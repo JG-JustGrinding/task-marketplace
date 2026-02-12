@@ -7,7 +7,7 @@
   --bg-muted: #F1F3F7;
 
   /* Text */
-  --text-primary: #1E1E22;
+  --text-primary: #191716;
   --text-secondary: #6B7280;
   --text-muted: #9CA3AF;
 
@@ -17,6 +17,8 @@
   /* Brand / Accent */
   --accent-primary: #6366F1;      /* Blue-violet */
   --accent-hover: #4F55E3;
+  --accent-secondary: #FB3640;
+  --accent-secondary-hover: #E02B2B;
 
   /* Success */
   --success: #22C55E;
@@ -75,10 +77,13 @@ a:hover {
   color: var(--accent-hover);
 }
 
-/* Buttons */
-button {
-  background-color: var(--accent-primary);
+a.button {
   color: white;
+  text-decoration: none;
+}
+
+/* Buttons */
+button:not(.none) {
   border: none;
   padding: 0.6rem 1.2rem;
   border-radius: 8px;
@@ -86,7 +91,12 @@ button {
   transition: background 0.2s ease;
 }
 
-button:hover {
+button:not(.uncolored) {
+  background-color: var(--accent-primary);
+  color: white;
+}
+
+button:not(.uncolored):hover {
   background-color: var(--accent-hover);
 }
 
@@ -127,4 +137,8 @@ button:hover {
 
 h1, h2, h3, h4, h5, h6, .title-font {
   font-family: var(--font-lato), sans-serif;
+}
+
+.bold {
+  font-weight: 700;
 }
