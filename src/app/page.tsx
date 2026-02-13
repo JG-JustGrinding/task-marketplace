@@ -30,20 +30,20 @@ export default function Home() {
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Header search={search} onSearchChange={setSearch} />
 
-      <main className="mx-auto max-w-5xl px-4 pt-2 pb-10 flex flex-col gap-4">
+      <main className="mx-auto max-w-7xl px-4 pt-2 pb-10 flex flex-col gap-4">
         <CategoryFilters
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
         />
 
-        <section className="mt-4 flex-1">
-          <div className="flex items-center justify-between mb-3">
-            {filteredListings.length < 11 && <h2 className="text-sm font-medium text-[var(--text-secondary)]">
-              {filteredListings.length} listing{filteredListings.length !== 1 && "s"}
+        <section className="mt-6 flex-1">
+          <div className="flex items-center justify-between mb-6">
+            {filteredListings.length < 11 && <h2 className="text-sm font-semibold text-[var(--text-secondary)]">
+              {filteredListings.length} listing{filteredListings.length !== 1 && "s"} available
             </h2>}
           </div>
 
-          <div className="space-y-3 md:space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             {filteredListings.map((listing) => (
               <ListingCard key={listing.id} listing={listing} />
             ))}

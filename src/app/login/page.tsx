@@ -100,7 +100,7 @@ export default function LoginPage() {
 
 						<button
 							type="button"
-							className="w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors btn-outline flex items-center justify-center gap-2"
+							className="btn-outline uncolored w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors btn-outline flex items-center justify-center gap-2"
 							aria-label="Log in with Google account"
 						>
 							<img

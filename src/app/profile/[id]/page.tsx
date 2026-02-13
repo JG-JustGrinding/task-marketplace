@@ -1,10 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Header from "@/components/Header";
 import ListingCard from "@/components/ListingCard";
 import { LISTINGS } from "@/data/listings";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCaretDown } from '@fortawesome/free-solid-svg-icons';
 
 export default function ProfilePage() {
+  const [createdExpanded, setCreatedExpanded] = useState(true);
+  const [completedExpanded, setCompletedExpanded] = useState(true);
+
   // Mock user data for design
   const userName = "Alex Rivera";
   const userInitial = userName.charAt(0);
@@ -59,22 +65,41 @@ export default function ProfilePage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Created listings</h2>
-            <span className="text-xs text-[var(--text-secondary)]">
-              {createdListings.length} {createdListings.length === 1 ? 'listing' : 'listings'}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[var(--text-secondary)]">
+                {createdListings.length} {createdListings.length === 1 ? 'listing' : 'listings'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCreatedExpanded((prev) => !prev)}
+                className="flex items-center gap-1 text-xs font-medium text-[var(--text-secondary)] transition"
+                aria-expanded={createdExpanded}
+                aria-controls="created-listings"
+              >
+                {createdExpanded ? "Collapse" : "Expand"}
+                <FontAwesomeIcon
+                  icon={faCaretDown}
+                  className={`text-xs transition-transform ${createdExpanded ? "rotate-180" : "rotate-0"}`}
+                />
+              </button>
+            </div>
           </div>
           
-          {createdListings.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {createdListings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
-          ) : (
-            <div className="card p-8 text-center">
-              <p className="text-sm text-[var(--text-secondary)]">
-                No listings created yet.
-              </p>
+          {createdExpanded && (
+            <div id="created-listings">
+              {createdListings.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {createdListings.map((listing) => (
+                    <ListingCard key={listing.id} listing={listing} />
+                  ))}
+                </div>
+              ) : (
+                <div className="card p-8 text-center">
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    No listings created yet.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -83,22 +108,41 @@ export default function ProfilePage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Completed listings</h2>
-            <span className="text-xs text-[var(--text-secondary)]">
-              {completedListings.length} {completedListings.length === 1 ? 'listing' : 'listings'}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[var(--text-secondary)]">
+                {completedListings.length} {completedListings.length === 1 ? 'listing' : 'listings'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCompletedExpanded((prev) => !prev)}
+                className="flex items-center gap-1 text-xs font-medium text-[var(--text-secondary)] transition"
+                aria-expanded={completedExpanded}
+                aria-controls="completed-listings"
+              >
+                {completedExpanded ? "Collapse" : "Expand"}
+                <FontAwesomeIcon
+                  icon={faCaretDown}
+                  className={`text-xs transition-transform ${completedExpanded ? "rotate-180" : "rotate-0"}`}
+                />
+              </button>
+            </div>
           </div>
           
-          {completedListings.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {completedListings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
-          ) : (
-            <div className="card p-8 text-center">
-              <p className="text-sm text-[var(--text-secondary)]">
-                No listings completed yet.
-              </p>
+          {completedExpanded && (
+            <div id="completed-listings">
+              {completedListings.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {completedListings.map((listing) => (
+                    <ListingCard key={listing.id} listing={listing} />
+                  ))}
+                </div>
+              ) : (
+                <div className="card p-8 text-center">
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    No listings completed yet.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </section>

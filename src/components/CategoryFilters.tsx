@@ -21,7 +21,7 @@ export default function CategoryFilters({
 }: CategoryFiltersProps) {
   return (
     <section className="w-full border-b border-[var(--border-color)] bg-[var(--bg-primary)]/90">
-      <div className="mx-auto max-w-5xl px-4 py-3 flex flex-wrap items-center gap-2">
+      <div className="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center gap-2">
         {CATEGORIES.map((category) => {
           const isActive = activeCategory === category || (activeCategory === "All" && category === "All");
 
