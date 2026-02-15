@@ -28,8 +28,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <Header search={search} onSearchChange={setSearch} />
-
       <main className="mx-auto max-w-7xl px-4 pt-2 pb-10 flex flex-col gap-4">
         <CategoryFilters
           activeCategory={activeCategory}

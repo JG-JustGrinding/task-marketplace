@@ -1,6 +1,50 @@
 "use client";
 
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+
 export default function LoginPage() {
+	const [email, setEmail] = useState("");
+	const [password, setPassword] = useState("");
+	const [error, setError] = useState("");
+	const [loading, setLoading] = useState(false);
+	const router = useRouter();
+	const supabase = createClient();
+
+	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		setError("");
+		setLoading(true);
+
+		try {
+			const { error: authError } = await supabase.auth.signInWithPassword({
+				email,
+				password,
+			});
+
+			if (authError) {
+				// Check if it's an invalid credentials error
+				if (
+					authError.message.includes("Invalid login credentials") ||
+					authError.message.includes("invalid credentials")
+				) {
+					setError("Invalid email or password");
+				} else {
+					setError("An error occurred. Please try again.");
+				}
+				return;
+			}
+
+			// Successfully logged in, redirect to home
+			router.push("/");
+		} catch (err) {
+			setError("An error occurred. Please try again.");
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	return (
 		<main
 			className="flex min-h-screen items-center justify-center px-4 py-12"
@@ -37,7 +81,15 @@ export default function LoginPage() {
 						</p> }
 					</header>
 
-					<form className="space-y-5" aria-label="Sign in form">
+					{error && (
+						<div className="mb-4 rounded-lg border border-[var(--danger)] bg-[var(--danger)]/10 p-3">
+							<p className="text-sm font-medium" style={{ color: "var(--danger)" }}>
+								{error}
+							</p>
+						</div>
+					)}
+
+					<form className="space-y-5" aria-label="Sign in form" onSubmit={handleSubmit}>
 						<div className="space-y-2">
 							<label
 								htmlFor="email"
@@ -51,7 +103,10 @@ export default function LoginPage() {
 								type="email"
 								autoComplete="email"
 								required
-								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2"
+								value={email}
+								onChange={(e) => {setEmail(e.target.value); setError("");}}
+								disabled={loading}
+								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2 disabled:opacity-50"
 								style={{
 									borderColor: "var(--border-color)",
 									backgroundColor: "var(--bg-secondary)",
@@ -73,7 +128,10 @@ export default function LoginPage() {
 								type="password"
 								autoComplete="current-password"
 								required
-								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2"
+								value={password}
+								onChange={(e) => {setPassword(e.target.value); setError("");}}
+								disabled={loading}
+								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2 disabled:opacity-50"
 								style={{
 									borderColor: "var(--border-color)",
 									backgroundColor: "var(--bg-secondary)",
@@ -83,9 +141,10 @@ export default function LoginPage() {
 
 						<button
 							type="submit"
-							className="mt-2 w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors"
+							disabled={loading}
+							className="mt-2 w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors disabled:opacity-50"
 						>
-							Log In
+							{loading ? "Logging in..." : "Log In"}
 						</button>
 					</form>
 
@@ -100,7 +159,8 @@ export default function LoginPage() {
 
 						<button
 							type="button"
-							className="btn-outline uncolored w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors btn-outline flex items-center justify-center gap-2"
+							disabled={loading}
+							className="btn-outline uncolored w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors btn-outline flex items-center justify-center gap-2 disabled:opacity-50"
 							aria-label="Log in with Google account"
 						>
 							<img

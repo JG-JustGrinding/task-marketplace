@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Header from "@/components/Header";
 
 const TABS = ["My Profile", "Dashboard", "Settings"] as const;
 
@@ -16,8 +15,6 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <Header search="" onSearchChange={() => {}} />
-
       <main className="mx-auto max-w-5xl px-4 py-8">
         <div className="card flex flex-col md:flex-row gap-6 p-4 md:p-6">
           {/* Sidebar */}

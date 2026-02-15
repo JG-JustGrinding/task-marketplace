@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Header from "@/components/Header";
 import ListingCard from "@/components/ListingCard";
 import { LISTINGS } from "@/data/listings";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -23,8 +22,6 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <Header search="" onSearchChange={() => {}} />
-
       <main className="mx-auto max-w-5xl px-4 py-8 space-y-8">
         {/* Profile Header */}
         <section className="card p-6">

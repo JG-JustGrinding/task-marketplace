@@ -1,6 +1,72 @@
 "use client";
 
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+
+const supabase = createClient();
+
 export default function SignupPage() {
+	const router = useRouter();
+	const [displayName, setDisplayName] = useState("");
+	const [email, setEmail] = useState("");
+	const [password, setPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [error, setError] = useState("");
+	const [loading, setLoading] = useState(false);
+
+	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		setError("");
+
+		if (password !== confirmPassword) {
+			setError("Passwords do not match");
+			return;
+		}
+
+		if (password.length < 8) {
+			setError("Password must be at least 8 characters");
+			return;
+		}
+
+		setLoading(true);
+
+		try {
+			const { error: authError } = await supabase.auth.signUp({
+				email,
+				password,
+				options: {
+					data: {
+						display_name: displayName,
+					},
+				},
+			});
+
+			if (authError) {
+				if (
+					authError.message.includes("already registered") ||
+					authError.message.includes("User already exists")
+				) {
+					setError("Email already in use");
+				} else if (authError.message.includes("Invalid email") || authError.message.includes("invalid email")) {
+					setError("Please enter a valid email address");
+				} else if (authError.message.includes("rate limit exceeded")) {
+					setError("Too many requests. Please try again later.");
+				} else {
+					console.error("Signup error:", authError);
+					setError("An error occurred. Please try again.");
+				}
+				return;
+			}
+
+			router.push("/");
+		} catch (err) {
+			setError("An error occurred. Please try again.");
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	return (
 		<main
 			className="flex min-h-screen items-center justify-center px-4 py-12"
@@ -27,7 +93,13 @@ export default function SignupPage() {
 						{process.env.NEXT_PUBLIC_SITE_SLOGAN}
 					</p>
 				</div>
-
+				{error && (
+					<div className="mb-4 rounded-lg border border-[var(--danger)] bg-[var(--danger)]/10 p-3">
+						<p className="text-sm font-medium" style={{ color: "var(--danger)" }}>
+							{error}
+						</p>
+					</div>
+				)}
 					<header className="mb-6">
 						<h1 className="mb-1 text-2xl font-bold title-font">
 							Create your account
@@ -37,7 +109,7 @@ export default function SignupPage() {
 						</p>
 					</header>
 
-					<form className="space-y-5" aria-label="Sign up form">
+					<form className="space-y-5" aria-label="Sign up form" onSubmit={handleSubmit}>
 						<div className="space-y-2">
 							<label
 								htmlFor="name"
@@ -51,7 +123,10 @@ export default function SignupPage() {
 								type="text"
 								autoComplete="name"
 								required
-								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2"
+								value={displayName}
+								onChange={(e) => {setDisplayName(e.target.value); setError("");}}
+								disabled={loading}
+								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2 disabled:opacity-50"
 								style={{
 									borderColor: "var(--border-color)",
 									backgroundColor: "var(--bg-secondary)",
@@ -73,7 +148,10 @@ export default function SignupPage() {
 								type="email"
 								autoComplete="email"
 								required
-								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2"
+								value={email}
+								onChange={(e) => {setEmail(e.target.value); setError("");}}
+								disabled={loading}
+								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2 disabled:opacity-50"
 								style={{
 									borderColor: "var(--border-color)",
 									backgroundColor: "var(--bg-secondary)",
@@ -95,7 +173,10 @@ export default function SignupPage() {
 								type="password"
 								autoComplete="new-password"
 								required
-								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2"
+								value={password}
+								onChange={(e) => {setPassword(e.target.value); setError("");}}
+								disabled={loading}
+								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2 disabled:opacity-50"
 								style={{
 									borderColor: "var(--border-color)",
 									backgroundColor: "var(--bg-secondary)",
@@ -116,7 +197,10 @@ export default function SignupPage() {
 								type="password"
 								autoComplete="new-password"
 								required
-								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2"
+								value={confirmPassword}
+								onChange={(e) => {setConfirmPassword(e.target.value); setError("");}}
+								disabled={loading}
+								className="w-full rounded-lg border px-3 py-2 text-sm body-font outline-none transition focus:ring-2 disabled:opacity-50"
 								style={{
 									borderColor: "var(--border-color)",
 									backgroundColor: "var(--bg-secondary)",
@@ -126,9 +210,10 @@ export default function SignupPage() {
 
 						<button
 							type="submit"
-							className="mt-2 w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors"
+							disabled={loading}
+							className="mt-2 w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors disabled:opacity-50"
 						>
-							Create account
+							{loading ? "Creating account..." : "Create account"}
 						</button>
 					</form>
 
@@ -143,7 +228,8 @@ export default function SignupPage() {
 
 						<button
 							type="button"
-							className="btn-outline uncolored w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors btn-outline flex items-center justify-center gap-2"
+							disabled={loading}
+							className="btn-outline uncolored w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors btn-outline flex items-center justify-center gap-2 disabled:opacity-50"
 							aria-label="Sign up with Google account"
 						>
 							<img

@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { notFound } from "next/navigation";
-import { LISTINGS } from "../../../data/listings";
-import Header from "../../../components/Header";
+import { LISTINGS } from "@/data/listings";
 
 interface ListingPageProps {
     params: {
@@ -36,7 +35,6 @@ export default function ListingPage({ params }: ListingPageProps) {
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-            <Header search="" onSearchChange={() => { }} />
             <main className="mx-auto max-w-5xl px-4 py-8 flex flex-col gap-6 md:flex-row md:items-start">
                 <section className="flex-1 min-w-0 space-y-6">
                     <div className="space-y-3">

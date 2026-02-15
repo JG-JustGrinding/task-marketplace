@@ -3,21 +3,21 @@
 import { useState } from "react";
 
 interface HeaderProps {
-  search: string;
-  onSearchChange: (value: string) => void;
+  user: any;
+  search?: string;
+  onSearchChange?: (value: string) => void;
 }
 
-export default function Header({ search, onSearchChange }: HeaderProps) {
+export default function Header({ user, search = "", onSearchChange }: HeaderProps) {
   const [localSearch, setLocalSearch] = useState(search);
-  
-  // Mock auth state - in a real app, this would come from auth context/session
-  const isLoggedIn = false; // Change to true to see logged-in state
-  const userName = "Alex Rivera";
-  const userInitial = userName.charAt(0);
+
+  const isLoggedIn = !!user;
+  const userName = user ? user.user_metadata?.display_name : "No Username";
+  const userInitial = userName?.charAt(0);
 
   const handleChange = (value: string) => {
     setLocalSearch(value);
-    onSearchChange(value);
+    onSearchChange?.(value);
   };
 
   return (
