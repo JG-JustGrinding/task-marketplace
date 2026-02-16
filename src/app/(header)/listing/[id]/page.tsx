@@ -13,6 +13,7 @@ interface ListingPageProps {
 export default function ListingPage({ params }: ListingPageProps) {
     const [activeImage, setActiveImage] = useState<string | null>(null);
     const [showStartConfirm, setShowStartConfirm] = useState(false);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
     const listing = LISTINGS[0];
 
     if (!listing) {
@@ -33,6 +34,10 @@ export default function ListingPage({ params }: ListingPageProps) {
     } = listing;
 
     const posterName = "Alex Rivera";
+
+    const hasUserStarted = false;
+    const isPoster = false;
+    const removeActions = false; // for when the user has cancelled the task
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
@@ -151,17 +156,82 @@ export default function ListingPage({ params }: ListingPageProps) {
                         <p className="text-xs text-[var(--text-secondary)]">
                             This is the estimated payout for completing this task. Exact payment details can be finalized once you start.
                         </p>
+                        
+                        {(!isPoster && !removeActions) && (
+                            <>
+                                {!hasUserStarted && (
+                                    <button
+                                        type="button"
+                                        className="w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]"
+                                        onClick={() => setShowStartConfirm(true)}
+                                    >
+                                        Start task
+                                    </button>
+                                )}
 
-                        <button
-                            type="button"
-                            className="w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]"
-                            onClick={() => setShowStartConfirm(true)}
-                        >
-                            Start task
-                        </button>
+                                {hasUserStarted && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            className="flex-1 py-2.5 text-sm font-medium rounded-lg bg-[var(--danger)] text-white hover:opacity-90"
+                                            onClick={() => setShowCancelConfirm(true)}
+                                        >
+                                            Cancel task
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="flex-1 py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-secondary)] text-white hover:bg-[var(--accent-secondary-hover)]"
+                                        >
+                                            Submit task
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
                 </aside>
             </main>
+
+            {showCancelConfirm && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
+                    onClick={() => setShowCancelConfirm(false)}
+                >
+                    <div
+                        className="relative w-full max-w-md rounded-xl bg-[var(--bg-secondary)] p-5 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="cancel-task-title"
+                    >
+                        <h2
+                            id="cancel-task-title"
+                            className="text-base font-semibold text-[var(--text-primary)]"
+                        >
+                            Cancel this task?
+                        </h2>
+                        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                            If you cancel, you won&apos;t be able to start this task again
+                        </p>
+                        <div className="mt-4 flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowCancelConfirm(false)}
+                                className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]"
+                            >
+                                Go back
+                            </button>
+                            <button
+                                type="button"
+                                className="rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-medium text-white hover:opacity-90"
+                                onClick={() => setShowCancelConfirm(false)}
+                            >
+                                Yes, cancel task
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {showStartConfirm && (
                 <div

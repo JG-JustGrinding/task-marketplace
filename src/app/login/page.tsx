@@ -142,7 +142,7 @@ export default function LoginPage() {
 						<button
 							type="submit"
 							disabled={loading}
-							className="mt-2 w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors disabled:opacity-50"
+							className="default mt-2 w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors disabled:opacity-50"
 						>
 							{loading ? "Logging in..." : "Log In"}
 						</button>

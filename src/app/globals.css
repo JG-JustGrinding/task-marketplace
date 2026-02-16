@@ -17,8 +17,8 @@
   /* Brand / Accent */
   --accent-primary: #6366F1;      /* Blue-violet */
   --accent-hover: #4F55E3;
-  --accent-secondary: #5EFC8D;
-  --accent-secondary-hover: #4AD77B;
+  --accent-secondary: #06A77D;
+  --accent-secondary-hover: #059E6B;
 
   /* Success */
   --success: #22C55E;
@@ -87,20 +87,23 @@ a.button {
 }
 
 /* Buttons */
-button:not(.none) {
+button {
+  cursor: pointer;
+}
+
+button.default {
   border: none;
   padding: 0.6rem 1.2rem;
   border-radius: 8px;
-  cursor: pointer;
   transition: background 0.2s ease;
 }
 
-button:not(.uncolored) {
+button.default {
   background-color: var(--accent-primary);
   color: white;
 }
 
-button:not(.uncolored):hover {
+button.default:hover {
   background-color: var(--accent-hover);
 }
 
