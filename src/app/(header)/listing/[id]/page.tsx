@@ -12,6 +12,7 @@ interface ListingPageProps {
 
 export default function ListingPage({ params }: ListingPageProps) {
     const [activeImage, setActiveImage] = useState<string | null>(null);
+    const [showStartConfirm, setShowStartConfirm] = useState(false);
     const listing = LISTINGS[0];
 
     if (!listing) {
@@ -40,7 +41,7 @@ export default function ListingPage({ params }: ListingPageProps) {
                     <div className="space-y-3">
                         <button
                             type="button"
-                            onClick={() => history.back()}
+                            onClick={() => window.location.href = "/"}
                             className="text-xs text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
                         >
                             Back to listings
@@ -154,12 +155,55 @@ export default function ListingPage({ params }: ListingPageProps) {
                         <button
                             type="button"
                             className="w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]"
+                            onClick={() => setShowStartConfirm(true)}
                         >
                             Start task
                         </button>
                     </div>
                 </aside>
             </main>
+
+            {showStartConfirm && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
+                    onClick={() => setShowStartConfirm(false)}
+                >
+                    <div
+                        className="relative w-full max-w-md rounded-xl bg-[var(--bg-secondary)] p-5 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="start-task-title"
+                    >
+                        <h2
+                            id="start-task-title"
+                            className="text-base font-semibold text-[var(--text-primary)]"
+                        >
+                            Start this task?
+                        </h2>
+                        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                            Once you start, the creator will be notified and the task will
+                            move into your active queue.
+                        </p>
+                        <div className="mt-4 flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowStartConfirm(false)}
+                                className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--accent-hover)]"
+                                onClick={() => setShowStartConfirm(false)}
+                            >
+                                Confirm & Start
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {activeImage && (
                 <div

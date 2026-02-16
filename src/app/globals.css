@@ -55,6 +55,10 @@
 
   --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.4);
   }
+
+  input:active:not(.none), input:focus:not(.none), textarea:active:not(.none), textarea:focus:not(.none) {
+    background-color: var(--bg-muted);
+  }  
 }
 
 html,
@@ -160,4 +164,15 @@ h1, h2, h3, h4, h5, h6, .title-font {
 
 .bold {
   font-weight: 700;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

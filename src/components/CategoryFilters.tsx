@@ -1,14 +1,7 @@
 "use client";
+import { CATEGORY_OPTIONS } from "@/lib/categories";
 
-const CATEGORIES = [
-  "All",
-  "Design",
-  "Development",
-  "Writing",
-  "Marketing",
-  "Data",
-  "Admin",
-];
+const CATEGORIES = ["All", ...CATEGORY_OPTIONS];
 
 interface CategoryFiltersProps {
   activeCategory: string;
