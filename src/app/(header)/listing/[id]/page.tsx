@@ -1,306 +1,133 @@
-"use client";
-
-import { useState } from "react";
 import { notFound } from "next/navigation";
-import { LISTINGS } from "@/data/listings";
+import { createClient } from "@/lib/supabase/server";
+import { type Listing } from "@/data/listings";
+import ListingClient from "@/components/ListingClient";
 
-interface ListingPageProps {
-    params: {
-        id: string;
-    };
-}
+type ReferenceType = "link" | "image";
 
-export default function ListingPage({ params }: ListingPageProps) {
-    const [activeImage, setActiveImage] = useState<string | null>(null);
-    const [showStartConfirm, setShowStartConfirm] = useState(false);
-    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-    const listing = LISTINGS[0];
+type ReferenceItem = {
+    type: ReferenceType;
+    url: string;
+};
+
+type TaskRow = {
+    id: number;
+    user_id: string;
+    title: string;
+    categories: string[] | null;
+    short_description: string | null;
+    need_details: string | null;
+    technical_requirements: string | null;
+    references: ReferenceItem[] | null;
+    price: number;
+};
+
+export default async function ListingPage({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    const { id } = await params;
+    const numericId = Number(id);
+    if (!Number.isFinite(numericId)) {
+        return notFound();
+    }
+
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+        .from("tasks")
+        .select(
+            "id, user_id, title, categories, short_description, need_details, technical_requirements, references, price",
+        )
+        .eq("id", numericId)
+        .single<TaskRow>();
+
+    let listing: Listing | null = null;
+
+    const { data: creatorData, error: creatorError } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .eq("id", data?.user_id)
+        .single();
+
+    if (!error && data) {
+        const refs = (data.references ?? []) as ReferenceItem[];
+        const imageUrls = refs
+            .filter((ref) => ref.type === "image" && ref.url)
+            .map((ref) => ref.url);
+        const linkUrls = refs
+            .filter((ref) => ref.type === "link" && ref.url)
+            .map((ref) => ref.url);
+
+        listing = {
+            id: data.id,
+            title: data.title,
+            categories: data.categories ?? [],
+            description: data.short_description ?? undefined,
+            longDescription: data.need_details ?? undefined,
+            requirements: data.technical_requirements ?? undefined,
+            images: imageUrls.length ? imageUrls : undefined,
+            links: linkUrls.length ? linkUrls : undefined,
+            price: data.price,
+            currency: "USD",
+        };
+    }
 
     if (!listing) {
         return notFound();
     }
 
-    const {
-        title,
-        categories,
-        description,
-        longDescription,
-        requirements,
-        price,
-        currency = "USD",
-        images,
-        projectTitle,
-        projectSummary,
-    } = listing;
+    const isPoster = !!user && !!data && user.id === data.user_id;
 
-    const posterName = "Alex Rivera";
+    let hasUserStarted = false;
+    let submissionPending = false;
+    let wasCancelled = false;
+    let submissionRejected = false;
+    let taskTaken = false;
 
-    const hasUserStarted = false;
-    const isPoster = false;
-    const removeActions = false; // for when the user has cancelled the task
+    if (user && data) {
+        const { data: activation } = await supabase
+            .from("task_activations")
+            .select("id, status")
+            .eq("user_id", user.id)
+            .eq("task_id", data.id)
+            .maybeSingle();
+
+        if (activation) {
+            hasUserStarted = true;
+            const status = (activation as any).status as string | null;
+            submissionPending = status === "pending";
+            wasCancelled = status === "cancelled";
+            submissionRejected = status === "rejected";
+        }
+
+        // Check if any other user has an active (non-cancelled) activation for this task.
+        const { data: otherActivation } = await supabase
+            .from("task_activations")
+            .select("id")
+            .eq("task_id", data.id)
+            .neq("user_id", user.id)
+            .not("status", "eq", "cancelled")
+            .maybeSingle();
+
+        taskTaken = !!otherActivation;
+    }
 
     return (
-        <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-            <main className="mx-auto max-w-5xl px-4 py-8 flex flex-col gap-6 md:flex-row md:items-start">
-                <section className="flex-1 min-w-0 space-y-6">
-                    <div className="space-y-3">
-                        <button
-                            type="button"
-                            onClick={() => window.location.href = "/"}
-                            className="text-xs text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
-                        >
-                            Back to listings
-                        </button>
-
-                        <div className="space-y-2">
-                            <h1 className="text-2xl md:text-3xl font-semibold leading-tight">
-                                {title}
-                            </h1>
-
-                            <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                                <div className="h-7 w-7 rounded-full bg-[var(--bg-muted)] flex items-center justify-center text-[0.7rem] font-semibold text-[var(--text-primary)]">
-                                    {posterName.charAt(0)}
-                                </div>
-                                <div className="flex flex-col leading-tight">
-                                    <span>{posterName}</span>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-1.5">
-                                {categories.map((cat) => (
-                                    <span
-                                        key={cat}
-                                        className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--bg-muted)]/70 px-2.5 py-0.5 text-[0.7rem] font-medium text-[var(--text-secondary)]"
-                                    >
-                                        {cat}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
-                        {(longDescription || description) && (
-                            <p className="text-sm md:text-base text-[var(--text-secondary)] leading-relaxed">
-                                {longDescription || description}
-                            </p>
-                        )}
-
-                        {requirements && (
-                            <section className="space-y-2">
-                                <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                                    Requirements/Specifications
-                                </h2>
-                                <ul className="list-disc pl-5 text-sm text-[var(--text-secondary)] space-y-1">
-                                    {requirements.split("\n").map((req) => (
-                                        <li key={req}>{req}</li>
-                                    ))}
-                                </ul>
-                            </section>
-                        )}
-
-                    </div>
-
-                    {images && images.length > 0 && (
-                        <section className="space-y-3">
-                            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                                Visual references
-                            </h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {images.map((src) => (
-                                    <div
-                                        key={src}
-                                        className="overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] cursor-pointer hover:ring-2 hover:ring-[var(--accent-primary)] hover:border-transparent transition"
-                                        onClick={() => setActiveImage(src)}
-                                    >
-                                        <img
-                                            src={src}
-                                            alt={title}
-                                            className="h-48 w-full object-cover"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {(projectTitle || projectSummary) && (
-                        <section className="space-y-2">
-                            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                                About the project
-                            </h2>
-                            {projectTitle && (
-                                <p className="text-sm font-medium text-[var(--text-primary)]">
-                                    {projectTitle}
-                                </p>
-                            )}
-                            {projectSummary && (
-                                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                                    {projectSummary}
-                                </p>
-                            )}
-                        </section>
-                    )}
-                </section>
-
-                <aside className="mt-6 md:mt-0 md:ml-8 w-full md:w-80">
-                    <div className="card space-y-4 sticky top-6">
-                        <div>
-                            <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-1">
-                                <b>{process.env.NEXT_PUBLIC_REWARD_TITLE}</b>
-                            </span>
-                            <p className="text-2xl font-semibold text-[var(--text-primary)]">
-                                {currency === "USD" ? "$" : ""}
-                                {price.toLocaleString()}
-                            </p>
-                        </div>
-
-                        <p className="text-xs text-[var(--text-secondary)]">
-                            This is the estimated payout for completing this task. Exact payment details can be finalized once you start.
-                        </p>
-                        
-                        {(!isPoster && !removeActions) && (
-                            <>
-                                {!hasUserStarted && (
-                                    <button
-                                        type="button"
-                                        className="w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]"
-                                        onClick={() => setShowStartConfirm(true)}
-                                    >
-                                        Start task
-                                    </button>
-                                )}
-
-                                {hasUserStarted && (
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            className="flex-1 py-2.5 text-sm font-medium rounded-lg bg-[var(--danger)] text-white hover:opacity-90"
-                                            onClick={() => setShowCancelConfirm(true)}
-                                        >
-                                            Cancel task
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="flex-1 py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-secondary)] text-white hover:bg-[var(--accent-secondary-hover)]"
-                                        >
-                                            Submit task
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                </aside>
-            </main>
-
-            {showCancelConfirm && (
-                <div
-                    className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
-                    onClick={() => setShowCancelConfirm(false)}
-                >
-                    <div
-                        className="relative w-full max-w-md rounded-xl bg-[var(--bg-secondary)] p-5 shadow-xl"
-                        onClick={(e) => e.stopPropagation()}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="cancel-task-title"
-                    >
-                        <h2
-                            id="cancel-task-title"
-                            className="text-base font-semibold text-[var(--text-primary)]"
-                        >
-                            Cancel this task?
-                        </h2>
-                        <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                            If you cancel, you won&apos;t be able to start this task again
-                        </p>
-                        <div className="mt-4 flex items-center justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setShowCancelConfirm(false)}
-                                className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]"
-                            >
-                                Go back
-                            </button>
-                            <button
-                                type="button"
-                                className="rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-medium text-white hover:opacity-90"
-                                onClick={() => setShowCancelConfirm(false)}
-                            >
-                                Yes, cancel task
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {showStartConfirm && (
-                <div
-                    className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
-                    onClick={() => setShowStartConfirm(false)}
-                >
-                    <div
-                        className="relative w-full max-w-md rounded-xl bg-[var(--bg-secondary)] p-5 shadow-xl"
-                        onClick={(e) => e.stopPropagation()}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="start-task-title"
-                    >
-                        <h2
-                            id="start-task-title"
-                            className="text-base font-semibold text-[var(--text-primary)]"
-                        >
-                            Start this task?
-                        </h2>
-                        <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                            Once you start, the creator will be notified and the task will
-                            move into your active queue.
-                        </p>
-                        <div className="mt-4 flex items-center justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setShowStartConfirm(false)}
-                                className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--accent-hover)]"
-                                onClick={() => setShowStartConfirm(false)}
-                            >
-                                Confirm & Start
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {activeImage && (
-                <div
-                    className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
-                    onClick={() => setActiveImage(null)}
-                >
-                    <div
-                        className="relative max-w-3xl w-full px-4"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <button
-                            type="button"
-                            onClick={() => setActiveImage(null)}
-                            className="absolute -top-3 right-3 h-8 w-8 rounded-full bg-[var(--bg-secondary)] text-[var(--text-primary)] text-lg flex items-center justify-center shadow-md hover:bg-[var(--bg-muted)]"
-                            aria-label="Close image preview"
-                        >
-                            ×
-                        </button>
-                        <img
-                            src={activeImage}
-                            alt={title}
-                            className="max-h-[80vh] w-full object-contain rounded-xl shadow-xl"
-                        />
-                    </div>
-                </div>
-            )}
-        </div>
+        <ListingClient
+            listing={listing}
+            creator={creatorData}
+            isPoster={isPoster}
+            hasUserStarted={hasUserStarted}
+            submissionPending={submissionPending}
+            wasCancelled={wasCancelled}
+            submissionRejected={submissionRejected}
+            taskTaken={taskTaken}
+        />
     );
 }
 

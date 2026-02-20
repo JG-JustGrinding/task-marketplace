@@ -28,6 +28,7 @@
 
   /* Danger (use sparingly) */
   --danger: #EF4444;
+  --danger-less-saturated: #FCA5A5;
 
   /* Shadows */
   --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -61,6 +62,12 @@
   }  
 }
 
+@media (prefers-color-scheme: light) {
+  :root {
+    --danger-less-saturated: #EF4444;
+  }
+}
+
 html,
 body {
   padding: 0;
@@ -72,12 +79,13 @@ body {
 }
 
 /* Links */
-a {
+/*
+a:not(.none) {
   color: var(--accent-primary);
   text-decoration: none;
 }
 
-a:hover {
+a:hover:not(.none) {
   color: var(--accent-hover);
 }
 
@@ -85,9 +93,10 @@ a.button {
   color: white;
   text-decoration: none;
 }
+*/
 
 /* Buttons */
-button {
+button:not(:disabled) {
   cursor: pointer;
 }
 
@@ -162,6 +171,30 @@ h1, h2, h3, h4, h5, h6, .title-font {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Textarea scrollbar polish */
+textarea {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) var(--bg-muted);
+}
+
+textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: var(--bg-muted);
+  border-radius: 3px;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
 

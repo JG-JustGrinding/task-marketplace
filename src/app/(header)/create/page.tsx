@@ -138,7 +138,7 @@ export default function CreateTaskPage() {
 			}
 			return {
 				...prev,
-				references: [...prev.references, { type: "link", url: "" }],
+				references: [...prev.references, { type: "image", url: "" }],
 			};
 		});
 	};
@@ -425,8 +425,8 @@ export default function CreateTaskPage() {
 												}
 												className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-indigo-400"
 											>
+												<option value="image">Image (URL to image)</option>												
 												<option value="link">Link</option>
-												<option value="image">Image (URL to image)</option>
 											</select>
 											<input
 												id={`reference-url-${index}`}
@@ -636,14 +636,14 @@ export default function CreateTaskPage() {
 	};
 
 	return (
-		<main className="min-h-[calc(100vh-4rem)] bg-slate-50/40 px-4 py-8 text-sm text-gray-900 dark:bg-gray-950 dark:text-gray-50">
+		<main className="min-h-[calc(100vh-4rem)] bg-[var(--bg-primary)]/40 px-4 py-8 text-sm text-[var(--text-primary)]">
 			<div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
 				{/* Step indicator */}
 				<nav
 					aria-label="Task creation progress"
-					className="rounded-2xl border border-gray-100 bg-white/80 p-3 shadow-sm backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/80"
+					className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 p-3 shadow-sm backdrop-blur-sm"
 				>
-					<ol className="flex flex-col gap-2 text-xs font-medium text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+					<ol className="flex flex-col gap-2 text-xs font-medium text-[var(--text-secondary)] sm:flex-row sm:items-center sm:justify-between">
 							{STEPS.map((step, index) => {
 								const isActive = index === stepIndex;
 								const isComplete = index < stepIndex;
@@ -657,7 +657,7 @@ export default function CreateTaskPage() {
 											type="button"
 											onClick={() => handleStepClick(index)}
 											disabled={!isClickable}
-											className={`flex items-center gap-2 uncolored none text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900 ${
+											className={`flex items-center gap-2 uncolored none text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)] ${
 												isClickable ? "cursor-pointer" : "cursor-default opacity-70"
 											}`}
 											aria-current={isActive ? "step" : undefined}
@@ -665,10 +665,10 @@ export default function CreateTaskPage() {
 											<div
 												className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] transition ${
 													isActive
-														? "border-indigo-500 bg-indigo-500 text-white shadow-sm"
-														: isComplete
-														? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200"
-														: "border-gray-300 bg-white text-gray-400 dark:border-gray-700 dark:bg-gray-900"
+														? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-sm"
+													: isComplete
+														? "border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]"
+														: "border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-muted)]"
 												}`}
 												aria-hidden="true"
 											>
@@ -694,26 +694,26 @@ export default function CreateTaskPage() {
 												<span
 													className={`text-[11px] uppercase tracking-wide ${
 														isActive
-															? "text-indigo-600 dark:text-indigo-300"
-															: isComplete
-															? "text-emerald-600 dark:text-emerald-300"
-															: "text-gray-500 dark:text-gray-400"
-													}`}
+															? "text-[var(--accent-primary)]"
+														: isComplete
+															? "text-[var(--success)]"
+															: "text-[var(--text-secondary)]"
+												}`}
 												>
 													{step.label}
 												</span>
 											</div>
 										</button>
 									{index < STEPS.length - 1 && (
-										<div className="hidden flex-1 items-center sm:flex">
-											<div
-												className={`h-px w-full rounded-full transition ${
-													index < stepIndex
-														? "bg-emerald-400/80 dark:bg-emerald-500/60"
-														: "bg-gray-200 dark:bg-gray-700"
-												}`}
-											/>
-										</div>
+											<div className="hidden flex-1 items-center sm:flex">
+												<div
+													className={`h-px w-full rounded-full transition ${
+														index < stepIndex
+															? "bg-[var(--success)]/80"
+															: "bg-[var(--border-color)]"
+													}`}
+												/>
+											</div>
 									)}
 								</li>
 							);

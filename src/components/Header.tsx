@@ -4,15 +4,16 @@ import { useState } from "react";
 
 interface HeaderProps {
   user: any;
+  profile?: any;
   search?: string;
   onSearchChange?: (value: string) => void;
 }
 
-export default function Header({ user, search = "", onSearchChange }: HeaderProps) {
+export default function Header({ user, profile, search = "", onSearchChange }: HeaderProps) {
   const [localSearch, setLocalSearch] = useState(search);
 
   const isLoggedIn = !!user;
-  const userName = user ? user.user_metadata?.display_name : "No Username";
+  const userName = profile ? profile.username : "No Username";
   const userInitial = userName?.charAt(0);
 
   const handleChange = (value: string) => {
@@ -48,7 +49,7 @@ export default function Header({ user, search = "", onSearchChange }: HeaderProp
         <div className="flex items-center gap-3">
           {isLoggedIn ? (
             <a
-              href="/profile/1"
+              href={`/profile/${user.id}`}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               aria-label={`Go to ${userName}'s profile`}
             >

@@ -1,0 +1,79 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+type ActivateTaskBody = {
+  taskId?: number;
+};
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as ActivateTaskBody;
+
+    const taskId = body.taskId;
+    if (!taskId || !Number.isFinite(taskId)) {
+      return NextResponse.json(
+        { error: "A valid taskId is required." },
+        { status: 400 }
+      );
+    }
+
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    // Check for existing activations for this user/task.
+    const { data: existing } = await supabase
+      .from("task_activations")
+      .select("id, status")
+      .eq("user_id", user.id)
+      .eq("task_id", taskId);
+
+    if (existing && existing.length > 0) {
+      const hasCancelled = existing.some((row) => (row as any).status === "cancelled");
+      if (hasCancelled) {
+        return NextResponse.json(
+          { error: "You cancelled this task and can\'t start it again." },
+          { status: 400 },
+        );
+      }
+
+      // Already activated in some other state; treat as success/idempotent.
+      return NextResponse.json(
+        { activation: { user_id: user.id, task_id: taskId } },
+        { status: 200 },
+      );
+    }
+
+    const { error } = await supabase
+      .from("task_activations")
+      .insert({ user_id: user.id, task_id: taskId, status: "waiting_submission" });
+
+    if (error) {
+      // If there's a unique constraint on (user_id, task_id), treat conflicts as success.
+      if ((error as any).code === "23505") {
+        return NextResponse.json({ activation: { user_id: user.id, task_id: taskId } }, { status: 200 });
+      }
+
+      return NextResponse.json(
+        { error: "Failed to activate task. Please try again." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { activation: { user_id: user.id, task_id: taskId } },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error activating task", error);
+    return NextResponse.json(
+      { error: "Failed to activate task" },
+      { status: 500 }
+    );
+  }
+}

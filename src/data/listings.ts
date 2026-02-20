@@ -8,8 +8,10 @@ export interface Listing {
   longDescription?: string;
   requirements?: string;
   images?: string[];
+  links?: string[];
   projectTitle?: string;
   projectSummary?: string;
+  startedCount?: number;
 }
 
 export const LISTINGS: Listing[] = [
@@ -30,6 +32,7 @@ export const LISTINGS: Listing[] = [
     projectSummary:
       "This task is part of an early-stage pixel art fighting game prototype focusing on expressive, readable combat animations for a small roster of characters.",
     price: 30,
+    startedCount: 14,
   },
   {
     id: 2,
@@ -43,6 +46,7 @@ export const LISTINGS: Listing[] = [
     projectSummary:
       "We are refreshing the podcast’s visual and audio identity. This theme will be used across intro, outro, and promo content.",
     price: 50,
+    startedCount: 7,
   },
   {
     id: 3,
@@ -51,6 +55,7 @@ export const LISTINGS: Listing[] = [
     description:
       "Set up Meta and Google campaigns for a DTC brand; need tracking + creative guidance.",
     price: 200,
+    startedCount: 1,
   },
   {
     id: 4,
@@ -59,6 +64,7 @@ export const LISTINGS: Listing[] = [
     description:
       "We have a messy CSV with ~10k rows that needs cleaning, deduping, and basic descriptive stats.",
     price: 150,
+    startedCount: 0,
   },
   {
     id: 5,
@@ -67,5 +73,6 @@ export const LISTINGS: Listing[] = [
     description:
       "Need a clear, friendly voice recording of the phrase 'You have a new message' for use in a mobile app notification.",
     price: 5,
+    startedCount: 12,
   },
 ];
