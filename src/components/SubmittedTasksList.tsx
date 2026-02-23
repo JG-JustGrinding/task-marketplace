@@ -249,11 +249,10 @@ export default function SubmittedTasksList({
               <div className="mt-2 rounded-lg bg-[var(--bg-muted)]/80 px-3 py-2 text-[0.7rem] text-[var(--text-secondary)]">
                 <p className="font-semibold mb-1">Requested changes</p>
                 <p>
-                  The task creator has requested an updated version. For example,
-                  they might want clearer copy in the hero section, adjusted
-                  colors to match their brand, or a tighter edit around key
-                  moments. When you resubmit, add a short note explaining what
-                  you changed.
+                  {"resubmission_message" in submission &&
+                  (submission as any).resubmission_message
+                    ? (submission as any).resubmission_message
+                    : "The task creator has requested an updated version. When you resubmit, add a short note explaining what you changed."}
                 </p>
               </div>
             )}

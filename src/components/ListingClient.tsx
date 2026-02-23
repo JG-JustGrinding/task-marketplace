@@ -240,7 +240,7 @@ export default function ListingClient({
                                                     : wasCancelled
                                                     ? "Task cancelled"
                                                     : submissionRejected
-                                                    ? "Submission denied"
+                                                    ? "Submission rejected"
                                                     : ""}
                                             </div>
                                         ) : (

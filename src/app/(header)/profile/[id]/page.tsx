@@ -8,6 +8,15 @@ type ProfileRow = {
   created_at?: string | null;
 };
 
+type Task = {
+  id: number;
+  title: string;
+  short_description: string | null;
+  price: number;
+  categories: string[] | null;
+  created_at: string;
+};
+
 interface ProfilePageProps {
   params: Promise<{
     id: string;
@@ -46,6 +55,14 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const currentUserId = authData?.user?.id ?? null;
   const isCurrentUser = !!currentUserId && currentUserId === profile.id;
 
+  const { data: createdTasksData } = await supabase
+    .from("tasks")
+    .select("id, title, short_description, price, categories, created_at")
+    .eq("user_id", profile.id)
+    .order("created_at", { ascending: false });
+
+  const createdTasks: Task[] = createdTasksData ?? [];
+
   let memberSince: string | null = null;
   if (profile.created_at) {
     memberSince = new Date(profile.created_at).toLocaleDateString(undefined, {
@@ -61,6 +78,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       userName={userName}
       memberSince={memberSince}
       isCurrentUser={isCurrentUser}
+      createdTasks={createdTasks}
     />
   );
 }

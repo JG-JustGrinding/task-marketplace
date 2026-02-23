@@ -59,7 +59,7 @@ export default async function HubPage() {
 
 	const { data: mySubmissionsData } = await supabase
 		.from("task_activations")
-		.select("id, task_id, status, created_at, is_hidden")
+		.select("id, task_id, status, created_at, is_hidden, resubmission_message")
 		.eq("user_id", user.id)
 		.order("created_at", { ascending: false });
 

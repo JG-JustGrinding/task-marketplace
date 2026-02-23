@@ -260,6 +260,14 @@ export default function HubDashboard({
                         <span>Posted {formatDate(task.created_at)}</span>
                       </div>
                       <div className="flex gap-2">
+                        {someoneStarted && (
+                          <Link
+                            href={`/listing/${task.id}/submissions`}
+                            className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
+                          >
+                            View submissions
+                          </Link>
+                        )}
                         {!isFinished && (
                           <Link
                             href={`/listing/${task.id}`}

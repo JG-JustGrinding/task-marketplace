@@ -2,29 +2,41 @@
 
 import { useState } from "react";
 import ListingCard from "@/components/ListingCard";
-import { LISTINGS } from "@/data/listings";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCaretDown } from "@fortawesome/free-solid-svg-icons";
+
+type Task = {
+  id: number;
+  title: string;
+  short_description: string | null;
+  price: number;
+  categories: string[] | null;
+};
 
 interface ProfileClientProps {
   userName: string;
   memberSince?: string | null;
   isCurrentUser: boolean;
+  createdTasks: Task[];
 }
 
 export default function ProfileClient({
   userName,
   memberSince,
   isCurrentUser,
+  createdTasks,
 }: ProfileClientProps) {
   const [createdExpanded, setCreatedExpanded] = useState(true);
-  const [completedExpanded, setCompletedExpanded] = useState(true);
 
   const userInitial = userName.charAt(0).toUpperCase();
 
-  // For now, use mock listings for layout/demo
-  const createdListings = [LISTINGS[0], LISTINGS[1]].filter(Boolean);
-  const completedListings = [LISTINGS[2]].filter(Boolean);
+  const createdListings = (createdTasks ?? []).map((task) => ({
+    id: task.id,
+    title: task.title,
+    categories: task.categories ?? [],
+    description: task.short_description ?? undefined,
+    price: task.price,
+  }));
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
@@ -52,12 +64,6 @@ export default function ProfileClient({
                     {createdListings.length}
                   </span>
                   <span className="text-[var(--text-secondary)]">Created</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {completedListings.length}
-                  </span>
-                  <span className="text-[var(--text-secondary)]">Completed</span>
                 </div>
               </div>
 
@@ -123,49 +129,6 @@ export default function ProfileClient({
                 <div className="card p-8 text-center">
                   <p className="text-sm text-[var(--text-secondary)]">
                     No listings created yet.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* Completed Listings */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Completed listings</h2>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-[var(--text-secondary)]">
-                {completedListings.length} {completedListings.length === 1 ? "listing" : "listings"}
-              </span>
-              <button
-                type="button"
-                onClick={() => setCompletedExpanded((prev) => !prev)}
-                className="flex items-center gap-1 text-xs font-medium text-[var(--text-secondary)] transition"
-                aria-expanded={completedExpanded}
-                aria-controls="completed-listings"
-              >
-                {completedExpanded ? "Collapse" : "Expand"}
-                <FontAwesomeIcon
-                  icon={faCaretDown}
-                  className={`text-xs transition-transform ${completedExpanded ? "rotate-180" : "rotate-0"}`}
-                />
-              </button>
-            </div>
-          </div>
-
-          {completedExpanded && (
-            <div id="completed-listings">
-              {completedListings.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {completedListings.map((listing) => (
-                    <ListingCard key={listing.id} listing={listing} />
-                  ))}
-                </div>
-              ) : (
-                <div className="card p-8 text-center">
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    No listings completed yet.
                   </p>
                 </div>
               )}
