@@ -14,6 +14,7 @@ type Task = {
   short_description: string | null;
   price: number;
   categories: string[] | null;
+  status?: string | null;
   created_at: string;
 };
 
@@ -57,7 +58,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   const { data: createdTasksData } = await supabase
     .from("tasks")
-    .select("id, title, short_description, price, categories, created_at")
+    .select("id, title, short_description, price, categories, status, created_at")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: false });
 

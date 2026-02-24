@@ -10,6 +10,7 @@ type Task = {
   short_description: string | null;
   price: number;
   categories: string[] | null;
+  status?: string | null;
   created_at: string;
 };
 
@@ -18,6 +19,7 @@ type SubmissionStatus =
   | "accepted"
   | "rejected"
   | "resubmission_requested"
+  | "resubmission"
   | "waiting_submission"
   | "cancelled"
   | string
@@ -193,7 +195,12 @@ export default function HubDashboard({
                 let statusClass =
                   "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase bg-[var(--bg-muted)] text-[var(--text-secondary)]";
 
-                if (totalSubs > 0) {
+                // If the task is awaiting funding, surface that explicitly.
+                if (task.status === "pending_payment") {
+                  statusLabel = "Pending payment";
+                  statusClass =
+                    "badge-warning inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase";
+                } else if (totalSubs > 0) {
                   if (isFinished) {
                     statusLabel = "Finished";
                     statusClass =

@@ -1,53 +1,64 @@
-"use client";
+import type { Listing } from "@/data/listings";
+import { createClient } from "@/lib/supabase/server";
+import HomeFeedClient from "@/components/HomeFeedClient";
 
-import { useMemo, useState } from "react";
-import Header from "@/components/Header";
-import CategoryFilters from "@/components/CategoryFilters";
-import ListingCard from "@/components/ListingCard";
-import { LISTINGS } from "@/data/listings";
+export default async function Home() {
+  const supabase = await createClient();
 
-export default function Home() {
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const filteredListings = useMemo(() => {
-    return LISTINGS.filter((listing) => {
-      const matchesCategory =
-        activeCategory === "All" || listing.categories.includes(activeCategory);
+  // If the user is logged in, fetch the tasks they have already activated
+  // so we can exclude them from the public feed.
+  let activatedTaskIds = new Set<number>();
 
-      const query = search.trim().toLowerCase();
-      const matchesSearch =
-        !query ||
-        listing.title.toLowerCase().includes(query) ||
-        listing.categories.some((c) => c.toLowerCase().includes(query)) ||
-        (listing.description && listing.description.toLowerCase().includes(query));
+  if (user) {
+    const { data: activations, error: activationsError } = await supabase
+      .from("task_activations")
+      .select("task_id")
+      .eq("user_id", user.id);
 
-      return matchesCategory && matchesSearch;
-    });
-  }, [search, activeCategory]);
+    if (activationsError) {
+      console.error("Error fetching user task activations", activationsError);
+    }
 
-  return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <main className="mx-auto max-w-7xl px-4 pt-2 pb-10 flex flex-col gap-4">
-        <CategoryFilters
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
-        />
+    if (activations) {
+      activatedTaskIds = new Set(
+        activations
+          .map((row: any) => row.task_id)
+          .filter((id: unknown): id is number => typeof id === "number"),
+      );
+    }
+  }
 
-        <section className="mt-6 flex-1">
-          <div className="flex items-center justify-between mb-6">
-            {filteredListings.length < 11 && <h2 className="text-sm font-semibold text-[var(--text-secondary)]">
-              {filteredListings.length} listing{filteredListings.length !== 1 && "s"} available
-            </h2>}
-          </div>
+  const { data, error } = await supabase
+    .from("tasks")
+    .select(
+      "id, user_id, title, categories, short_description, price, status, created_at",
+    )
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-            {filteredListings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
-        </section>
-      </main>
-    </div>
-  );
+  if (error) {
+    console.error("Error fetching tasks for home feed", error);
+  }
+
+  const listings: Listing[] = (data ?? [])
+    // Exclude tasks created by the current user and tasks they have activated.
+    .filter((task: any) => {
+      if (user && task.user_id === user.id) return false;
+      if (user && activatedTaskIds.has(task.id)) return false;
+      return true;
+    })
+    .map((task: any) => ({
+      id: task.id,
+      title: task.title,
+      categories: task.categories ?? [],
+      description: task.short_description ?? undefined,
+      price: task.price,
+      currency: "USD",
+    }));
+
+  return <HomeFeedClient listings={listings} />;
 }

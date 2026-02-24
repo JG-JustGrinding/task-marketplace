@@ -5,6 +5,7 @@ import ListingSubmissionsClient from "@/components/ListingSubmissionsClient";
 type TaskRow = {
     id: number;
     title: string | null;
+    status: string | null;
 };
 
 export default async function ListingSubmissionsPage({
@@ -21,7 +22,7 @@ export default async function ListingSubmissionsPage({
     const supabase = await createClient();
     const { data: task, error } = await supabase
         .from("tasks")
-        .select("id, title")
+        .select("id, title, status")
         .eq("id", numericId)
         .single<TaskRow>();
 
@@ -33,6 +34,7 @@ export default async function ListingSubmissionsPage({
         <ListingSubmissionsClient
             listingId={task.id}
             listingTitle={task.title}
+            isTaskAccepted={task.status === "task_accepted"}
         />
     );
 }

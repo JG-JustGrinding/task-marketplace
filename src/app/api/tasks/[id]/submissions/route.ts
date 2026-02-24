@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const STORAGE_BUCKET = "task-submissions";
+
 // Keep this in sync with other submission status usages in the app
 // (e.g. hub dashboard, task activations).
 type SubmissionStatus =
@@ -8,6 +10,7 @@ type SubmissionStatus =
   | "accepted"
   | "rejected"
   | "resubmission_requested"
+  | "resubmission"
   | "changes_requested"
   | "cancelled"
   | string
@@ -102,19 +105,60 @@ export async function GET(
       }
     }
 
-    const result = submissions.map((s: any) => {
+    const result: Array<{
+      id: number;
+      submitterName: string;
+      submittedAt: string;
+      demoUrl: string | null;
+      finalUrl: string | null;
+      note: string | null;
+      status: SubmissionStatus;
+    }> = [];
+
+    for (const s of submissions as any[]) {
       const profile = profilesById.get(s.user_id as string);
 
-      return {
+      const rawDemo = (s.demo_submission as string | null) ?? null;
+      const rawFinal = (s.final_submission as string | null) ?? null;
+
+      const resolveUrl = async (value: string | null) => {
+        if (!value) return null;
+
+        // If the value looks like an absolute URL (e.g. external link),
+        // return it as-is. Otherwise, treat it as a Storage object path
+        // and create a short-lived signed URL from the private bucket.
+        if (/^https?:\/\//i.test(value)) {
+          return value;
+        }
+
+        const { data, error } = await supabase.storage
+          .from(STORAGE_BUCKET)
+          .createSignedUrl(value, 60 * 60); // 1 hour
+
+        if (error) {
+          console.error(
+            "Error creating signed URL for submission object",
+            { value, error },
+          );
+          return null;
+        }
+
+        return data?.signedUrl ?? null;
+      };
+
+      const demoUrl = await resolveUrl(rawDemo);
+      const finalUrl = await resolveUrl(rawFinal);
+
+      result.push({
         id: s.id as number,
         submitterName: profile?.username || "Marketplace user",
         submittedAt: s.created_at as string,
-        demoUrl: (s.demo_submission as string | null) ?? null,
-        finalUrl: (s.final_submission as string | null) ?? null,
+        demoUrl,
+        finalUrl,
         note: (s.note as string | null) ?? null,
         status: (s.status as SubmissionStatus) ?? "pending",
-      };
-    });
+      });
+    }
 
     return NextResponse.json({ submissions: result }, { status: 200 });
   } catch (error) {

@@ -20,6 +20,7 @@ type TaskRow = {
     technical_requirements: string | null;
     references: ReferenceItem[] | null;
     price: number;
+    status: string | null;
 };
 
 export default async function ListingPage({
@@ -41,7 +42,7 @@ export default async function ListingPage({
     const { data, error } = await supabase
         .from("tasks")
         .select(
-            "id, user_id, title, categories, short_description, need_details, technical_requirements, references, price",
+            "id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status",
         )
         .eq("id", numericId)
         .single<TaskRow>();
@@ -88,6 +89,9 @@ export default async function ListingPage({
     let wasCancelled = false;
     let submissionRejected = false;
     let taskTaken = false;
+    let isResubmission = false;
+    const taskAccepted = !!data && data.status === "task_accepted";
+    const taskUnavailable = !!data && data.status === "pending_payment";
 
     if (user && data) {
         const { data: activation } = await supabase
@@ -103,18 +107,22 @@ export default async function ListingPage({
             submissionPending = status === "pending";
             wasCancelled = status === "cancelled";
             submissionRejected = status === "rejected";
+            isResubmission = status === "resubmission";
         }
 
         // Check if any other user has an active (non-cancelled) activation for this task.
+        /*
         const { data: otherActivation } = await supabase
             .from("task_activations")
             .select("id")
             .eq("task_id", data.id)
             .neq("user_id", user.id)
             .not("status", "eq", "cancelled")
+            .not("status", "eq", "rejected")
             .maybeSingle();
 
         taskTaken = !!otherActivation;
+        */
     }
 
     return (
@@ -127,6 +135,9 @@ export default async function ListingPage({
             wasCancelled={wasCancelled}
             submissionRejected={submissionRejected}
             taskTaken={taskTaken}
+            isResubmission={isResubmission}
+            taskAccepted={taskAccepted}
+            taskUnavailable={taskUnavailable}
         />
     );
 }

@@ -12,7 +12,7 @@ async function uploadToStorage(
   if (file.size > MAX_FILE_BYTES) {
     return {
       error: `File size must be <= 30MB (got ${(file.size / (1024 * 1024)).toFixed(1)}MB)`,
-      url: null as string | null,
+      path: null as string | null,
     };
   }
 
@@ -32,25 +32,14 @@ async function uploadToStorage(
   if (uploadError || !uploadData?.path) {
     return {
       error: uploadError?.message || "Failed to upload file",
-      url: null as string | null,
+      path: null as string | null,
     };
   }
 
-  const { data: publicUrlData } = supabase
-    .storage
-    .from(STORAGE_BUCKET)
-    .getPublicUrl(uploadData.path);
-
-  const publicUrl = publicUrlData?.publicUrl ?? null;
-
-  if (!publicUrl) {
-    return {
-      error: "Failed to generate public URL for uploaded file",
-      url: null as string | null,
-    };
-  }
-
-  return { error: null as string | null, url: publicUrl };
+  // For a private bucket we only store the object path. Later,
+  // API routes create short-lived signed URLs when returning data
+  // to the client.
+  return { error: null as string | null, path: uploadData.path as string };
 }
 
 export async function POST(request: Request) {
@@ -84,6 +73,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    // Determine whether this submission is a resubmission based on the
+    // current activation status for this user & task.
+    const { data: activation, error: activationFetchError } = await supabase
+      .from("task_activations")
+      .select("id, status")
+      .eq("user_id", user.id)
+      .eq("task_id", taskId)
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (activationFetchError) {
+      console.error("Error fetching task activation for submission", activationFetchError);
+    }
+
+    const isResubmission = activation?.status === "resubmission_requested";
+
     const demoFile = demoFileRaw instanceof File ? demoFileRaw : null;
     const finalFile = finalFileRaw instanceof File ? finalFileRaw : null;
     const demoLink =
@@ -103,35 +109,39 @@ export async function POST(request: Request) {
       );
     }
 
+    // These values may be either a Supabase Storage object path
+    // (for uploaded files) or an external URL (for link-based
+    // submissions). Downstream readers decide whether to sign or
+    // use the value directly based on its shape.
     let demoSubmissionUrl: string | null = null;
     let finalSubmissionUrl: string | null = null;
 
     const basePrefix = `${user.id}/${taskId}`;
 
     if (demoFile) {
-      const { error, url } = await uploadToStorage(
+      const { error, path } = await uploadToStorage(
         supabase,
         demoFile,
         `${basePrefix}/demo`,
       );
-      if (error || !url) {
+      if (error || !path) {
         return NextResponse.json({ error }, { status: 400 });
       }
-      demoSubmissionUrl = url;
+      demoSubmissionUrl = path;
     } else if (demoLink) {
       demoSubmissionUrl = demoLink;
     }
 
     if (finalFile) {
-      const { error, url } = await uploadToStorage(
+      const { error, path } = await uploadToStorage(
         supabase,
         finalFile,
         `${basePrefix}/final`,
       );
-      if (error || !url) {
+      if (error || !path) {
         return NextResponse.json({ error }, { status: 400 });
       }
-      finalSubmissionUrl = url;
+      finalSubmissionUrl = path;
     } else if (finalLink) {
       finalSubmissionUrl = finalLink;
     }
@@ -143,38 +153,128 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: submission, error: insertError } = await supabase
-      .from("task_submissions")
-      .insert({
-        task_id: taskId,
-        user_id: user.id,
-        demo_submission: demoSubmissionUrl,
-        final_submission: finalSubmissionUrl,
-        note,
-      })
-      .select()
-      .single();
+    let submission;
 
-    if (insertError) {
-      console.error("Error inserting task_submissions row", insertError);
-      return NextResponse.json(
-        { error: "Failed to save submission" },
-        { status: 500 },
-      );
-    }
+    if (isResubmission) {
+      // For resubmissions, update the most recent submission row for this
+      // user/task instead of inserting a brand new row. This keeps the
+      // creator and submitter views in sync and avoids duplicate entries.
+      const { data: existingSubmission, error: existingError } = await supabase
+        .from("task_submissions")
+        .select("id")
+        .eq("task_id", taskId)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    const { error: activationError } = await supabase
-      .from("task_activations")
-      .update({ status: "pending" })
-      .eq("user_id", user.id)
-      .eq("task_id", taskId);
+      if (existingError) {
+        console.error("Error fetching existing submission for resubmission", existingError);
+      }
 
-    if (activationError) {
-      console.error("Error updating task_activations status to pending", activationError);
-      return NextResponse.json(
-        { error: "Submission saved but failed to update activation status" },
-        { status: 500 },
-      );
+      if (existingSubmission) {
+        const { data: updated, error: updateError } = await supabase
+          .from("task_submissions")
+          .update({
+            demo_submission: demoSubmissionUrl,
+            final_submission: finalSubmissionUrl,
+            note,
+            status: "resubmission",
+          })
+          .eq("id", existingSubmission.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error("Error updating existing task_submissions row for resubmission", updateError);
+          return NextResponse.json(
+            { error: "Failed to save resubmission" },
+            { status: 500 },
+          );
+        }
+
+        submission = updated;
+      } else {
+        // Fallback: if we couldn't find an existing row, create one but
+        // mark it explicitly as a resubmission.
+        const { data: inserted, error: insertError } = await supabase
+          .from("task_submissions")
+          .insert({
+            task_id: taskId,
+            user_id: user.id,
+            demo_submission: demoSubmissionUrl,
+            final_submission: finalSubmissionUrl,
+            note,
+            status: "resubmission",
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error("Error inserting task_submissions row for resubmission", insertError);
+          return NextResponse.json(
+            { error: "Failed to save resubmission" },
+            { status: 500 },
+          );
+        }
+
+        submission = inserted;
+      }
+
+      const { error: activationError } = await supabase
+        .from("task_activations")
+        .update({ status: "resubmission", resubmission_message: null })
+        .eq("user_id", user.id)
+        .eq("task_id", taskId);
+
+      if (activationError) {
+        console.error(
+          "Error updating task_activations status to resubmission",
+          activationError,
+        );
+        return NextResponse.json(
+          { error: "Resubmission saved but failed to update activation status" },
+          { status: 500 },
+        );
+      }
+    } else {
+      // First-time submissions: insert a new row and mark the activation
+      // as pending review.
+      const { data: inserted, error: insertError } = await supabase
+        .from("task_submissions")
+        .insert({
+          task_id: taskId,
+          user_id: user.id,
+          demo_submission: demoSubmissionUrl,
+          final_submission: finalSubmissionUrl,
+          note,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Error inserting task_submissions row", insertError);
+        return NextResponse.json(
+          { error: "Failed to save submission" },
+          { status: 500 },
+        );
+      }
+
+      submission = inserted;
+
+      const { error: activationError } = await supabase
+        .from("task_activations")
+        .update({ status: "pending" })
+        .eq("user_id", user.id)
+        .eq("task_id", taskId);
+
+      if (activationError) {
+        console.error("Error updating task_activations status to pending", activationError);
+        return NextResponse.json(
+          { error: "Submission saved but failed to update activation status" },
+          { status: 500 },
+        );
+      }
     }
 
     return NextResponse.json({ submission }, { status: 201 });

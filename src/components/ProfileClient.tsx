@@ -11,6 +11,7 @@ type Task = {
   short_description: string | null;
   price: number;
   categories: string[] | null;
+  status?: string | null;
 };
 
 interface ProfileClientProps {
@@ -36,6 +37,7 @@ export default function ProfileClient({
     categories: task.categories ?? [],
     description: task.short_description ?? undefined,
     price: task.price,
+    status: task.status,
   }));
 
   return (
@@ -122,7 +124,11 @@ export default function ProfileClient({
               {createdListings.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {createdListings.map((listing) => (
-                    <ListingCard key={listing.id} listing={listing} />
+                    <ListingCard
+                      key={listing.id}
+                      listing={listing}
+                      showStatus={isCurrentUser}
+                    />
                   ))}
                 </div>
               ) : (

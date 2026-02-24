@@ -6,15 +6,20 @@ interface Listing {
   price: number;
   currency?: string;
   images?: string[];
+  status?: string | null;
 }
 
 interface ListingCardProps {
   listing: Listing;
+  showStatus?: boolean;
 }
 
-export default function ListingCard({ listing }: ListingCardProps) {
-  const { title, categories, description, price, currency = "USD" } = listing;
+export default function ListingCard({ listing, showStatus = false }: ListingCardProps) {
+  const { title, categories, description, price, currency = "USD", status } = listing;
   const thumbnail = listing.images?.[0] || "https://placehold.co/600x340/e5e7eb/6b7280?text=Task+Preview";
+
+  const isPendingPayment = showStatus && status === "pending_payment";
+  const isFinished = showStatus && status === "task_accepted";
 
   return (
     <article className="card flex flex-col overflow-hidden hover:shadow-lg transition-shadow duration-200 min-h-[400px]">
@@ -24,6 +29,17 @@ export default function ListingCard({ listing }: ListingCardProps) {
       <div className="flex flex-col flex-1 p-5">
         {/* Categories */}
         <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          {showStatus && (isFinished || isPendingPayment) && (
+            <span
+              className={`${
+                isFinished
+                  ? "badge-success"
+                  : "badge-warning"
+              } inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.7rem] font-semibold tracking-wide uppercase`}
+            >
+              {isFinished ? "Finished" : "Pending payment"}
+            </span>
+          )}
           {categories.slice(0, 3).map((cat) => (
             <span
               key={cat}
@@ -47,22 +63,24 @@ export default function ListingCard({ listing }: ListingCardProps) {
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-[var(--border-color)] mt-auto">
-          <div>
-            <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-1">
-              <b>{process.env.NEXT_PUBLIC_REWARD_TITLE}</b>
-            </span>
-            <span className="text-xl font-bold text-[var(--text-primary)]">
-              {currency === "USD" ? "$" : ""}
-              {price.toLocaleString()}
-            </span>
+        <div className="flex flex-col gap-2 pt-3 border-t border-[var(--border-color)] mt-auto">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-1">
+                <b>{process.env.NEXT_PUBLIC_REWARD_TITLE}</b>
+              </span>
+              <span className="text-xl font-bold text-[var(--text-primary)]">
+                {currency === "USD" ? "$" : ""}
+                {price.toLocaleString()}
+              </span>
+            </div>
+            <a
+              href={`/listing/${listing.id}`}
+              className="button px-4 py-2 text-sm font-semibold rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)] transition-colors"
+            >
+              View
+            </a>
           </div>
-          <a
-            href={`/listing/${listing.id}`}
-            className="button px-4 py-2 text-sm font-semibold rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)] transition-colors"
-          >
-            View
-          </a>
         </div>
       </div>
     </article>

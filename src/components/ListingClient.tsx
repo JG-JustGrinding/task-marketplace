@@ -18,6 +18,9 @@ type ListingClientProps = {
     wasCancelled?: boolean;
     submissionRejected?: boolean;
     taskTaken?: boolean;
+    isResubmission?: boolean;
+    taskAccepted?: boolean;
+    taskUnavailable?: boolean;
 };
 
 export default function ListingClient({
@@ -29,6 +32,9 @@ export default function ListingClient({
     wasCancelled = false,
     submissionRejected = false,
     taskTaken = false,
+    isResubmission = false,
+    taskAccepted = false,
+    taskUnavailable = false,
 }: ListingClientProps) {
     const [activeImage, setActiveImage] = useState<string | null>(null);
     const [showStartConfirm, setShowStartConfirm] = useState(false);
@@ -206,8 +212,17 @@ export default function ListingClient({
                         <p className="text-xs text-[var(--text-secondary)]">
                             {isPoster
                                 ? "This is the reward you have set for an accepted submission."
-                                : `This is the reward the poster is offering for completing the task.`}
+                                : `This is the reward the poster is offering for the accepted task. You will only receive this reward if your submission is accepted by the poster after submitting.`}
                         </p>
+
+                        {isPoster && !taskAccepted && !taskUnavailable && (
+                            <Link
+                                href={`/listing/${listing.id}/submissions`}
+                                className="bold inline-block text-xs font-medium text-[var(--accent-primary)] hover:underline"
+                            >
+                                View submissions
+                            </Link>
+                        )}
 
                         {false && startedCount > 0 && !taskTaken && (
                             <p className="text-xs text-[var(--text-secondary)]">
@@ -217,26 +232,61 @@ export default function ListingClient({
                             </p>
                         )}
 
-                        {!isPoster && !removeActions && (
-                            <>
-                                {!hasUserStarted && !taskTaken && (
-                                    <button
-                                        type="button"
-                                        className="w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]"
-                                        onClick={() => setShowStartConfirm(true)}
-                                    >
-                                        Start task
-                                    </button>
+                        {taskUnavailable && (
+                            <div className="space-y-2">
+                                {!isPoster && (
+                                    <div className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[var(--bg-muted)] text-[var(--text-secondary)] text-center border border-[var(--border-color)]">
+                                        Task unavailable
+                                    </div>
                                 )}
+                                {isPoster && (
+                                    <>
+                                    <p className="bold text-xs text-[var(--text-secondary)] text-center">
+                                        This task is currently unavailable because it hasn&apos;t been funded yet.
+                                    </p>
+                                    <Link
+                                        href="/account"
+                                        className="bold block w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white text-center hover:bg-[var(--accent-hover)]"
+                                    >
+                                        Fund task
+                                    </Link>
+                                    </>
+                                )}
+                            </div>
+                        )}
 
-                                {hasUserStarted && (
+                        {taskAccepted && (
+                            <div className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[var(--bg-muted)] text-[var(--text-secondary)] text-center border border-[var(--border-color)]">
+                                Task finished
+                            </div>
+                        )}
+
+                        {!isPoster && !removeActions && !taskAccepted && !taskUnavailable && (
+                            <>
+                                {!hasUserStarted ? (
+                                    taskTaken ? (
+                                        <div className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[var(--bg-muted)] text-[var(--text-secondary)] text-center border border-[var(--border-color)]">
+                                            Task taken
+                                        </div>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            className="w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]"
+                                            onClick={() => setShowStartConfirm(true)}
+                                        >
+                                            Start task
+                                        </button>
+                                    )
+                                ) : (
                                     <div className="flex gap-2">
-                                        {submissionPending || wasCancelled || submissionRejected || taskTaken ? (
+                                        {submissionPending || wasCancelled || submissionRejected || taskTaken || isResubmission ? (
                                             <div className="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-[var(--bg-muted)] text-[var(--text-secondary)] text-center border border-[var(--border-color)]">
                                                 {taskTaken
                                                     ? "Task taken"
                                                     : submissionPending
                                                     ? "Submission pending"
+                                                    : isResubmission
+                                                    ? "Pending (resubmission)"
                                                     : wasCancelled
                                                     ? "Task cancelled"
                                                     : submissionRejected

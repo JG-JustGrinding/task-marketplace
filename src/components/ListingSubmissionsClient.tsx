@@ -8,6 +8,7 @@ type SubmissionStatus =
   | "accepted"
   | "rejected"
   | "resubmission_requested"
+  | "resubmission"
   | "changes_requested"
   | "cancelled"
   | string
@@ -38,6 +39,7 @@ function formatDate(dateString: string) {
 function statusLabel(status: SubmissionStatus) {
   if (status === "accepted") return "Accepted";
   if (status === "rejected") return "Rejected";
+  if (status === "resubmission") return "Pending (resubmission)";
   if (status === "changes_requested" || status === "resubmission_requested") {
     return "Awaiting resubmission";
   }
@@ -47,11 +49,13 @@ function statusLabel(status: SubmissionStatus) {
 type ListingSubmissionsClientProps = {
   listingId: number;
   listingTitle: string | null;
+  isTaskAccepted?: boolean;
 };
 
 export default function ListingSubmissionsClient({
   listingId,
   listingTitle,
+  isTaskAccepted = false,
 }: ListingSubmissionsClientProps) {
   const [submissions, setSubmissions] = useState<ListingSubmission[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -63,6 +67,9 @@ export default function ListingSubmissionsClient({
   const [requestNote, setRequestNote] = useState<string>("");
   const [isRequesting, setIsRequesting] = useState<boolean>(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [acceptingId, setAcceptingId] = useState<number | null>(null);
+  const [isAccepting, setIsAccepting] = useState<boolean>(false);
+  const [acceptError, setAcceptError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -118,6 +125,47 @@ export default function ListingSubmissionsClient({
     setRequestError(null);
     setRequestNote("");
     setRequestingId(submissionId);
+  };
+
+  const handleOpenAcceptConfirm = (submissionId: number) => {
+    setAcceptError(null);
+    setAcceptingId(submissionId);
+  };
+
+  const handleConfirmAccept = async () => {
+    if (acceptingId == null) return;
+
+    setIsAccepting(true);
+    setAcceptError(null);
+
+    try {
+      const res = await fetch("/api/tasks/accept-submission", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          taskId: Number(listingId),
+          submissionId: acceptingId,
+        }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error((body as any).error || "Failed to accept submission");
+      }
+
+      // Reload the page so the accepted state and disabled actions
+      // are fully reflected from the server.
+      window.location.reload();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to accept submission";
+      setAcceptError(message);
+    } finally {
+      setIsAccepting(false);
+    }
   };
 
   const handleConfirmRequestChanges = async () => {
@@ -200,6 +248,11 @@ export default function ListingSubmissionsClient({
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             Review submissions for <strong>{listingTitle ?? `listing #${listingId}`}</strong>.
           </p>
+          {isTaskAccepted && (
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              This task has been accepted. No further changes can be made.
+            </p>
+          )}
         </div>
         <Link
           href={`/listing/${listingId}`}
@@ -224,12 +277,21 @@ export default function ListingSubmissionsClient({
         )}
 
         {submissions.map((submission) => {
-          const primaryUrl = submission.demoUrl || submission.finalUrl;
-          const primaryLabel = submission.demoUrl
+          const hasFinal = !!submission.finalUrl;
+          const isAccepted = submission.status === "accepted";
+
+          const primaryUrl = isAccepted && hasFinal
+            ? submission.finalUrl
+            : submission.demoUrl || submission.finalUrl;
+
+          const primaryLabel = isAccepted && hasFinal
+            ? "Final submission"
+            : submission.demoUrl
             ? "Demo submission"
             : "Final submission";
 
           const actionsDisabled =
+            isTaskAccepted ||
             submission.status === "rejected" ||
             submission.status === "resubmission_requested" ||
             submission.status === "changes_requested";
@@ -269,6 +331,18 @@ export default function ListingSubmissionsClient({
                   >
                     Open submission
                   </a>
+                  {isAccepted && submission.demoUrl && submission.finalUrl && (
+                    <p className="mt-1 text-[0.65rem] text-[var(--text-muted)]">
+                      <a
+                        href={submission.demoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline-offset-2 hover:underline"
+                      >
+                        View demo version
+                      </a>
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -300,7 +374,7 @@ export default function ListingSubmissionsClient({
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleUpdateStatus(submission.id, "accepted")}
+                    onClick={() => handleOpenAcceptConfirm(submission.id)}
                     className="inline-flex items-center justify-center rounded-full bg-[var(--accent-primary)] px-3 py-1 text-xs font-medium text-white hover:bg-[var(--accent-hover)]"
                   >
                     Accept submission
@@ -354,6 +428,53 @@ export default function ListingSubmissionsClient({
                 className="rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-70"
               >
                 {isRejecting ? "Rejecting..." : "Yes, reject submission"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {acceptingId !== null && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
+          onClick={() => {
+            if (!isAccepting) setAcceptingId(null);
+          }}
+        >
+          <div
+            className="relative w-full max-w-md rounded-xl bg-[var(--bg-secondary)] p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="accept-submission-title"
+          >
+            <h2
+              id="accept-submission-title"
+              className="text-base font-semibold text-[var(--text-primary)]"
+            >
+              Accept this submission?
+            </h2>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              This action cannot be undone. You will get the submission's final file/link (if applicable) and the submitter will receive the reward for this task. All other pending submissions for this task will be automatically rejected.
+            </p>
+            {acceptError && (
+              <p className="mt-2 text-xs text-[var(--danger)]">{acceptError}</p>
+            )}
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setAcceptingId(null)}
+                disabled={isAccepting}
+                className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] disabled:opacity-70"
+              >
+                Go back
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAccept}
+                disabled={isAccepting}
+                className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--accent-hover)] disabled:opacity-70"
+              >
+                {isAccepting ? "Accepting..." : "Yes, accept submission"}
               </button>
             </div>
           </div>

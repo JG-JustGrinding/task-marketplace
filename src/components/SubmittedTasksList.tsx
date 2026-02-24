@@ -8,6 +8,7 @@ type SubmissionStatus =
   | "accepted"
   | "rejected"
   | "resubmission_requested"
+  | "resubmission"
   | "waiting_submission"
   | "cancelled"
   | string
@@ -69,6 +70,13 @@ function statusBadge(status: SubmissionStatus) {
     return {
       label: "Cancelled",
       className: `${base} badge-danger`,
+    };
+  }
+
+  if (status === "resubmission") {
+    return {
+      label: "Pending (resubmission)",
+      className: `${base} badge-warning`,
     };
   }
 
@@ -142,6 +150,7 @@ export default function SubmittedTasksList({
         const isCancelled = submission.status === "cancelled";
         const isResubmissionRequested =
           submission.status === "resubmission_requested";
+        const isResubmission = submission.status === "resubmission";
         const isAccepted = submission.status === "accepted";
         const isPending = submission.status === "pending";
         const showDetails = expandedDetailsId === submission.id;
@@ -226,7 +235,7 @@ export default function SubmittedTasksList({
                   !isCancelled &&
                   !isResubmissionRequested && (
                   <>
-                    {!isPending && (
+                    {!isPending && !isResubmission && (
                       <Link
                         href={`/listing/${task.id}/submit`}
                         className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
