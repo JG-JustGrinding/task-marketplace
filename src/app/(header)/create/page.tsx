@@ -174,6 +174,7 @@ export default function CreateTaskPage() {
 			setSubmitSuccess(false);
 			setSubmitError(null);
 
+			// First, create the task
 			const response = await fetch("/api/tasks/create", {
 				method: "POST",
 				headers: {
@@ -205,8 +206,6 @@ export default function CreateTaskPage() {
 				return;
 			}
 
-			setSubmitSuccess(true);
-
 			const taskId = json?.task?.id as string | number | undefined;
 			if (!taskId) {
 				setSubmitError(
@@ -215,7 +214,46 @@ export default function CreateTaskPage() {
 				return;
 			}
 
-			router.push(`/listing/${taskId}`);
+			// Task created successfully, now create a Stripe Checkout session
+			try {
+				const checkoutResponse = await fetch("/api/tasks/create-checkout", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						amount: priceValue,
+						taskId,
+					}),
+				});
+
+				let checkoutJson: any = null;
+				try {
+					checkoutJson = await checkoutResponse.json();
+				} catch {
+					checkoutJson = null;
+				}
+
+				if (!checkoutResponse.ok || !checkoutJson?.url) {
+					setSubmitError(
+						"Your task was created but there was an issue starting checkout. Please try again from your task page.",
+					);
+					// Fallback: send the user to the listing page
+					router.push(`/listing/${taskId}`);
+					return;
+				}
+
+				setSubmitSuccess(true);
+
+				// Redirect to Stripe Checkout
+				window.location.href = checkoutJson.url as string;
+			} catch (error) {
+				setSubmitError(
+					"Your task was created but we couldn't start checkout. Please try again from your task page.",
+				);
+				// Fallback: send the user to the listing page
+				router.push(`/listing/${taskId}`);
+			}
 		} catch (error) {
 			setSubmitError(
 				"Something went wrong while posting your task. Please try again.",
