@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CATEGORY_OPTIONS } from "@/lib/categories";
+import { createClient } from "@/lib/supabase/client";
 
 type StepKey = "details" | "requirements" | "price" | "review";
 
@@ -42,22 +43,77 @@ const INITIAL_STATE: TaskFormState = {
 	price: "",
 };
 
+const DRAFT_STORAGE_KEY = "create_task_draft_v1";
+
+const supabase = createClient();
+
 export default function CreateTaskPage() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const [stepIndex, setStepIndex] = useState(0);
 	const [form, setForm] = useState<TaskFormState>(INITIAL_STATE);
 	const [touched, setTouched] = useState<Record<string, boolean>>({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [submitSuccess, setSubmitSuccess] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [authModalOpen, setAuthModalOpen] = useState(false);
+	const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+	const [loginEmail, setLoginEmail] = useState("");
+	const [loginPassword, setLoginPassword] = useState("");
+	const [signupDisplayName, setSignupDisplayName] = useState("");
+	const [signupEmail, setSignupEmail] = useState("");
+	const [signupPassword, setSignupPassword] = useState("");
+	const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
+	const [authError, setAuthError] = useState<string | null>(null);
+	const [authLoading, setAuthLoading] = useState(false);
 
 	const currentStep = STEPS[stepIndex];
+
+	const rawPayment = searchParams.get("payment");
+	const paymentStatus: "success" | "cancel" | null =
+		rawPayment === "success" || rawPayment === "cancel" ? rawPayment : null;
 
 	const priceValue = useMemo(() => {
 		const n = Number(form.price.replace(/[^0-9.]/g, ""));
 		if (Number.isNaN(n)) return 0;
 		return n;
 	}, [form.price]);
+
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		try {
+			const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+			if (!raw) return;
+			const parsed = JSON.parse(raw) as {
+				form?: Partial<TaskFormState>;
+				stepIndex?: number;
+			} | null;
+			if (!parsed || !parsed.form) return;
+			setForm((prev) => ({ ...prev, ...parsed.form }));
+			if (
+				typeof parsed.stepIndex === "number" &&
+				parsed.stepIndex >= 0 &&
+				parsed.stepIndex < STEPS.length
+			) {
+				setStepIndex(parsed.stepIndex);
+			}
+		} catch {
+			// ignore draft load errors
+		}
+	}, []);
+
+	const saveDraft = () => {
+		if (typeof window === "undefined") return;
+		try {
+			const payload = JSON.stringify({
+				form,
+				stepIndex,
+			});
+			window.localStorage.setItem(DRAFT_STORAGE_KEY, payload);
+		} catch {
+			// ignore draft save errors
+		}
+	};
 
 	const basicErrors = useMemo(() => {
 		const errors: Record<string, string> = {};
@@ -174,6 +230,19 @@ export default function CreateTaskPage() {
 			setSubmitSuccess(false);
 			setSubmitError(null);
 
+			// Ensure user is authenticated before creating a task
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
+			if (!user) {
+				// Save current form so we can restore after login/signup
+				saveDraft();
+				setAuthError(null);
+				setAuthMode("login");
+				setAuthModalOpen(true);
+				return;
+			}
+
 			// First, create the task
 			const response = await fetch("/api/tasks/create", {
 				method: "POST",
@@ -198,6 +267,14 @@ export default function CreateTaskPage() {
 				json = null;
 			}
 
+			if (response.status === 401) {
+				// Session expired or user not logged in
+				saveDraft();
+				setAuthError(null);
+				setAuthMode("login");
+				setAuthModalOpen(true);
+				return;
+			}
 			if (!response.ok) {
 				const message =
 					(json && (json.error as string)) ||
@@ -224,6 +301,7 @@ export default function CreateTaskPage() {
 					body: JSON.stringify({
 						amount: priceValue,
 						taskId,
+						source: "create" as const,
 					}),
 				});
 
@@ -244,6 +322,9 @@ export default function CreateTaskPage() {
 				}
 
 				setSubmitSuccess(true);
+				if (typeof window !== "undefined") {
+					window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+				}
 
 				// Redirect to Stripe Checkout
 				window.location.href = checkoutJson.url as string;
@@ -260,6 +341,88 @@ export default function CreateTaskPage() {
 			);
 		} finally {
 			setIsSubmitting(false);
+		}
+	};
+
+	const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		setAuthError(null);
+		setAuthLoading(true);
+		try {
+			const { error } = await supabase.auth.signInWithPassword({
+				email: loginEmail,
+				password: loginPassword,
+			});
+			if (error) {
+				if (
+					error.message.includes("Invalid login credentials") ||
+					error.message.includes("invalid credentials")
+				) {
+					setAuthError("Invalid email or password");
+				} else {
+					setAuthError("An error occurred. Please try again.");
+				}
+				return;
+			}
+			// Reload page so server layout picks up session; draft is already saved
+			if (typeof window !== "undefined") {
+				window.location.reload();
+			}
+		} catch {
+			setAuthError("An error occurred. Please try again.");
+		} finally {
+			setAuthLoading(false);
+		}
+	};
+
+	const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		setAuthError(null);
+		if (signupPassword !== signupConfirmPassword) {
+			setAuthError("Passwords do not match");
+			return;
+		}
+		if (signupPassword.length < 8) {
+			setAuthError("Password must be at least 8 characters");
+			return;
+		}
+		setAuthLoading(true);
+		try {
+			const { error } = await supabase.auth.signUp({
+				email: signupEmail,
+				password: signupPassword,
+				options: {
+					data: {
+						display_name: signupDisplayName,
+					},
+				},
+			});
+			if (error) {
+				if (
+					error.message.includes("already registered") ||
+					error.message.includes("User already exists")
+				) {
+					setAuthError("Email already in use");
+				} else if (
+					error.message.includes("Invalid email") ||
+					error.message.includes("invalid email")
+				) {
+					setAuthError("Please enter a valid email address");
+				} else if (error.message.includes("rate limit exceeded")) {
+					setAuthError("Too many requests. Please try again later.");
+				} else {
+					setAuthError("An error occurred. Please try again.");
+				}
+				return;
+			}
+			// After successful signup, reload so session + profile propagate
+			if (typeof window !== "undefined") {
+				window.location.reload();
+			}
+		} catch {
+			setAuthError("An error occurred. Please try again.");
+		} finally {
+			setAuthLoading(false);
 		}
 	};
 
@@ -676,6 +839,20 @@ export default function CreateTaskPage() {
 	return (
 		<main className="min-h-[calc(100vh-4rem)] bg-[var(--bg-primary)]/40 px-4 py-8 text-sm text-[var(--text-primary)]">
 			<div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+				{paymentStatus && (
+					<div
+						className={`rounded-xl border px-4 py-3 text-xs shadow-sm ${
+							paymentStatus === "success"
+								? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-900/40 dark:text-emerald-100"
+								: "border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-900/40 dark:text-red-100"
+						}`}
+					>
+						{paymentStatus === "success"
+							? "Your Stripe payment completed. Your task will update once payment is confirmed."
+							: "Stripe checkout was cancelled. You can fund this task later from its listing page."}
+					</div>
+				)}
+
 				{/* Step indicator */}
 				<nav
 					aria-label="Task creation progress"
@@ -818,6 +995,204 @@ export default function CreateTaskPage() {
 					</div>
 				</section>
 			</div>
+
+			{authModalOpen && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+					<div
+						className="w-full max-w-md rounded-2xl border bg-white/95 p-8 shadow-md backdrop-blur-sm card"
+						style={{
+							backgroundColor: "var(--bg-secondary)",
+							borderColor: "var(--border-color)",
+							boxShadow: "var(--shadow-soft)",
+						}}
+					>
+						<div
+							className="mb-6 text-center"
+							aria-label="Task marketplace logo"
+						>
+							<span className="inline-flex items-baseline gap-1.5 text-xl font-bold tracking-tight title-font">
+								<span>{process.env.NEXT_PUBLIC_SITE_NAME}</span>
+							</span>
+							<p className="mt-1 text-xs uppercase tracking-[0.2em] body-font">
+								{process.env.NEXT_PUBLIC_SITE_SLOGAN}
+							</p>
+						</div>
+						<div className="mb-4 flex items-center justify-between">
+							<h2 className="text-base font-semibold title-font">
+								Sign in to continue
+							</h2>
+							<button
+								type="button"
+								onClick={() => setAuthModalOpen(false)}
+								className="text-xs body-font text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+							>
+								Close
+							</button>
+						</div>
+							<p className="mb-4 text-[11px] body-font text-[var(--text-secondary)]">
+								Your task draft is saved and will be restored after you log in or sign up
+							</p>
+						<div className="mb-4 flex gap-2 text-xs font-medium body-font">
+							<button
+								type="button"
+								onClick={() => {
+									setAuthMode("login");
+									setAuthError(null);
+								}}
+								className={`flex-1 rounded-lg px-3 py-1.5 ${
+									authMode === "login"
+										? "bg-indigo-600 text-white"
+										: "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
+								}`}
+							>
+								Log in
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									setAuthMode("signup");
+									setAuthError(null);
+							}}
+								className={`flex-1 rounded-lg px-3 py-1.5 ${
+									authMode === "signup"
+										? "bg-indigo-600 text-white"
+										: "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
+								}`}
+							>
+								Sign up
+							</button>
+						</div>
+						{authError && (
+							<div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+								{authError}
+							</div>
+						)}
+						{authMode === "login" ? (
+							<form className="space-y-3" onSubmit={handleLogin}>
+								<div className="space-y-1">
+									<label className="text-xs font-medium" htmlFor="auth-login-email">
+										Email
+									</label>
+									<input
+										id="auth-login-email"
+										type="email"
+										required
+										value={loginEmail}
+										onChange={(e) => {
+											setLoginEmail(e.target.value);
+											setAuthError(null);
+										}}
+										disabled={authLoading}
+										className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+									/>
+								</div>
+								<div className="space-y-1">
+									<label className="text-xs font-medium" htmlFor="auth-login-password">
+										Password
+									</label>
+									<input
+										id="auth-login-password"
+										type="password"
+										required
+										value={loginPassword}
+										onChange={(e) => {
+											setLoginPassword(e.target.value);
+											setAuthError(null);
+										}}
+										disabled={authLoading}
+										className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+									/>
+								</div>
+								<button
+										type="submit"
+										disabled={authLoading}
+										className="mt-2 w-full rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-400/70"
+									>
+										{authLoading ? "Logging in..." : "Log in"}
+									</button>
+							</form>
+						) : (
+							<form className="space-y-3" onSubmit={handleSignup}>
+								<div className="space-y-1">
+									<label className="text-xs font-medium" htmlFor="auth-signup-name">
+										Username
+									</label>
+									<input
+										id="auth-signup-name"
+										type="text"
+										required
+										value={signupDisplayName}
+										onChange={(e) => {
+											setSignupDisplayName(e.target.value);
+											setAuthError(null);
+										}}
+										disabled={authLoading}
+										className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+									/>
+								</div>
+								<div className="space-y-1">
+									<label className="text-xs font-medium" htmlFor="auth-signup-email">
+										Email
+									</label>
+									<input
+										id="auth-signup-email"
+										type="email"
+										required
+										value={signupEmail}
+										onChange={(e) => {
+											setSignupEmail(e.target.value);
+											setAuthError(null);
+										}}
+										disabled={authLoading}
+										className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+									/>
+								</div>
+								<div className="space-y-1">
+									<label className="text-xs font-medium" htmlFor="auth-signup-password">
+										Password
+									</label>
+									<input
+										id="auth-signup-password"
+										type="password"
+										required
+										value={signupPassword}
+										onChange={(e) => {
+											setSignupPassword(e.target.value);
+											setAuthError(null);
+										}}
+										disabled={authLoading}
+										className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+									/>
+								</div>
+								<div className="space-y-1">
+									<label className="text-xs font-medium" htmlFor="auth-signup-confirm-password">
+										Confirm password
+									</label>
+									<input
+										id="auth-signup-confirm-password"
+										type="password"
+										required
+										value={signupConfirmPassword}
+										onChange={(e) => {
+											setSignupConfirmPassword(e.target.value);
+											setAuthError(null);
+										}}
+										disabled={authLoading}
+										className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+									/>
+								</div>
+								<button
+										type="submit"
+										disabled={authLoading}
+										className="mt-2 w-full rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-400/70"
+									>
+										{authLoading ? "Creating account..." : "Create account"}
+									</button>
+							</form>
+						)}
+					</div>
+				</div>
+			)}
 		</main>
 	);
 }

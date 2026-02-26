@@ -41,6 +41,8 @@ type HubDashboardProps = {
   createdError: boolean;
   hasRealCreated: boolean;
   hasRealSubmitted: boolean;
+  availableBalanceCents: number;
+  hasStripeAccount: boolean;
 };
 
 function formatDate(dateString: string) {
@@ -97,17 +99,15 @@ export default function HubDashboard({
   createdError,
   hasRealCreated,
   hasRealSubmitted,
+  availableBalanceCents,
+  hasStripeAccount,
 }: HubDashboardProps) {
   const [view, setView] = useState<"activity" | "earnings">("activity");
 
-  // TODO: Replace with real Stripe connected-account status from your backend.
-  const [hasStripeAccount] = useState(true);
-
   const createdSubmissionsByTask = useSubmissionsByTask(createdSubmissions);
-  const { available, pending } = useEarningsSummary(
-    createdTasks,
-    createdSubmissionsByTask
-  );
+  const { pending } = useEarningsSummary(createdTasks, createdSubmissionsByTask);
+
+  const available = (availableBalanceCents ?? 0) / 100;
 
   const someoneHasCreatedTasks = createdTasks.length > 0;
 
@@ -331,6 +331,30 @@ export default function HubDashboard({
               <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
                 <button
                   type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/account/create-stripe-account", {
+                        method: "POST",
+                      });
+
+                      const data = await res.json().catch(() => ({}));
+
+                      if (!res.ok || !data?.url) {
+                        window.alert(
+                          data?.error ||
+                            "There was a problem starting Stripe onboarding. Please try again."
+                        );
+                        return;
+                      }
+
+                      window.location.href = data.url as string;
+                    } catch (err) {
+                      console.error("Error creating Stripe account link", err);
+                      window.alert(
+                        "Unexpected error starting Stripe onboarding. Please try again."
+                      );
+                    }
+                  }}
                   className="inline-flex items-center rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-[0.75rem] font-semibold text-white hover:bg-[var(--accent-hover)]"
                 >
                   Create Stripe account
@@ -383,14 +407,38 @@ export default function HubDashboard({
                 </p>
                 <button
                   type="button"
-                  disabled={available <= 0}
-                  onClick={() => {
-                    window.alert(
-                      "This is a demo action. Wire this button up to your Stripe payout flow."
-                    );
+                  disabled={available <= 0 || !hasStripeAccount}
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/account/withdraw", {
+                        method: "POST",
+                      });
+
+                      const data = await res.json().catch(() => ({}));
+
+                      if (!res.ok) {
+                        window.alert(
+                          data?.error ||
+                            "We couldn't start your withdrawal. Please check your payouts setup and try again."
+                        );
+                        return;
+                      }
+
+                      window.alert(
+                        "Withdrawal requested. Funds will be sent to your connected Stripe account."
+                      );
+
+                      // Simple approach: refresh to show updated balance.
+                      window.location.reload();
+                    } catch (err) {
+                      console.error("Error starting withdrawal", err);
+                      window.alert(
+                        "Unexpected error starting withdrawal. Please try again later."
+                      );
+                    }
                   }}
                   className={`inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[0.75rem] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                    available > 0
+                    available > 0 && hasStripeAccount
                       ? "bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]"
                       : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
                   }`}

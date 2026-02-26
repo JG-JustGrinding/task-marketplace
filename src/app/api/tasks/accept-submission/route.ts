@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type AcceptSubmissionBody = {
   taskId?: number;
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // Use the normal server client for auth and permission checks
     const supabase = await createClient();
     const {
       data: { user },
@@ -30,10 +32,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Ensure the current user is the owner of this task.
+    // Ensure the current user is the owner of this task and fetch payout details.
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id, user_id")
+      .select("id, user_id, status, price")
       .eq("id", taskId)
       .single();
 
@@ -69,7 +71,21 @@ export async function POST(request: Request) {
       );
     }
 
+    if (task.status !== "active") {
+      return NextResponse.json(
+        { error: "Cannot accept submission for a task that is not active." },
+        { status: 400 },
+      );
+    }
+
     const submitterId = submission.user_id as string;
+
+    // Determine how much the submitter should earn for this task.
+    // We use the task's price and convert to cents for precise accounting.
+    const taskPrice = (task as any).price as number | null;
+    const payoutCents = taskPrice && Number.isFinite(taskPrice)
+      ? Math.round(taskPrice * 100)
+      : 0;
 
     // Mark the accepted submission row as accepted.
     const { error: acceptedUpdateError } = await supabase
@@ -143,6 +159,39 @@ export async function POST(request: Request) {
         { error: "Failed to update task status" },
         { status: 500 },
       );
+    }
+
+    // Credit the submitter's internal balance for withdrawal.
+    // This assumes a numeric column `available_balance_cents` on `profiles`.
+    if (payoutCents > 0) {
+      const admin = createAdminClient();
+
+      const { data: profile, error: profileError } = await admin
+        .from("profiles")
+        .select("available_balance_cents")
+        .eq("id", submitterId)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching submitter profile for balance update", profileError);
+      } else {
+        const currentCents =
+          (profile as any)?.available_balance_cents &&
+          Number.isFinite((profile as any).available_balance_cents)
+            ? (profile as any).available_balance_cents
+            : 0;
+
+        const newBalance = currentCents + payoutCents;
+
+        const { error: balanceError } = await admin
+          .from("profiles")
+          .update({ available_balance_cents: newBalance })
+          .eq("id", submitterId);
+
+        if (balanceError) {
+          console.error("Error updating submitter available_balance_cents", balanceError);
+        }
+      }
     }
 
     return NextResponse.json({ success: true }, { status: 200 });

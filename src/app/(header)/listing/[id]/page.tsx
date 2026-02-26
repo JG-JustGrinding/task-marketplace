@@ -25,8 +25,10 @@ type TaskRow = {
 
 export default async function ListingPage({
     params,
+    searchParams,
 }: {
     params: Promise<{ id: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
     const { id } = await params;
     const numericId = Number(id);
@@ -84,6 +86,18 @@ export default async function ListingPage({
 
     const isPoster = !!user && !!data && user.id === data.user_id;
 
+    // Determine whether this task currently has any (non-rejected) submissions
+    let hasSubmissions = false;
+    if (data) {
+        const { count } = await supabase
+            .from("task_submissions")
+            .select("id", { count: "exact", head: true })
+            .eq("task_id", data.id)
+            .not("status", "eq", "rejected");
+
+        hasSubmissions = (count ?? 0) > 0;
+    }
+
     let hasUserStarted = false;
     let submissionPending = false;
     let wasCancelled = false;
@@ -92,6 +106,18 @@ export default async function ListingPage({
     let isResubmission = false;
     const taskAccepted = !!data && data.status === "task_accepted";
     const taskUnavailable = !!data && data.status === "pending_payment";
+
+    // Read payment status from query string (e.g. ?payment=success|cancel)
+    const resolvedSearchParams = await searchParams;
+    let paymentStatus: "success" | "cancel" | null = null;
+    if (typeof resolvedSearchParams.payment !== "undefined") {
+        const raw = Array.isArray(resolvedSearchParams.payment)
+            ? resolvedSearchParams.payment[0]
+            : resolvedSearchParams.payment;
+        if (raw === "success" || raw === "cancel") {
+            paymentStatus = raw;
+        }
+    }
 
     if (user && data) {
         const { data: activation } = await supabase
@@ -138,6 +164,8 @@ export default async function ListingPage({
             isResubmission={isResubmission}
             taskAccepted={taskAccepted}
             taskUnavailable={taskUnavailable}
+            paymentStatus={paymentStatus}
+            hasSubmissions={hasSubmissions}
         />
     );
 }

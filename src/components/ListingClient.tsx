@@ -21,6 +21,8 @@ type ListingClientProps = {
     isResubmission?: boolean;
     taskAccepted?: boolean;
     taskUnavailable?: boolean;
+    paymentStatus?: "success" | "cancel" | null;
+    hasSubmissions?: boolean;
 };
 
 export default function ListingClient({
@@ -35,6 +37,8 @@ export default function ListingClient({
     isResubmission = false,
     taskAccepted = false,
     taskUnavailable = false,
+    paymentStatus = null,
+    hasSubmissions = false,
 }: ListingClientProps) {
     const [activeImage, setActiveImage] = useState<string | null>(null);
     const [showStartConfirm, setShowStartConfirm] = useState(false);
@@ -199,6 +203,20 @@ export default function ListingClient({
 
                 <aside className="mt-6 md:mt-0 md:ml-8 w-full md:w-80">
                     <div className="card space-y-4 sticky top-6">
+                        {isPoster && taskUnavailable && paymentStatus && (
+                            <div
+                                className={`rounded-lg px-3 py-2 text-xs font-medium border ${
+                                    paymentStatus === "success"
+                                        ? "border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]"
+                                        : "border-[var(--danger)] bg-[var(--danger)]/10 text-[var(--danger)]"
+                                }`}
+                            >
+                                {paymentStatus === "success"
+                                    ? "Payment completed. Your task will update shortly once the payment is confirmed."
+                                    : "Payment was cancelled. You can try funding the task again when you're ready."}
+                            </div>
+                        )}
+
                         <div>
                             <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-1">
                                 <b>{process.env.NEXT_PUBLIC_REWARD_TITLE}</b>
@@ -216,12 +234,18 @@ export default function ListingClient({
                         </p>
 
                         {isPoster && !taskAccepted && !taskUnavailable && (
-                            <Link
-                                href={`/listing/${listing.id}/submissions`}
-                                className="bold inline-block text-xs font-medium text-[var(--accent-primary)] hover:underline"
-                            >
-                                View submissions
-                            </Link>
+                            hasSubmissions ? (
+                                <Link
+                                    href={`/listing/${listing.id}/submissions`}
+                                    className="bold inline-block text-xs font-medium text-[var(--accent-primary)] hover:underline"
+                                >
+                                    View submissions
+                                </Link>
+                            ) : (
+                                <span className="inline-flex items-center rounded-full bg-[var(--bg-muted)] px-2.5 py-0.5 text-[0.7rem] font-medium text-[var(--text-secondary)]">
+                                    Waiting for submissions
+                                </span>
+                            )
                         )}
 
                         {false && startedCount > 0 && !taskTaken && (
@@ -239,17 +263,48 @@ export default function ListingClient({
                                         Task unavailable
                                     </div>
                                 )}
-                                {isPoster && (
+                                {(isPoster && paymentStatus !== "success") && (
                                     <>
-                                    <p className="bold text-xs text-[var(--text-secondary)] text-center">
+                                    {!paymentStatus && (<p className="bold text-xs text-[var(--text-secondary)] text-center">
                                         This task is currently unavailable because it hasn&apos;t been funded yet.
-                                    </p>
-                                    <Link
-                                        href="/account"
+                                    </p>)}
+                                    <button
+                                        type="button"
                                         className="bold block w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white text-center hover:bg-[var(--accent-hover)]"
+                                        onClick={async () => {
+                                            try {
+                                                const res = await fetch("/api/tasks/create-checkout", {
+                                                    method: "POST",
+                                                    headers: {
+                                                        "Content-Type": "application/json",
+                                                    },
+                                                    body: JSON.stringify({
+                                                        amount: price,
+                                                        taskId: listing.id,
+                                                        source: "listing" as const,
+                                                    }),
+                                                });
+
+                                                const data = await res.json().catch(() => ({}));
+
+                                                if (!res.ok || !data.url) {
+                                                    alert(
+                                                        (data && (data as any).error) ||
+                                                            "We couldn't start checkout. Please try again in a moment.",
+                                                    );
+                                                    return;
+                                                }
+
+                                                window.location.href = data.url as string;
+                                            } catch (err) {
+                                                alert(
+                                                    "We couldn't start checkout. Please check your connection and try again.",
+                                                );
+                                            }
+                                        }}
                                     >
                                         Fund task
-                                    </Link>
+                                    </button>
                                     </>
                                 )}
                             </div>

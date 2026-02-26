@@ -40,6 +40,20 @@ export default async function HubPage() {
 		redirect("/login");
 	}
 
+	// Load the current user's payout balance and Stripe account status
+	const { data: profileData } = await supabase
+		.from("profiles")
+		.select("available_balance_cents, stripe_account_id")
+		.eq("id", user.id)
+		.single();
+
+	const availableBalanceCents =
+		(typeof profileData?.available_balance_cents === "number"
+			? profileData.available_balance_cents
+			: 0) || 0;
+
+	const hasStripeAccount = Boolean(profileData?.stripe_account_id);
+
 	const { data: createdTasksData, error: createdError } = await supabase
 		.from("tasks")
 		.select("id, title, short_description, price, categories, status, created_at")
@@ -87,6 +101,8 @@ export default async function HubPage() {
 					createdError={!!createdError}
 					hasRealCreated={createdTasks.length > 0 && !createdError}
 					hasRealSubmitted={mySubmissions.length > 0}
+					availableBalanceCents={availableBalanceCents}
+					hasStripeAccount={hasStripeAccount}
 				/>
 			</div>
 		</main>
