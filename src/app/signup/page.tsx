@@ -2,18 +2,24 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const supabase = createClient();
 
 export default function SignupPage() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const [displayName, setDisplayName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+
+	const redirectParam = searchParams.get("redirect");
+	const redirectPath = redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")
+		? redirectParam
+		: "/";
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -59,7 +65,7 @@ export default function SignupPage() {
 				return;
 			}
 
-			router.push("/");
+			router.push(redirectPath);
 		} catch (err) {
 			setError("An error occurred. Please try again.");
 		} finally {
@@ -243,7 +249,7 @@ export default function SignupPage() {
 
 					<p className="mt-6 text-center text-sm body-font">
 						Already have an account?{" "}
-						<a href="/login">
+						<a href={redirectParam ? `/login?redirect=${encodeURIComponent(redirectParam)}` : "/login"}>
 							<b>Log in</b>
 						</a>
 					</p>

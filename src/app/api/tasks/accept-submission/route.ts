@@ -80,12 +80,19 @@ export async function POST(request: Request) {
 
     const submitterId = submission.user_id as string;
 
-    // Determine how much the submitter should earn for this task.
-    // We use the task's price and convert to cents for precise accounting.
+    // Determine how much the submitter should earn for this task and how much the
+    // platform keeps as a fee. We use the task's price and convert to cents for
+    // precise accounting.
     const taskPrice = (task as any).price as number | null;
-    const payoutCents = taskPrice && Number.isFinite(taskPrice)
+    const grossCents = taskPrice && Number.isFinite(taskPrice)
       ? Math.round(taskPrice * 100)
       : 0;
+
+    // Platform take rate (e.g. 10% of the task price).
+    const PLATFORM_TAKE_RATE = 0.1;
+
+    const workerCents = Math.round(grossCents * (1 - PLATFORM_TAKE_RATE));
+    const platformCents = Math.max(0, grossCents - workerCents);
 
     // Mark the accepted submission row as accepted.
     const { error: acceptedUpdateError } = await supabase
@@ -161,35 +168,73 @@ export async function POST(request: Request) {
       );
     }
 
-    // Credit the submitter's internal balance for withdrawal.
-    // This assumes a numeric column `available_balance_cents` on `profiles`.
-    if (payoutCents > 0) {
+    // Credit the submitter's internal balance using the pending -> available system
+    // for the worker's share, and record the platform's share separately.
+    // Assumptions:
+    // - numeric column `pending_balance_cents` on `profiles`.
+    // - `task_earnings` table to track when earnings become available.
+    // - optional `platform_earnings` table for analytics of platform revenue.
+    if (workerCents > 0 || platformCents > 0) {
       const admin = createAdminClient();
 
-      const { data: profile, error: profileError } = await admin
-        .from("profiles")
-        .select("available_balance_cents")
-        .eq("id", submitterId)
-        .single();
+      if (workerCents > 0) {
+        // 1) Create a pending earnings record for the worker that will mature after 3 days.
+        const availableAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
-      if (profileError) {
-        console.error("Error fetching submitter profile for balance update", profileError);
-      } else {
-        const currentCents =
-          (profile as any)?.available_balance_cents &&
-          Number.isFinite((profile as any).available_balance_cents)
-            ? (profile as any).available_balance_cents
-            : 0;
+        const { error: earningsError } = await admin.from("task_earnings").insert({
+          submitter_id: submitterId,
+          task_id: taskId,
+          submission_id: submissionId,
+          amount_cents: workerCents,
+          status: "pending",
+          available_at: availableAt,
+        } as any);
 
-        const newBalance = currentCents + payoutCents;
+        if (earningsError) {
+          console.error("Error inserting pending task_earnings row", earningsError);
+        }
 
-        const { error: balanceError } = await admin
+        // 2) Increment the submitter's pending_balance_cents.
+        const { data: profile, error: profileError } = await admin
           .from("profiles")
-          .update({ available_balance_cents: newBalance })
-          .eq("id", submitterId);
+          .select("pending_balance_cents")
+          .eq("id", submitterId)
+          .single();
 
-        if (balanceError) {
-          console.error("Error updating submitter available_balance_cents", balanceError);
+        if (profileError) {
+          console.error("Error fetching submitter profile for pending balance update", profileError);
+        } else {
+          const currentPending =
+            (profile as any)?.pending_balance_cents &&
+            Number.isFinite((profile as any).pending_balance_cents)
+              ? (profile as any).pending_balance_cents
+              : 0;
+
+          const newPending = currentPending + workerCents;
+
+          const { error: pendingError } = await admin
+            .from("profiles")
+            .update({ pending_balance_cents: newPending })
+            .eq("id", submitterId);
+
+          if (pendingError) {
+            console.error("Error updating submitter pending_balance_cents", pendingError);
+          }
+        }
+      }
+
+      // 3) Optionally record the platform's share for analytics/reporting.
+      if (platformCents > 0) {
+        const { error: platformEarningsError } = await admin
+          .from("platform_earnings")
+          .insert({
+            task_id: taskId,
+            submitter_id: submitterId,
+            amount_cents: platformCents,
+          } as any);
+
+        if (platformEarningsError) {
+          console.error("Error inserting platform_earnings row", platformEarningsError);
         }
       }
     }

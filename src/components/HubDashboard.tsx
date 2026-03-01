@@ -42,7 +42,17 @@ type HubDashboardProps = {
   hasRealCreated: boolean;
   hasRealSubmitted: boolean;
   availableBalanceCents: number;
+  pendingBalanceCents: number;
+  pendingEarnings: {
+    id: number;
+    taskId: number;
+    submissionId: number;
+    amountCents: number;
+    availableAt: string;
+    taskTitle: string;
+  }[];
   hasStripeAccount: boolean;
+  hasCompletedStripeOnboarding: boolean;
 };
 
 function formatDate(dateString: string) {
@@ -67,30 +77,6 @@ function useSubmissionsByTask(submissions: TaskSubmission[]) {
   }, [submissions]);
 }
 
-function useEarningsSummary(
-  createdTasks: Task[],
-  createdSubmissionsByTask: Map<number, TaskSubmission[]>
-) {
-  return useMemo(() => {
-    let available = 0;
-    let pending = 0;
-
-    for (const task of createdTasks) {
-      const subs = createdSubmissionsByTask.get(task.id) ?? [];
-      const hasAccepted = subs.some((s) => s.status === "accepted");
-      const hasPending = subs.some((s) => s.status === "pending");
-
-      if (hasAccepted) {
-        available += task.price;
-      } else if (hasPending) {
-        pending += task.price;
-      }
-    }
-
-    return { available, pending };
-  }, [createdTasks, createdSubmissionsByTask]);
-}
-
 export default function HubDashboard({
   createdTasks,
   createdSubmissions,
@@ -100,14 +86,28 @@ export default function HubDashboard({
   hasRealCreated,
   hasRealSubmitted,
   availableBalanceCents,
+  pendingBalanceCents,
+  pendingEarnings,
   hasStripeAccount,
+  hasCompletedStripeOnboarding,
 }: HubDashboardProps) {
   const [view, setView] = useState<"activity" | "earnings">("activity");
+  const [activityTab, setActivityTab] = useState<"posted" | "started">(
+    "posted"
+  );
+  const [isStripeLinkLoading, setIsStripeLinkLoading] = useState(false);
+  const [isStripeDashboardLoading, setIsStripeDashboardLoading] = useState(false);
+  const [isWithdrawLoading, setIsWithdrawLoading] = useState(false);
+  const [showPendingDetails, setShowPendingDetails] = useState(false);
+  const [notification, setNotification] = useState<
+    | { type: "success" | "error"; message: string }
+    | null
+  >(null);
 
   const createdSubmissionsByTask = useSubmissionsByTask(createdSubmissions);
-  const { pending } = useEarningsSummary(createdTasks, createdSubmissionsByTask);
 
   const available = (availableBalanceCents ?? 0) / 100;
+	const pending = (pendingBalanceCents ?? 0) / 100;
 
   const someoneHasCreatedTasks = createdTasks.length > 0;
 
@@ -120,8 +120,8 @@ export default function HubDashboard({
         </p>
       </header>
 
-      <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
-        <div className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 p-0.5 text-[0.7rem]">
+      <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-wrap">
+        <div className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 p-0.5 text-[0.7rem] w-full sm:w-auto justify-between sm:justify-start">
           <button
             type="button"
             onClick={() => setView("activity")}
@@ -147,10 +147,62 @@ export default function HubDashboard({
         </div>
       </div>
 
+      {notification && (
+        <div
+          className={`mt-4 flex items-start justify-between gap-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-2.5 text-[0.75rem] sm:text-xs border-l-4 ${
+            notification.type === "success"
+              ? "border-l-[var(--success)]"
+              : "border-l-[var(--danger-less-saturated)]"
+          }`}
+        >
+          <span className="flex-1 leading-snug text-[var(--text-primary)]">
+            {notification.message}
+          </span>
+          <button
+            type="button"
+            onClick={() => setNotification(null)}
+            className="none uncolored text-[0.7rem] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {view === "activity" ? (
+        <>
+          {/* Mobile tab switcher between posted and started tasks */}
+          <div className="mt-4 flex sm:hidden items-center rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 p-0.5 text-[0.7rem] w-full justify-between">
+            <button
+              type="button"
+              onClick={() => setActivityTab("posted")}
+              className={`flex-1 px-3 py-1.5 rounded-full font-semibold transition-colors ${
+                activityTab === "posted"
+                  ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-sm"
+                  : "text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
+              }`}
+            >
+              Posted
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivityTab("started")}
+              className={`flex-1 px-3 py-1.5 rounded-full font-semibold transition-colors ${
+                activityTab === "started"
+                  ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-sm"
+                  : "text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
+              }`}
+            >
+              Started
+            </button>
+          </div>
+
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {/* Created tasks */}
-          <section className="card space-y-4">
+          <section
+            className={`card space-y-4 ${
+              activityTab === "started" ? "hidden md:block" : ""
+            }`}
+          >
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h2 className="text-sm font-semibold">Tasks you posted</h2>
@@ -179,7 +231,7 @@ export default function HubDashboard({
               </p>
             )}
 
-            <div className="space-y-3 max-h-[480px] overflow-y-auto scrollbar-thin pr-1">
+            <div className="space-y-3 max-h-[420px] sm:max-h-[480px] overflow-y-auto scrollbar-thin pr-1">
               {createdTasks.map((task) => {
                 const submissions = createdSubmissionsByTask.get(task.id) ?? [];
                 const totalSubs = submissions.length;
@@ -224,7 +276,7 @@ export default function HubDashboard({
                     key={task.id}
                     className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-3 flex flex-col gap-2"
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold truncate">
                           {task.title}
@@ -245,7 +297,7 @@ export default function HubDashboard({
                           ))}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
+                      <div className="flex flex-row sm:flex-col items-start sm:items-end gap-1 sm:text-right text-left mt-2 sm:mt-0">
                         <span className="text-sm font-semibold">
                           ${task.price.toLocaleString()}
                         </span>
@@ -253,8 +305,8 @@ export default function HubDashboard({
                       </div>
                     </div>
 
-                    <div className="mt-1 flex items-center justify-between gap-2 text-[0.65rem] text-[var(--text-secondary)]">
-                      <div className="flex flex-col">
+                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[0.65rem] text-[var(--text-secondary)]">
+                      <div className="flex flex-col gap-0.5">
                         {totalSubs !== 1 && (
                           <span>
                             {someoneStarted
@@ -266,7 +318,7 @@ export default function HubDashboard({
                         )}
                         <span>Posted {formatDate(task.created_at)}</span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2 justify-end sm:justify-end">
                         {someoneStarted && (
                           <Link
                             href={`/listing/${task.id}/submissions`}
@@ -292,7 +344,11 @@ export default function HubDashboard({
           </section>
 
           {/* Submitted tasks */}
-          <section className="card space-y-4">
+          <section
+            className={`card space-y-4 ${
+              activityTab === "posted" ? "hidden md:block" : ""
+            }`}
+          >
             <div>
               <h2 className="text-sm font-semibold">Tasks you have started</h2>
               <p className="text-[0.7rem] text-[var(--text-secondary)]">
@@ -313,6 +369,7 @@ export default function HubDashboard({
             />
           </section>
         </div>
+        </>
       ) : (
         <section className="mt-6 space-y-4">
           {!hasStripeAccount ? (
@@ -331,8 +388,10 @@ export default function HubDashboard({
               <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
                 <button
                   type="button"
+                  disabled={isStripeLinkLoading}
                   onClick={async () => {
                     try {
+                      setIsStripeLinkLoading(true);
                       const res = await fetch("/api/account/create-stripe-account", {
                         method: "POST",
                       });
@@ -340,61 +399,175 @@ export default function HubDashboard({
                       const data = await res.json().catch(() => ({}));
 
                       if (!res.ok || !data?.url) {
-                        window.alert(
-                          data?.error ||
-                            "There was a problem starting Stripe onboarding. Please try again."
-                        );
+                        setNotification({
+                          type: "error",
+                          message:
+                            data?.error ||
+                            "There was a problem starting Stripe onboarding. Please try again.",
+                        });
                         return;
                       }
 
                       window.location.href = data.url as string;
                     } catch (err) {
                       console.error("Error creating Stripe account link", err);
-                      window.alert(
-                        "Unexpected error starting Stripe onboarding. Please try again."
-                      );
+                      setNotification({
+                        type: "error",
+                        message:
+                          "Unexpected error starting Stripe onboarding. Please try again.",
+                      });
+                      setIsStripeLinkLoading(false);
                     }
                   }}
-                  className="inline-flex items-center rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-[0.75rem] font-semibold text-white hover:bg-[var(--accent-hover)]"
+                  className="inline-flex items-center justify-center rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-[0.75rem] font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto"
                 >
-                  Create Stripe account
+                  {isStripeLinkLoading ? "Starting Stripe onboarding..." : "Create Stripe account"}
                 </button>
-                <p className="text-[0.65rem] text-[var(--text-muted)]">
+                <p className="text-[0.65rem] text-[var(--text-muted)] max-w-xs sm:max-w-none">
                   Once your Stripe account is connected, you&apos;ll see your
                   payout balance and pending earnings here.
+                </p>
+              </div>
+            </div>
+          ) : !hasCompletedStripeOnboarding ? (
+            <div className="card flex flex-col gap-3">
+              <h2 className="text-sm font-semibold">Finish Stripe setup</h2>
+              <p className="text-xs text-[var(--text-secondary)]">
+                Your Stripe account has been created but onboarding isn&apos;t
+                complete yet. To access your earnings dashboard and withdraw
+                funds, please finish the verification steps with Stripe.
+              </p>
+              <ul className="list-disc pl-5 text-[0.7rem] text-[var(--text-secondary)] space-y-1">
+                <li>Confirm your business or individual details.</li>
+                <li>Verify payout and tax information.</li>
+                <li>Enable payouts to your bank account.</li>
+              </ul>
+              <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
+                <button
+                  type="button"
+                  disabled={isStripeLinkLoading}
+                  onClick={async () => {
+                    try {
+                      setIsStripeLinkLoading(true);
+                      const res = await fetch("/api/account/create-stripe-account", {
+                        method: "POST",
+                      });
+
+                      const data = await res.json().catch(() => ({}));
+
+                      if (!res.ok || !data?.url) {
+                        setNotification({
+                          type: "error",
+                          message:
+                            data?.error ||
+                            "There was a problem resuming Stripe onboarding. Please try again.",
+                        });
+                        return;
+                      }
+
+                      window.location.href = data.url as string;
+                    } catch (err) {
+                      console.error("Error resuming Stripe onboarding", err);
+                      setNotification({
+                        type: "error",
+                        message:
+                          "Unexpected error resuming Stripe onboarding. Please try again.",
+                      });
+                      setIsStripeLinkLoading(false);
+                    }
+                  }}
+                  className="inline-flex items-center justify-center rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-[0.75rem] font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto"
+                >
+                  {isStripeLinkLoading ? "Opening Stripe..." : "Continue Stripe setup"}
+                </button>
+                <p className="text-[0.65rem] text-[var(--text-muted)] max-w-xs sm:max-w-none">
+                  Once onboarding is complete, your payout balance and pending
+                  earnings will appear here.
                 </p>
               </div>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-3">
               <article className="card flex flex-col gap-2">
-                <h2 className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Payout balance
-                </h2>
-                <p className="text-2xl font-semibold">
-                  ${available.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
+              <h2 className="text-xs font-semibold text-[var(--text-secondary)]">
+                Pending earnings
+              </h2>
+              <p className="text-2xl font-semibold">
+                ${pending.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+                })}
+              </p>
+              <p className="text-[0.7rem] text-[var(--text-secondary)]">
+                Earnings that are in the 3-day clearing period after a submission is accepted.
+              </p>
+              {pendingEarnings.length > 0 ? (
+                <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPendingDetails((v) => !v)}
+                  className="none uncolored text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
+                >
+                  {showPendingDetails ? "Hide pending earnings" : "Show pending earnings"}
+                </button>
+                {showPendingDetails && (
+                  <div className="mt-2 max-h-40 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                  {pendingEarnings.map((e) => {
+                    const amount = (e.amountCents ?? 0) / 100;
+                    const availableDate = new Date(e.availableAt);
+                    const dateLabel = Number.isNaN(availableDate.getTime())
+                    ? ""
+                    : availableDate.toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      });
+                    return (
+                    <div
+                      key={e.id}
+                      className="flex items-center justify-between rounded-md bg-[var(--bg-secondary)]/80 px-2 py-1 text-[0.65rem]"
+                    >
+                      <div className="flex-1 min-w-0 pr-2">
+                      <p className="truncate font-medium text-[var(--text-primary)]">
+                        {e.taskTitle}
+                      </p>
+                      {dateLabel && (
+                        <p className="text-[0.6rem] text-[var(--text-secondary)]">
+                        Available around {dateLabel}
+                        </p>
+                      )}
+                      </div>
+                      <span className="whitespace-nowrap font-semibold">
+                      ${amount.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                      </span>
+                    </div>
+                    );
                   })}
+                  </div>
+                )}
+                </div>
+              ) : (
+                <p className="mt-2 text-[0.65rem] text-[var(--text-secondary)]">
+                You currently have no pending earnings.
                 </p>
-                <p className="text-[0.7rem] text-[var(--text-secondary)]">
-                  Available to withdraw to your bank account.
-                </p>
+              )}
               </article>
 
               <article className="card flex flex-col gap-2">
-                <h2 className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Pending earnings
-                </h2>
-                <p className="text-2xl font-semibold">
-                  ${pending.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </p>
-                <p className="text-[0.7rem] text-[var(--text-secondary)]">
-                  Earnings that have not arrived yet. These earnings typically appear in your balance in a few days after a submission is accepted.
-                </p>
+              <h2 className="text-xs font-semibold text-[var(--text-secondary)]">
+                Payout balance
+              </h2>
+              <p className="text-2xl font-semibold">
+                ${available.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+                })}
+              </p>
+              <p className="text-[0.7rem] text-[var(--text-secondary)]">
+                Available to withdraw to your bank account.
+              </p>
               </article>
 
               <article className="card flex flex-col gap-3">
@@ -407,9 +580,10 @@ export default function HubDashboard({
                 </p>
                 <button
                   type="button"
-                  disabled={available <= 0 || !hasStripeAccount}
+                  disabled={available <= 0 || !hasStripeAccount || isWithdrawLoading}
                   onClick={async () => {
                     try {
+                      setIsWithdrawLoading(true);
                       const res = await fetch("/api/account/withdraw", {
                         method: "POST",
                       });
@@ -417,34 +591,80 @@ export default function HubDashboard({
                       const data = await res.json().catch(() => ({}));
 
                       if (!res.ok) {
-                        window.alert(
-                          data?.error ||
-                            "We couldn't start your withdrawal. Please check your payouts setup and try again."
-                        );
+                        setNotification({
+                          type: "error",
+                          message:
+                            data?.error ||
+                            "We couldn't start your withdrawal. Please check your payouts setup and try again.",
+                        });
                         return;
                       }
 
-                      window.alert(
-                        "Withdrawal requested. Funds will be sent to your connected Stripe account."
-                      );
+                      setNotification({
+                        type: "success",
+                        message:
+                          "Withdrawal successful. Funds will be sent to your connected Stripe account.",
+                      });
 
-                      // Simple approach: refresh to show updated balance.
                       window.location.reload();
                     } catch (err) {
                       console.error("Error starting withdrawal", err);
-                      window.alert(
-                        "Unexpected error starting withdrawal. Please try again later."
-                      );
+                      setNotification({
+                        type: "error",
+                        message:
+                          "Unexpected error starting withdrawal. Please try again later.",
+                      });
+                      setIsWithdrawLoading(false);
                     }
                   }}
-                  className={`inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[0.75rem] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                  className={`inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[0.75rem] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto ${
                     available > 0 && hasStripeAccount
                       ? "bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]"
                       : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
                   }`}
                 >
-                  Withdraw to bank
+                  {isWithdrawLoading ? "Processing..." : "Withdraw to bank"}
                 </button>
+                {hasStripeAccount && (
+                  <button
+                  type="button"
+                  disabled={isStripeDashboardLoading}
+                  onClick={async () => {
+                    try {
+                    setIsStripeDashboardLoading(true);
+                    const res = await fetch("/api/account/stripe-login", {
+                      method: "POST",
+                    });
+
+                    const data = await res.json().catch(() => ({}));
+
+                    if (!res.ok || !data?.url) {
+                      setNotification({
+                        type: "error",
+                        message:
+                          data?.error ||
+                          "We couldn't open your Stripe dashboard. Please try again.",
+                      });
+                      return;
+                    }
+                    const url = data.url as string;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                    } catch (err) {
+                    console.error("Error opening Stripe dashboard", err);
+                    setNotification({
+                      type: "error",
+                      message:
+                        "Unexpected error opening your Stripe dashboard. Please try again.",
+                    });
+                    } finally {
+                    setIsStripeDashboardLoading(false);
+                    }
+                  }}
+                  className="mt-2 inline-flex items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-1.5 text-[0.7rem] font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto"
+                  >
+                  {isStripeDashboardLoading ? "Opening Stripe..." : "Open Stripe account"}
+                  </button>
+                )}
               </article>
             </div>
           )}

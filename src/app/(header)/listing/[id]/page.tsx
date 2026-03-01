@@ -104,6 +104,8 @@ export default async function ListingPage({
     let submissionRejected = false;
     let taskTaken = false;
     let isResubmission = false;
+    let hasReachedTaskLimit = false;
+    let hasActiveActivations = false;
     const taskAccepted = !!data && data.status === "task_accepted";
     const taskUnavailable = !!data && data.status === "pending_payment";
 
@@ -120,6 +122,20 @@ export default async function ListingPage({
     }
 
     if (user && data) {
+        // Count how many active tasks this user currently has.
+        const { count: activeCount } = await supabase
+            .from("task_activations")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id)
+            .in("status", [
+                "waiting_submission",
+                "pending",
+                "resubmission",
+                "resubmission_requested",
+            ]);
+
+        hasReachedTaskLimit = (activeCount ?? 0) >= 3;
+
         const { data: activation } = await supabase
             .from("task_activations")
             .select("id, status")
@@ -137,7 +153,6 @@ export default async function ListingPage({
         }
 
         // Check if any other user has an active (non-cancelled) activation for this task.
-        /*
         const { data: otherActivation } = await supabase
             .from("task_activations")
             .select("id")
@@ -148,7 +163,21 @@ export default async function ListingPage({
             .maybeSingle();
 
         taskTaken = !!otherActivation;
-        */
+
+        if (isPoster) {
+            const { count: activationsCount } = await supabase
+                .from("task_activations")
+                .select("id", { count: "exact", head: true })
+                .eq("task_id", data.id)
+                .in("status", [
+                    "waiting_submission",
+                    "pending",
+                    "resubmission",
+                    "resubmission_requested",
+                ]);
+
+            hasActiveActivations = (activationsCount ?? 0) > 0;
+        }
     }
 
     return (
@@ -166,6 +195,9 @@ export default async function ListingPage({
             taskUnavailable={taskUnavailable}
             paymentStatus={paymentStatus}
             hasSubmissions={hasSubmissions}
+            isLoggedIn={!!user}
+            hasReachedTaskLimit={hasReachedTaskLimit}
+            hasActiveActivations={hasActiveActivations}
         />
     );
 }

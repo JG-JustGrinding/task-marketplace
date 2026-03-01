@@ -29,7 +29,7 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
             <b>{process.env.NEXT_PUBLIC_SITE_NAME}</b>
           </span>
           <h1 className="text-xl sm:text-2xl font-semibold text-[var(--text-primary)]">
-            Find work that fits your flow
+            SLOGAN FOR WEBSITE
           </h1>
         </div>
 

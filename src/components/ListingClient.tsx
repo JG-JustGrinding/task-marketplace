@@ -23,6 +23,9 @@ type ListingClientProps = {
     taskUnavailable?: boolean;
     paymentStatus?: "success" | "cancel" | null;
     hasSubmissions?: boolean;
+    isLoggedIn?: boolean;
+    hasReachedTaskLimit?: boolean;
+    hasActiveActivations?: boolean;
 };
 
 export default function ListingClient({
@@ -39,13 +42,20 @@ export default function ListingClient({
     taskUnavailable = false,
     paymentStatus = null,
     hasSubmissions = false,
+    isLoggedIn = false,
+    hasReachedTaskLimit = false,
+    hasActiveActivations = false,
 }: ListingClientProps) {
     const [activeImage, setActiveImage] = useState<string | null>(null);
     const [showStartConfirm, setShowStartConfirm] = useState(false);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
     const [hasUserStarted, setHasUserStarted] = useState(initialHasUserStarted);
     const [isStartingTask, setIsStartingTask] = useState(false);
     const [startError, setStartError] = useState<string | null>(null);
+    const [isFundingTask, setIsFundingTask] = useState(false);
 
     const {
         title,
@@ -199,6 +209,21 @@ export default function ListingClient({
                             )}
                         </section>
                     )}
+
+                    {isPoster && taskUnavailable && !hasSubmissions && !taskTaken && (
+                        <div className="pt-2">
+                            <button
+                                type="button"
+                                className="text-xs font-medium text-[var(--danger)] hover:opacity-80"
+                                onClick={() => {
+                                    setDeleteError(null);
+                                    setShowDeleteConfirm(true);
+                                }}
+                            >
+                                Delete task
+                            </button>
+                        </div>
+                    )}
                 </section>
 
                 <aside className="mt-6 md:mt-0 md:ml-8 w-full md:w-80">
@@ -232,6 +257,17 @@ export default function ListingClient({
                                 ? "This is the reward you have set for an accepted submission."
                                 : `This is the reward the poster is offering for the accepted task. You will only receive this reward if your submission is accepted by the poster after submitting.`}
                         </p>
+
+                        {isPoster && hasActiveActivations && (
+                            <div className="pt-1">
+                                <Link
+                                    href={`/listing/${listing.id}/activations`}
+                                    className="bold inline-block text-xs font-medium text-[var(--accent-primary)] hover:underline"
+                                >
+                                    View task activations
+                                </Link>
+                            </div>
+                        )}
 
                         {isPoster && !taskAccepted && !taskUnavailable && (
                             hasSubmissions ? (
@@ -270,8 +306,11 @@ export default function ListingClient({
                                     </p>)}
                                     <button
                                         type="button"
-                                        className="bold block w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white text-center hover:bg-[var(--accent-hover)]"
+                                        className="bold block w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white text-center hover:bg-[var(--accent-hover)] disabled:opacity-70"
+                                        disabled={isFundingTask}
                                         onClick={async () => {
+                                            if (isFundingTask) return;
+                                            setIsFundingTask(true);
                                             try {
                                                 const res = await fetch("/api/tasks/create-checkout", {
                                                     method: "POST",
@@ -300,10 +339,12 @@ export default function ListingClient({
                                                 alert(
                                                     "We couldn't start checkout. Please check your connection and try again.",
                                                 );
+                                            } finally {
+                                                setIsFundingTask(false);
                                             }
                                         }}
                                     >
-                                        Fund task
+                                        {isFundingTask ? "Starting checkout..." : "Fund task"}
                                     </button>
                                     </>
                                 )}
@@ -323,11 +364,27 @@ export default function ListingClient({
                                         <div className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[var(--bg-muted)] text-[var(--text-secondary)] text-center border border-[var(--border-color)]">
                                             Task taken
                                         </div>
+                                    ) : hasReachedTaskLimit ? (
+                                        <div className="space-y-2">
+                                            <div className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[var(--bg-muted)] text-[var(--text-secondary)] text-center border border-[var(--border-color)]">
+                                                Task limit reached
+                                            </div>
+                                            <p className="text-xs text-[var(--text-secondary)] text-center">
+                                                You already have 3 active tasks. Complete or cancel one before starting another.
+                                            </p>
+                                        </div>
                                     ) : (
                                         <button
                                             type="button"
                                             className="w-full py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]"
-                                            onClick={() => setShowStartConfirm(true)}
+                                            onClick={() => {
+                                                if (!isLoggedIn) {
+                                                    const redirectTo = `${window.location.pathname}${window.location.search || ""}`;
+                                                    window.location.href = `/login?redirect=${encodeURIComponent(redirectTo)}`;
+                                                    return;
+                                                }
+                                                setShowStartConfirm(true);
+                                            }}
                                         >
                                             Start task
                                         </button>
@@ -372,6 +429,75 @@ export default function ListingClient({
                     </div>
                 </aside>
             </main>
+
+            {showDeleteConfirm && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
+                    onClick={() => !isDeleting && setShowDeleteConfirm(false)}
+                >
+                    <div
+                        className="relative w-full max-w-md rounded-xl bg-[var(--bg-secondary)] p-5 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="delete-task-title"
+                    >
+                        <h2
+                            id="delete-task-title"
+                            className="text-base font-semibold text-[var(--text-primary)]"
+                        >
+                            Delete this task?
+                        </h2>
+                        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                            This will permanently remove the task. This action cannot be undone.
+                        </p>
+                        {deleteError && (
+                            <p className="mt-2 text-xs text-[var(--danger)]">{deleteError}</p>
+                        )}
+                        <div className="mt-4 flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] disabled:opacity-50"
+                            >
+                                Go back
+                            </button>
+                            <button
+                                type="button"
+                                disabled={isDeleting}
+                                className="rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-70"
+                                onClick={async () => {
+                                    if (isDeleting) return;
+                                    setIsDeleting(true);
+                                    setDeleteError(null);
+                                    try {
+                                        const res = await fetch(`/api/tasks/${listing.id}`, {
+                                            method: "DELETE",
+                                        });
+                                        const data = await res.json().catch(() => ({}));
+                                        if (!res.ok) {
+                                            setDeleteError(
+                                                (data as any).error ||
+                                                    "Failed to delete task. Please try again.",
+                                            );
+                                            return;
+                                        }
+                                        window.location.href = "/";
+                                    } catch {
+                                        setDeleteError(
+                                            "Something went wrong. Please check your connection and try again.",
+                                        );
+                                        setIsDeleting(false);
+                                    }
+                                }}
+                            >
+                                {isDeleting ? "Deleting..." : "Yes, delete task"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {showCancelConfirm && (
                 <div

@@ -60,10 +60,10 @@ export default function AccountClient({ username, email, userId }: AccountClient
       // Update profile username if it changed and is non-empty.
       if (profileUsername.trim() && profileUsername.trim() !== username) {
         const supabase = createClient();
-        const { error } = await supabase
-          .from("profiles")
-          .update({ username: profileUsername.trim() })
-          .eq("id", userId);
+        const { error } = await supabase.rpc("update_profile", {
+		  p_display_name: profileUsername.trim(),
+		  p_avatar_url: null,
+		});
 
         if (error) {
           setProfileError("There was a problem saving your profile. Please try again.");

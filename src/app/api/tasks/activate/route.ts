@@ -49,6 +49,34 @@ export async function POST(request: Request) {
       );
     }
 
+    // User does not yet have an activation for this task.
+    // Enforce a maximum of 3 active tasks across all activations.
+    const { count: activeCount, error: countError } = await supabase
+      .from("task_activations")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .in("status", [
+        "waiting_submission",
+        "pending",
+        "resubmission",
+        "resubmission_requested",
+      ]);
+
+    if (countError) {
+      console.error("Error counting active task activations", countError);
+      return NextResponse.json(
+        { error: "Failed to check active tasks. Please try again." },
+        { status: 500 },
+      );
+    }
+
+    if ((activeCount ?? 0) >= 3) {
+      return NextResponse.json(
+        { error: "You already have 3 active tasks. Complete or cancel one before starting another." },
+        { status: 400 },
+      );
+    }
+
     const { error } = await supabase
       .from("task_activations")
       .insert({ user_id: user.id, task_id: taskId, status: "waiting_submission" });
