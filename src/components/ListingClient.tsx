@@ -258,19 +258,8 @@ export default function ListingClient({
                                 : `This is the reward the poster is offering for the accepted task. You will only receive this reward if your submission is accepted by the poster after submitting.`}
                         </p>
 
-                        {isPoster && hasActiveActivations && (
-                            <div className="pt-1">
-                                <Link
-                                    href={`/listing/${listing.id}/activations`}
-                                    className="bold inline-block text-xs font-medium text-[var(--accent-primary)] hover:underline"
-                                >
-                                    View task activations
-                                </Link>
-                            </div>
-                        )}
-
                         {isPoster && !taskAccepted && !taskUnavailable && (
-                            hasSubmissions ? (
+                            (hasSubmissions || hasActiveActivations) ? (
                                 <Link
                                     href={`/listing/${listing.id}/submissions`}
                                     className="bold inline-block text-xs font-medium text-[var(--accent-primary)] hover:underline"

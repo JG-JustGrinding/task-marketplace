@@ -29,6 +29,7 @@ type TaskActivationsClientProps = {
     currentUserId: string;
     isPoster: boolean;
     activations: Activation[];
+    variant?: "page" | "embedded";
 };
 
 function formatDate(dateString: string) {
@@ -144,6 +145,7 @@ export default function TaskActivationsClient({
     currentUserId,
     isPoster,
     activations,
+    variant = "page",
 }: TaskActivationsClientProps) {
     const [pendingIds, setPendingIds] = useState<number[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -251,6 +253,174 @@ export default function TaskActivationsClient({
     const confirmActivation = confirmState?.activation ?? null;
     const isConfirmCancel = confirmState?.type === "cancel";
 
+    const listMarkup = (
+        <>
+            {error && (
+                <div className="rounded-lg border border-[var(--danger-less-saturated)] bg-[var(--danger-less-saturated)]/10 px-3 py-2 text-xs text-[var(--danger)]">
+                    {error}
+                </div>
+            )}
+
+            {!hasAny && (
+                <p className="text-xs text-[var(--text-secondary)]">
+                    No one is currently working on this task.
+                </p>
+            )}
+
+            {hasAny && (
+                <div className="space-y-3 max-h-[480px] overflow-y-auto scrollbar-thin pr-1">
+                    {localActivations.map((activation) => {
+                        const isCurrentUser = activation.userId === currentUserId;
+                        const { label, className } = statusBadge(
+                            activation.status,
+                        );
+                        const { canCancel, canReject, reason } =
+                            canActOnActivation(activation, nowMs);
+                        const isPending = pendingIds.includes(activation.id);
+
+                        const canShowCancel = isCurrentUser && canCancel;
+                        const canShowReject = isPoster && !isCurrentUser && canReject;
+
+                        return (
+                            <article
+                                key={activation.id}
+                                className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-3 flex flex-col gap-2"
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-sm font-semibold truncate">
+                                            {activation.username || "Unknown user"}
+                                        </h3>
+                                        <p className="mt-1 text-[0.7rem] text-[var(--text-secondary)]">
+                                            Started {formatDate(activation.createdAt)}
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                        <span className={className}>{label}</span>
+                                    </div>
+                                </div>
+
+                                <div className="mt-1 flex items-center justify-between gap-2 text-[0.65rem] text-[var(--text-secondary)]">
+                                    <div className="flex flex-col">
+                                        {reason &&
+                                            !(canCancel || canReject) && (
+                                                <span>{reason}</span>
+                                            )}
+                                    </div>
+                                    <div className="flex gap-2 items-center">
+                                        {canShowCancel && (
+                                            <button
+                                                type="button"
+                                                disabled={isPending}
+                                                onClick={() =>
+                                                    setConfirmState({
+                                                        type: "cancel",
+                                                        activation,
+                                                    })
+                                                }
+                                                className="px-2 py-1 rounded-lg bg-[var(--danger)] text-white text-[0.7rem] font-semibold hover:opacity-90 disabled:opacity-60"
+                                            >
+                                                {isPending
+                                                    ? "Cancelling..."
+                                                    : "Cancel activation"}
+                                            </button>
+                                        )}
+                                        {canShowReject && (
+                                            <button
+                                                type="button"
+                                                disabled={isPending}
+                                                onClick={() =>
+                                                    setConfirmState({
+                                                        type: "reject",
+                                                        activation,
+                                                    })
+                                                }
+                                                className="px-2 py-1 rounded-lg bg-[var(--danger)] text-[var(--text-primary)] text-[0.7rem] font-semibold hover:opacity-90 disabled:opacity-60"
+                                            >
+                                                {isPending
+                                                    ? "Rejecting..."
+                                                    : "Reject activation"}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </article>
+                        );
+                    })}
+                </div>
+            )}
+        </>
+    );
+
+    const confirmDialog =
+        confirmActivation && (
+            <div
+                className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
+                onClick={() => setConfirmState(null)}
+            >
+                <div
+                    className="relative w-full max-w-md rounded-xl bg-[var(--bg-secondary)] p-5 shadow-xl"
+                    onClick={(e) => e.stopPropagation()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="confirm-activation-title"
+                >
+                    <h2
+                        id="confirm-activation-title"
+                        className="text-base font-semibold text-[var(--text-primary)]"
+                    >
+                        {isConfirmCancel
+                            ? "Cancel this activation?"
+                            : "Reject this activation?"}
+                    </h2>
+                    <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                        {isConfirmCancel
+                            ? "If you cancel, you might not be able to start this task again."
+                            : "If you reject this activation, the submitter will no longer be working on this task so someone else can take it."}
+                    </p>
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setConfirmState(null)}
+                            className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]"
+                        >
+                            Go back
+                        </button>
+                        <button
+                            type="button"
+                            className="rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
+                            onClick={async () => {
+                                if (!confirmActivation) return;
+                                if (isConfirmCancel) {
+                                    await handleCancel(confirmActivation);
+                                } else {
+                                    await handleReject(confirmActivation);
+                                }
+                                setConfirmState(null);
+                            }}
+                        >
+                            {isConfirmCancel ? "Yes, cancel" : "Yes, reject"}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+
+    if (variant === "embedded") {
+        return (
+            <section className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 pb-6">
+                <header className="space-y-1 mt-2">
+                    <h2 className="text-base font-semibold">Task activations</h2>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                        See who has started this task and when they started it.
+                    </p>
+                </header>
+                {listMarkup}
+                {confirmDialog}
+            </section>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
             <main className="mx-auto max-w-4xl px-4 py-8 space-y-6">
@@ -280,153 +450,8 @@ export default function TaskActivationsClient({
                     </div>
                 </header>
 
-                {error && (
-                    <div className="rounded-lg border border-[var(--danger-less-saturated)] bg-[var(--danger-less-saturated)]/10 px-3 py-2 text-xs text-[var(--danger)]">
-                        {error}
-                    </div>
-                )}
-
-                {!hasAny && (
-                    <p className="text-xs text-[var(--text-secondary)]">
-                        No one has started this task yet.
-                    </p>
-                )}
-
-                {hasAny && (
-                    <div className="space-y-3 max-h-[480px] overflow-y-auto scrollbar-thin pr-1">
-                        {localActivations.map((activation) => {
-                            const isCurrentUser = activation.userId === currentUserId;
-                            const { label, className } = statusBadge(
-                                activation.status,
-                            );
-                            const { canCancel, canReject, reason } =
-                                canActOnActivation(activation, nowMs);
-                            const isPending = pendingIds.includes(activation.id);
-
-                            const canShowCancel = isCurrentUser && canCancel;
-                            const canShowReject = isPoster && !isCurrentUser && canReject;
-
-                            return (
-                                <article
-                                    key={activation.id}
-                                    className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-3 flex flex-col gap-2"
-                                >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-sm font-semibold truncate">
-                                                {activation.username || "Unknown user"}
-                                            </h3>
-                                            <p className="mt-1 text-[0.7rem] text-[var(--text-secondary)]">
-                                                Started {formatDate(activation.createdAt)}
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1">
-                                            <span className={className}>{label}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-1 flex items-center justify-between gap-2 text-[0.65rem] text-[var(--text-secondary)]">
-                                        <div className="flex flex-col">
-                                            {reason &&
-                                                !(canCancel || canReject) && (
-                                                    <span>{reason}</span>
-                                                )}
-                                        </div>
-                                        <div className="flex gap-2 items-center">
-                                            {canShowCancel && (
-                                                <button
-                                                    type="button"
-                                                    disabled={isPending}
-                                                    onClick={() =>
-                                                        setConfirmState({
-                                                            type: "cancel",
-                                                            activation,
-                                                        })
-                                                    }
-                                                    className="px-2 py-1 rounded-lg bg-[var(--danger)] text-white text-[0.7rem] font-semibold hover:opacity-90 disabled:opacity-60"
-                                                >
-                                                    {isPending
-                                                        ? "Cancelling..."
-                                                        : "Cancel activation"}
-                                                </button>
-                                            )}
-                                            {canShowReject && (
-                                                <button
-                                                    type="button"
-                                                    disabled={isPending}
-                                                    onClick={() =>
-                                                        setConfirmState({
-                                                            type: "reject",
-                                                            activation,
-                                                        })
-                                                    }
-                                                    className="px-2 py-1 rounded-lg bg-[var(--danger)] text-[var(--text-primary)] text-[0.7rem] font-semibold hover:opacity-90 disabled:opacity-60"
-                                                >
-                                                    {isPending
-                                                        ? "Rejecting..."
-                                                        : "Reject activation"}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </article>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {confirmActivation && (
-                    <div
-                        className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
-                        onClick={() => setConfirmState(null)}
-                    >
-                        <div
-                            className="relative w-full max-w-md rounded-xl bg-[var(--bg-secondary)] p-5 shadow-xl"
-                            onClick={(e) => e.stopPropagation()}
-                            role="dialog"
-                            aria-modal="true"
-                            aria-labelledby="confirm-activation-title"
-                        >
-                            <h2
-                                id="confirm-activation-title"
-                                className="text-base font-semibold text-[var(--text-primary)]"
-                            >
-                                {isConfirmCancel
-                                    ? "Cancel this activation?"
-                                    : "Reject this activation?"}
-                            </h2>
-                            <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                                {isConfirmCancel
-                                    ? "If you cancel, you might not be able to start this task again."
-                                    : "If you reject this activation, the submitter will no longer be working on this task so someone else can take it."}
-                            </p>
-                            <div className="mt-4 flex items-center justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setConfirmState(null)}
-                                    className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]"
-                                >
-                                    Go back
-                                </button>
-                                <button
-                                    type="button"
-                                    className="rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
-                                    onClick={async () => {
-                                        if (!confirmActivation) return;
-                                        if (isConfirmCancel) {
-                                            await handleCancel(confirmActivation);
-                                        } else {
-                                            await handleReject(confirmActivation);
-                                        }
-                                        setConfirmState(null);
-                                    }}
-                                >
-                                    {isConfirmCancel ? "Yes, cancel" : "Yes, reject"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {listMarkup}
+                {confirmDialog}
             </main>
         </div>
     );

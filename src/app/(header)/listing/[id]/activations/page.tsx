@@ -25,7 +25,11 @@ type ProfileRow = {
 };
 
 export default async function ListingActivationsPage({ params }: PageParams) {
-	const { id } = await params;
+    if (10 > 2) {
+        return notFound();
+    }
+    
+    const { id } = await params;
 	const numericId = Number(id);
 
 	if (!Number.isFinite(numericId)) {
@@ -95,7 +99,11 @@ export default async function ListingActivationsPage({ params }: PageParams) {
 		});
 	}
 
-	const serializedActivations = activations.map((a) => ({
+	const filteredActivations = activations.filter(
+		(a) => !hasSubmissionByUser.get(a.user_id),
+	);
+
+	const serializedActivations = filteredActivations.map((a) => ({
 		id: a.id,
 		userId: a.user_id,
 		username: profilesById.get(a.user_id)?.username ?? null,
