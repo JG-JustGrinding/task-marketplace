@@ -29,6 +29,10 @@ type TaskSubmission = {
 	status: SubmissionStatus;
 	created_at: string;
 	is_hidden?: boolean | null;
+	has_dispute?: boolean | null;
+	// True when a dispute on this submission has been resolved in favor of the creator
+	// and the original acceptance was effectively overturned.
+	is_overturned?: boolean | null;
 };
 
 export default async function HubPage() {
@@ -106,15 +110,46 @@ export default async function HubPage() {
 		.eq("user_id", user.id)
 		.order("created_at", { ascending: false });
 
-	const mySubmissions: TaskSubmission[] = mySubmissionsData ?? [];
-	const submittedTaskIds = mySubmissions.map((s) => s.task_id);
+	const rawMySubmissions: TaskSubmission[] = mySubmissionsData ?? [];
+	const submittedTaskIds = rawMySubmissions.map((s) => s.task_id);
+
+	// Track both currently open disputes and disputes that have been resolved
+	// in favor of the creator (overturned) so the worker sees accurate status.
+	const disputedTaskIds = new Set<number>();
+	const overturnedTaskIds = new Set<number>();
+	if (submittedTaskIds.length > 0) {
+		const { data: disputesData } = await supabase
+			.from("task_submission_disputes")
+			.select("task_id, status")
+			.eq("worker_id", user.id)
+			.in("task_id", submittedTaskIds);
+
+		for (const row of disputesData ?? []) {
+			const taskId = (row as any).task_id as number | null;
+			const status = (row as any).status as string | null;
+			if (taskId == null) continue;
+			if (status === "open") {
+				disputedTaskIds.add(taskId);
+			}
+			if (status === "resolved_upheld") {
+				overturnedTaskIds.add(taskId);
+			}
+		}
+	}
+
+	const mySubmissions: TaskSubmission[] = rawMySubmissions.map((s) => ({
+		...s,
+		has_dispute: disputedTaskIds.has(s.task_id),
+		is_overturned: overturnedTaskIds.has(s.task_id),
+	}));
+	const submittedTaskIdsWithDetails = mySubmissions.map((s) => s.task_id);
 
 	let submittedTasks: Task[] = [];
-	if (submittedTaskIds.length > 0) {
+	if (submittedTaskIdsWithDetails.length > 0) {
 		const { data } = await supabase
 			.from("tasks")
 			.select("id, title, short_description, price, categories, created_at")
-			.in("id", submittedTaskIds);
+			.in("id", submittedTaskIdsWithDetails);
 		submittedTasks = data ?? [];
 	}
 
@@ -126,6 +161,29 @@ export default async function HubPage() {
 		.eq("status", "pending")
 		.order("available_at", { ascending: true });
 
+	// Determine which of the pending earnings currently have an open dispute
+	// for this worker so we can highlight disputed payouts in the UI.
+	const pendingSubmissionIds = (pendingEarningsData ?? [])
+		.map((row: any) => row.submission_id as number | null)
+		.filter((id): id is number => id != null);
+
+	let disputedSubmissionIds = new Set<number>();
+	if (pendingSubmissionIds.length > 0) {
+		const { data: disputedRows } = await supabase
+			.from("task_submission_disputes")
+			.select("submission_id")
+			.eq("worker_id", user.id)
+			.eq("status", "open")
+			.in("submission_id", pendingSubmissionIds);
+
+		for (const row of disputedRows ?? []) {
+			const sid = (row as any).submission_id as number | null;
+			if (sid != null) {
+				disputedSubmissionIds.add(sid);
+			}
+		}
+	}
+
 	const pendingEarnings = (pendingEarningsData ?? []).map((row: any) => ({
 		id: row.id as number,
 		taskId: row.task_id as number,
@@ -135,6 +193,7 @@ export default async function HubPage() {
 		taskTitle:
 			(row as any)?.tasks?.title ||
 			`Task #${row.task_id}`,
+		hasDispute: disputedSubmissionIds.has(row.submission_id as number),
 	}));
 
 	return (

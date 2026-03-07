@@ -31,6 +31,8 @@ type TaskSubmission = {
   status: SubmissionStatus;
   created_at: string;
   is_hidden?: boolean | null;
+  has_dispute?: boolean | null;
+  is_overturned?: boolean | null;
 };
 
 type HubDashboardProps = {
@@ -50,6 +52,7 @@ type HubDashboardProps = {
     amountCents: number;
     availableAt: string;
     taskTitle: string;
+    hasDispute?: boolean;
   }[];
   hasStripeAccount: boolean;
   hasCompletedStripeOnboarding: boolean;
@@ -327,7 +330,7 @@ export default function HubDashboard({
                             View submissions
                           </Link>
                         )}
-                        {!isFinished && (
+                        {(!isFinished) && (
                           <Link
                             href={`/listing/${task.id}`}
                             className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
@@ -499,7 +502,7 @@ export default function HubDashboard({
                 })}
               </p>
               <p className="text-[0.7rem] text-[var(--text-secondary)]">
-                Earnings that are in the 3-day clearing period after a submission is accepted.
+                Earnings that are in the 3-day clearing period after a submission is accepted. Disputed payouts are highlighted below.
               </p>
               {pendingEarnings.length > 0 ? (
                 <div className="mt-2">
@@ -533,6 +536,11 @@ export default function HubDashboard({
                       {dateLabel && (
                         <p className="text-[0.6rem] text-[var(--text-secondary)]">
                         Available around {dateLabel}
+                        </p>
+                      )}
+                      {e.hasDispute && (
+                        <p className="mt-0.5 flex items-center gap-1 text-[0.6rem] text-amber-400">
+                          This payout is under dispute and may be delayed or adjusted.
                         </p>
                       )}
                       </div>

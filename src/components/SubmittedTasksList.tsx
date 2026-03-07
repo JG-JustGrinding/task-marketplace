@@ -145,7 +145,7 @@ export default function SubmittedTasksList({
     <div className="space-y-3 max-h-[480px] overflow-y-auto scrollbar-thin pr-1">
       {visibleSubmissions.map((submission) => {
         const task = tasksById.get(submission.task_id);
-        const { label, className } = statusBadge(submission.status);
+        const baseStatus = statusBadge(submission.status);
         const isRejected = submission.status === "rejected";
         const isCancelled = submission.status === "cancelled";
         const isResubmissionRequested =
@@ -154,6 +154,20 @@ export default function SubmittedTasksList({
         const isAccepted = submission.status === "accepted";
         const isPending = submission.status === "pending";
         const showDetails = expandedDetailsId === submission.id;
+		const hasDispute =
+		  (submission as any).has_dispute === true ||
+		  (submission as any).hasDispute === true;
+		const isOverturned =
+		  (submission as any).is_overturned === true ||
+		  (submission as any).isOverturned === true;
+
+    const baseBadgeClass =
+      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase";
+    const label = isOverturned && isAccepted ? "Overturned" : baseStatus.label;
+    const className =
+      isOverturned && isAccepted
+      ? `${baseBadgeClass} badge-danger`
+      : baseStatus.className;
 
         return (
           <article
@@ -189,12 +203,17 @@ export default function SubmittedTasksList({
                 )}
                 <div className="flex items-center gap-2">
                   <span className={className}>{label}</span>
-                  {(isRejected || isCancelled) && (
+                  {hasDispute && (
+                    <span className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-amber-400">
+                      Dispute open
+                    </span>
+                  )}
+                  {(isRejected || isCancelled || (isOverturned && isAccepted)) && (
                     <button
                       type="button"
                       onClick={() => handleHide(submission.id)}
                       className="h-5 w-5 flex items-center justify-center rounded-full border border-[var(--border-color)] text-[0.6rem] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
-                      aria-label="Hide rejected submission"
+                      aria-label="Hide submission"
                     >
                       ×
                     </button>
@@ -206,6 +225,11 @@ export default function SubmittedTasksList({
             <div className="mt-1 flex items-center justify-between gap-2 text-[0.65rem] text-[var(--text-secondary)]">
               <div className="flex flex-col">
 		        <span>Started {formatDate(submission.created_at)}</span>
+                {hasDispute && (
+                  <span className="mt-1 max-w-xs text-[0.6rem] text-[var(--text-secondary)]">
+                    There is an open dispute on this task. Your payout may be removed if the dispute is resolved in favor of the task poster.
+                  </span>
+                )}
               </div>
               <div className="flex gap-2 items-center">
                 {isResubmissionRequested && (

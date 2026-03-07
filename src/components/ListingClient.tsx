@@ -56,6 +56,12 @@ export default function ListingClient({
     const [isStartingTask, setIsStartingTask] = useState(false);
     const [startError, setStartError] = useState<string | null>(null);
     const [isFundingTask, setIsFundingTask] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [reportReason, setReportReason] = useState<string>("inappropiate_content");
+    const [reportDescription, setReportDescription] = useState("");
+    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+    const [reportError, setReportError] = useState<string | null>(null);
+    const [reportSuccess, setReportSuccess] = useState(false);
 
     const {
         title,
@@ -221,6 +227,22 @@ export default function ListingClient({
                                 }}
                             >
                                 Delete task
+                            </button>
+                        </div>
+                    )}
+
+                    {isLoggedIn && !isPoster && (
+                        <div className="pt-2">
+                            <button
+                                type="button"
+                                className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
+                                onClick={() => {
+                                    setReportError(null);
+                                    setReportSuccess(false);
+                                    setShowReportModal(true);
+                                }}
+                            >
+                                Report this task
                             </button>
                         </div>
                     )}
@@ -641,6 +663,143 @@ export default function ListingClient({
                             alt={title}
                             className="max-h-[80vh] w-full object-contain rounded-xl shadow-xl"
                         />
+                    </div>
+                </div>
+            )}
+
+            {showReportModal && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
+                    onClick={() => {
+                        if (!isSubmittingReport) {
+                            setShowReportModal(false);
+                        }
+                    }}
+                >
+                    <div
+                        className="relative w-full max-w-md rounded-xl bg-[var(--bg-secondary)] p-5 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="report-task-title"
+                    >
+                        <h2
+                            id="report-task-title"
+                            className="text-base font-semibold text-[var(--text-primary)]"
+                        >
+                            Report this task
+                        </h2>
+                        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                            Use this form to let us know if this task is spam, fraudulent, abusive, or otherwise inappropriate.
+                        </p>
+
+                        <div className="mt-4 space-y-3">
+                            <div className="space-y-1">
+                                <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                                    Reason
+                                </label>
+                                <select
+                                    className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                                    value={reportReason}
+                                    onChange={(e) => setReportReason(e.target.value)}
+                                    disabled={isSubmittingReport}
+                                >
+                                    <option value="inappropiate_content">Inappropriate content</option>
+                                    <option value="spam">Spam</option>
+                                    <option value="fraud">Fraud</option>
+                                    <option value="abuse">Abuse or harassment</option>
+                                    <option value="scam">Scam or misleading</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                                    Additional details <span className="text-[var(--text-muted)]">(optional)</span>
+                                </label>
+                                <textarea
+                                    className="w-full min-h-[80px] rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] resize-y"
+                                    value={reportDescription}
+                                    onChange={(e) => setReportDescription(e.target.value)}
+                                    disabled={isSubmittingReport}
+                                    maxLength={2000}
+                                />
+                                <p className="text-[0.7rem] text-[var(--text-muted)]">
+                                    Please avoid sharing personal or sensitive information.
+                                </p>
+                            </div>
+                        </div>
+
+                        {reportError && (
+                            <p className="mt-3 text-xs text-[var(--danger)]">{reportError}</p>
+                        )}
+                        {reportSuccess && !reportError && (
+                            <p className="mt-3 text-xs text-[var(--success)]">
+                                Thank you for your report. We&apos;ve received it.
+                            </p>
+                        )}
+
+                        <div className="mt-4 flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] disabled:opacity-50"
+                                onClick={() => {
+                                    if (!isSubmittingReport) {
+                                        setShowReportModal(false);
+                                    }
+                                }}
+                                disabled={isSubmittingReport}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--accent-hover)] disabled:opacity-70"
+                                disabled={isSubmittingReport}
+                                onClick={async () => {
+                                    if (isSubmittingReport) return;
+                                    setIsSubmittingReport(true);
+                                    setReportError(null);
+                                    setReportSuccess(false);
+                                    try {
+                                        const res = await fetch("/api/tasks/report", {
+                                            method: "POST",
+                                            headers: {
+                                                "Content-Type": "application/json",
+                                            },
+                                            body: JSON.stringify({
+                                                taskId: listing.id,
+                                                reason: reportReason,
+                                                description: reportDescription,
+                                            }),
+                                        });
+
+                                        const data = await res.json().catch(() => ({}));
+
+                                        if (!res.ok) {
+                                            setReportError(
+                                                (data && (data as any).error) ||
+                                                    "We couldn&apos;t submit your report. Please try again.",
+                                            );
+                                            return;
+                                        }
+
+                                        setReportSuccess(true);
+                                        setReportDescription("");
+                                        // Optionally close the modal after a short delay; for now, close immediately.
+                                        setShowReportModal(false);
+                                    } catch (err) {
+                                        setReportError(
+                                            "We couldn&apos;t submit your report. Please check your connection and try again.",
+                                        );
+                                    } finally {
+                                        setIsSubmittingReport(false);
+                                    }
+                                }}
+                            >
+                                {isSubmittingReport ? "Submitting..." : "Submit report"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
