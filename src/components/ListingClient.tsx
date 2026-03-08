@@ -724,9 +724,6 @@ export default function ListingClient({
                                     disabled={isSubmittingReport}
                                     maxLength={2000}
                                 />
-                                <p className="text-[0.7rem] text-[var(--text-muted)]">
-                                    Please avoid sharing personal or sensitive information.
-                                </p>
                             </div>
                         </div>
 

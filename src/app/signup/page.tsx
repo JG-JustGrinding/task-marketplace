@@ -21,6 +21,24 @@ export default function SignupPage() {
 		? redirectParam
 		: "/";
 
+	const handleBack = () => {
+		if (typeof document !== "undefined" && typeof window !== "undefined") {
+			const referrer = document.referrer;
+			try {
+				if (referrer) {
+					const referrerUrl = new URL(referrer);
+					if (referrerUrl.origin === window.location.origin) {
+						return router.back();
+					}
+				}
+			} catch {
+				// Ignore parsing errors and fall through to home redirect.
+			}
+		}
+
+		router.push("/");
+	};
+
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError("");
@@ -87,6 +105,14 @@ export default function SignupPage() {
 						boxShadow: "var(--shadow-soft)",
 					}}
 				>
+					<button
+						type="button"
+						onClick={handleBack}
+						className="mb-4 inline-flex items-center text-sm body-font hover:text-[color:var(--accent-primary)] transition-colors"
+						aria-label="Go back"
+					>
+						<span className="mr-1 text-lg">←</span>
+					</button>
 
 				<div
 					className="mb-8 text-center"
