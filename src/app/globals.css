@@ -10,6 +10,7 @@
   --text-primary: #191716;
   --text-secondary: #6B7280;
   --text-muted: #9CA3AF;
+  --white: #FFFFFF;
 
   /* Borders */
   --border-color: #E5E7EB;
@@ -211,4 +212,12 @@ textarea::-webkit-scrollbar-thumb:hover {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Background pattern for hero section */
+.bg-grid-pattern {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
 }

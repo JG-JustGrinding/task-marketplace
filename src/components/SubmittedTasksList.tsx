@@ -174,7 +174,7 @@ export default function SubmittedTasksList({
             key={submission.id}
             className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-3 flex flex-col gap-2"
           >
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold truncate">
                   {task?.title ?? `Task #${submission.task_id}`}
@@ -195,30 +195,28 @@ export default function SubmittedTasksList({
                   ))}
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-1">
+              <div className="flex flex-row sm:flex-col items-start sm:items-end gap-1 sm:text-right text-left mt-2 sm:mt-0">
                 {task && (
                   <span className="text-sm font-semibold">
                     ${task.price.toLocaleString()}
                   </span>
                 )}
-                <div className="flex items-center gap-2">
-                  <span className={className}>{label}</span>
-                  {hasDispute && (
-                    <span className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-amber-400">
-                      Dispute open
-                    </span>
-                  )}
-                  {(isRejected || isCancelled || (isOverturned && isAccepted)) && (
-                    <button
-                      type="button"
-                      onClick={() => handleHide(submission.id)}
-                      className="h-5 w-5 flex items-center justify-center rounded-full border border-[var(--border-color)] text-[0.6rem] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
-                      aria-label="Hide submission"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
+                <span className={className}>{label}</span>
+                {hasDispute && (
+                  <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase bg-[var(--danger-less-saturated)]/10 text-[var(--danger-less-saturated)] border border-[var(--danger-less-saturated)]">
+                    Dispute open
+                  </span>
+                )}
+                {(isRejected || isCancelled || (isOverturned && isAccepted)) && (
+                  <button
+                    type="button"
+                    onClick={() => handleHide(submission.id)}
+                    className="h-5 w-5 flex items-center justify-center rounded-full border border-[var(--border-color)] text-[0.6rem] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+                    aria-label="Hide submission"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             </div>
 

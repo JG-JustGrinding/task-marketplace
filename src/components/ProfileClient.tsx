@@ -46,7 +46,7 @@ export default function ProfileClient({
         {/* Profile Header */}
         <section className="card p-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-            <div className="h-24 w-24 rounded-full bg-[var(--bg-muted)] flex items-center justify-center text-3xl font-semibold text-[var(--text-primary)]">
+            <div className="h-24 w-24 rounded-full bg-[var(--accent-primary)] flex items-center justify-center text-3xl font-semibold text-white">
               {userInitial}
             </div>
 

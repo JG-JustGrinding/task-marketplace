@@ -93,7 +93,7 @@ export default function ListingClient({
                             onClick={() => (window.location.href = "/")}
                             className="text-xs text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
                         >
-                            Back to listings
+                            Back to tasks
                         </button>
 
                         <div className="space-y-2">

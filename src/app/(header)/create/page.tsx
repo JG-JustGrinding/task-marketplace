@@ -556,7 +556,7 @@ export default function CreateTaskPage() {
 								htmlFor="needDetails"
 								className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1"
 							>
-								What do you need?
+								What do you need? (Optional)
 							</label>
 							<textarea
 								id="needDetails"
@@ -580,7 +580,7 @@ export default function CreateTaskPage() {
 								htmlFor="technicalRequirements"
 								className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1"
 							>
-								Technical Requirements
+								Technical Requirements (Optional)
 							</label>
 							<textarea
 								id="technicalRequirements"

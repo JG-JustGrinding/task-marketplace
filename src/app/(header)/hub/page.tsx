@@ -12,6 +12,7 @@ type Task = {
 	categories: string[] | null;
 	status?: string | null;
 	created_at: string;
+	has_dispute?: boolean | null;
 };
 
 type SubmissionStatus =
@@ -92,8 +93,32 @@ export default async function HubPage() {
 		.eq("user_id", user.id)
 		.order("created_at", { ascending: false });
 
-	const createdTasks: Task[] = createdTasksData ?? [];
-	const createdTaskIds = createdTasks.map((t) => t.id);
+	const createdTasksRaw: Task[] = createdTasksData ?? [];
+	const createdTaskIds = createdTasksRaw.map((t) => t.id);
+
+	// Determine which of the creator's tasks currently have an open dispute
+	// so we can surface a clear "Dispute open" pill in the hub.
+	const openDisputedTaskIds = new Set<number>();
+	if (createdTaskIds.length > 0) {
+		const { data: creatorDisputes } = await supabase
+			.from("task_submission_disputes")
+			.select("task_id, status")
+			.eq("creator_id", user.id)
+			.eq("status", "open")
+			.in("task_id", createdTaskIds);
+
+		for (const row of creatorDisputes ?? []) {
+			const taskId = (row as any).task_id as number | null;
+			if (taskId != null) {
+				openDisputedTaskIds.add(taskId);
+			}
+		}
+	}
+
+	const createdTasks: Task[] = createdTasksRaw.map((task) => ({
+		...task,
+		has_dispute: openDisputedTaskIds.has(task.id),
+	}));
 
 	let createdSubmissions: TaskSubmission[] = [];
 	if (createdTaskIds.length > 0) {

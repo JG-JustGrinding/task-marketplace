@@ -335,7 +335,7 @@ export default function TaskActivationsClient({
                                                         activation,
                                                     })
                                                 }
-                                                className="px-2 py-1 rounded-lg bg-[var(--danger)] text-[var(--text-primary)] text-[0.7rem] font-semibold hover:opacity-90 disabled:opacity-60"
+                                                className="px-2 py-1 rounded-lg bg-[var(--danger)] text-[var(--white)] text-[0.7rem] font-semibold hover:opacity-90 disabled:opacity-60"
                                             >
                                                 {isPending
                                                     ? "Rejecting..."

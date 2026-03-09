@@ -12,6 +12,7 @@ type Task = {
   categories: string[] | null;
   status?: string | null;
   created_at: string;
+  has_dispute?: boolean | null;
 };
 
 type SubmissionStatus =
@@ -128,7 +129,7 @@ export default function HubDashboard({
           <button
             type="button"
             onClick={() => setView("activity")}
-            className={`px-3 py-1.5 rounded-full font-semibold transition-colors ${
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-full font-semibold transition-colors ${
               view === "activity"
                 ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-sm"
                 : "text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
@@ -139,7 +140,7 @@ export default function HubDashboard({
           <button
             type="button"
             onClick={() => setView("earnings")}
-            className={`px-3 py-1.5 rounded-full font-semibold transition-colors ${
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-full font-semibold transition-colors ${
               view === "earnings"
                 ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-sm"
                 : "text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
@@ -173,33 +174,37 @@ export default function HubDashboard({
 
       {view === "activity" ? (
         <>
-          {/* Mobile tab switcher between posted and started tasks */}
-          <div className="mt-4 flex sm:hidden items-center rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 p-0.5 text-[0.7rem] w-full justify-between">
-            <button
-              type="button"
-              onClick={() => setActivityTab("posted")}
-              className={`flex-1 px-3 py-1.5 rounded-full font-semibold transition-colors ${
-                activityTab === "posted"
-                  ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-sm"
-                  : "text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
-              }`}
-            >
-              Posted
-            </button>
-            <button
-              type="button"
-              onClick={() => setActivityTab("started")}
-              className={`flex-1 px-3 py-1.5 rounded-full font-semibold transition-colors ${
-                activityTab === "started"
-                  ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-sm"
-                  : "text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
-              }`}
-            >
-              Started
-            </button>
-          </div>
-
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {/* Mobile tab switcher between posted and started tasks */}
+    <div className="sm:hidden lg:col-span-2">
+      <div className="mb-1 flex items-center gap-2 text-[0.7rem] w-full">
+        <button
+          type="button"
+          onClick={() => setActivityTab("posted")}
+          className={`flex-1 px-3 py-1.5 rounded-full transition-colors ${
+            activityTab === "posted"
+              ? "bg-[var(--bg-muted)] text-[var(--text-primary)] font-semibold"
+              : "text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
+          }`}
+        >
+          Posted
+        </button>
+        <button
+          type="button"
+          onClick={() => setActivityTab("started")}
+          className={`flex-1 px-3 py-1.5 rounded-full transition-colors ${
+            activityTab === "started"
+              ? "bg-[var(--bg-muted)] text-[var(--text-primary)] font-semibold"
+              : "text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
+          }`}
+        >
+          Started
+        </button>
+      </div>
+    </div>
+
+	  
+	
           {/* Created tasks */}
           <section
             className={`card space-y-4 ${
@@ -215,7 +220,7 @@ export default function HubDashboard({
               </div>
               <Link
                 href="/create"
-                className="button none px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-white text-[0.7rem] font-semibold hover:bg-[var(--accent-hover)]"
+                className="button none px-3 py-1.5 text-center rounded-lg bg-[var(--accent-primary)] text-white text-[0.7rem] font-semibold hover:bg-[var(--accent-hover)]"
               >
                 Post new
               </Link>
@@ -273,6 +278,7 @@ export default function HubDashboard({
                 }
 
                 const someoneStarted = totalSubs > 0;
+                const hasOpenDispute = Boolean(task.has_dispute);
 
                 return (
                   <article
@@ -305,6 +311,11 @@ export default function HubDashboard({
                           ${task.price.toLocaleString()}
                         </span>
                         <span className={statusClass}>{statusLabel}</span>
+                        {hasOpenDispute && (
+                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase bg-[var(--warning)]/10 text-[var(--warning)] border border-[var(--warning)]">
+                            Dispute open
+                          </span>
+                        )}
                       </div>
                     </div>
 

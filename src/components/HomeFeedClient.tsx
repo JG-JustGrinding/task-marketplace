@@ -7,10 +7,11 @@ import type { Listing } from "@/data/listings";
 
 type HomeFeedClientProps = {
   listings: Listing[];
+  initialSearch?: string;
 };
 
-export default function HomeFeedClient({ listings }: HomeFeedClientProps) {
-  const [search, setSearch] = useState("");
+export default function HomeFeedClient({ listings, initialSearch = "" }: HomeFeedClientProps) {
+  const [search, setSearch] = useState(initialSearch);
   const [activeCategory, setActiveCategory] = useState("All");
 
   const filteredListings = useMemo(() => {
@@ -36,15 +37,26 @@ export default function HomeFeedClient({ listings }: HomeFeedClientProps) {
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
         />
-
-        {/* Optional: hook up search input later */}
+        {/* Search is handled globally in the header; this component just filters based on the current query. */}
 
         <section className="mt-6 flex-1">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-sm font-semibold text-[var(--text-secondary)]">
-              {filteredListings.length} listing
-              {filteredListings.length !== 1 && "s"} available
-            </h2>
+          <div className="mb-6 space-y-1">
+            {initialSearch.trim() && (
+              <p className="text-xs text-[var(--text-muted)]">
+                Search results for {""}
+                <span className="font-semibold text-[var(--text-secondary)]">
+                  &ldquo;{initialSearch.trim()}&rdquo;
+                </span>
+              </p>
+            )}
+            <div className="flex items-center justify-between">
+              {false && (
+                <h2 className="text-sm font-semibold text-[var(--text-secondary)]">
+                  {filteredListings.length} task
+                  {filteredListings.length !== 1 && "s"} available
+                </h2>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
