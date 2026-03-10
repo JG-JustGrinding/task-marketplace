@@ -26,6 +26,7 @@ type ListingClientProps = {
     isLoggedIn?: boolean;
     hasReachedTaskLimit?: boolean;
     hasActiveActivations?: boolean;
+    canDeleteTask?: boolean;
 };
 
 export default function ListingClient({
@@ -45,6 +46,7 @@ export default function ListingClient({
     isLoggedIn = false,
     hasReachedTaskLimit = false,
     hasActiveActivations = false,
+    canDeleteTask = false,
 }: ListingClientProps) {
     const [activeImage, setActiveImage] = useState<string | null>(null);
     const [showStartConfirm, setShowStartConfirm] = useState(false);
@@ -82,6 +84,8 @@ export default function ListingClient({
     const posterInitial = posterName.charAt(0).toUpperCase();
     const profileHref = creator?.id ? `/profile/${creator.id}` : null;
     const removeActions = false; // for when the user has cancelled the task
+
+    const isFundedDeletionFlow = canDeleteTask && !taskUnavailable;
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
@@ -216,7 +220,7 @@ export default function ListingClient({
                         </section>
                     )}
 
-                    {isPoster && taskUnavailable && !hasSubmissions && !taskTaken && (
+                    {canDeleteTask && (
                         <div className="pt-2">
                             <button
                                 type="button"
@@ -280,7 +284,7 @@ export default function ListingClient({
                                 : `This is the reward the poster is offering for the accepted task. You will only receive this reward if your submission is accepted by the poster after submitting.`}
                         </p>
 
-                        {isPoster && !taskAccepted && !taskUnavailable && (
+                        {isPoster && !taskUnavailable && (
                             (hasSubmissions || hasActiveActivations) ? (
                                 <Link
                                     href={`/listing/${listing.id}/submissions`}
@@ -289,9 +293,11 @@ export default function ListingClient({
                                     View submissions
                                 </Link>
                             ) : (
-                                <span className="inline-flex items-center rounded-full bg-[var(--bg-muted)] px-2.5 py-0.5 text-[0.7rem] font-medium text-[var(--text-secondary)]">
-                                    Waiting for submissions
-                                </span>
+                                !taskAccepted && (
+                                    <span className="inline-flex items-center rounded-full bg-[var(--bg-muted)] px-2.5 py-0.5 text-[0.7rem] font-medium text-[var(--text-secondary)]">
+                                        Waiting for submissions
+                                    </span>
+                                )
                             )
                         )}
 
@@ -457,10 +463,14 @@ export default function ListingClient({
                             id="delete-task-title"
                             className="text-base font-semibold text-[var(--text-primary)]"
                         >
-                            Delete this task?
+                            {isFundedDeletionFlow
+                                ? "Delete this task and issue a refund?"
+                                : "Delete this task?"}
                         </h2>
                         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                            This will permanently remove the task. This action cannot be undone.
+                            {isFundedDeletionFlow
+                                ? "This will permanently remove the task. You will receive a refund to your original payment method with a cancellation fee of 15% of the task reward. This action cannot be undone."
+                                : "This will permanently remove the task. This action cannot be undone."}
                         </p>
                         {deleteError && (
                             <p className="mt-2 text-xs text-[var(--danger)]">{deleteError}</p>
@@ -503,7 +513,11 @@ export default function ListingClient({
                                     }
                                 }}
                             >
-                                {isDeleting ? "Deleting..." : "Yes, delete task"}
+                                {isDeleting
+                                    ? "Deleting..."
+                                    : isFundedDeletionFlow
+                                    ? "Yes, delete and refund"
+                                    : "Yes, delete task"}
                             </button>
                         </div>
                     </div>

@@ -180,6 +180,14 @@ export default async function ListingPage({
         }
     }
 
+    const isActiveFundedTask = !!data && data.status === "active";
+
+    const canDeleteTask =
+        isPoster &&
+        !hasSubmissions &&
+        !taskTaken &&
+        (taskUnavailable || (isActiveFundedTask && !taskAccepted && !hasActiveActivations));
+
     return (
         <ListingClient
             listing={listing}
@@ -198,6 +206,7 @@ export default async function ListingPage({
             isLoggedIn={!!user}
             hasReachedTaskLimit={hasReachedTaskLimit}
             hasActiveActivations={hasActiveActivations}
+            canDeleteTask={canDeleteTask}
         />
     );
 }

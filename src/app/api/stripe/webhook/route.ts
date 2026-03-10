@@ -34,14 +34,30 @@ export async function POST(req: Request) {
       const session = event.data.object as Stripe.Checkout.Session;
       const taskIdRaw = session.metadata?.taskId;
 
+      // Capture the PaymentIntent ID so we can issue refunds later.
+      const paymentIntentRaw = session.payment_intent;
+      let paymentIntentId: string | null = null;
+
+      if (typeof paymentIntentRaw === "string") {
+        paymentIntentId = paymentIntentRaw;
+      } else if (paymentIntentRaw && typeof paymentIntentRaw === "object") {
+        paymentIntentId = (paymentIntentRaw as Stripe.PaymentIntent).id ?? null;
+      }
+
       if (taskIdRaw) {
         const supabase = createAdminClient();
         const taskIdNum = Number(taskIdRaw);
 
         if (Number.isFinite(taskIdNum)) {
+          const updatePayload: Record<string, any> = { status: "active" };
+
+          if (paymentIntentId) {
+            updatePayload.stripe_payment_intent_id = paymentIntentId;
+          }
+
           const { error } = await supabase
             .from("tasks")
-            .update({ status: "active" })
+            .update(updatePayload)
             .eq("id", taskIdNum);
 
             console.log(`Marked task ${taskIdNum} as active after successful payment.`);
