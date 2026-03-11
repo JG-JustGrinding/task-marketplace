@@ -179,7 +179,10 @@ export async function POST(request: Request) {
             demo_submission: demoSubmissionUrl,
             final_submission: finalSubmissionUrl,
             note,
+            // Treat a resubmission as a fresh submission for timing logic
+            // like auto-accept windows by bumping the created_at timestamp.
             status: "resubmission",
+            created_at: new Date().toISOString(),
           })
           .eq("id", existingSubmission.id)
           .select()

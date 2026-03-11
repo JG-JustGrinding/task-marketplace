@@ -31,6 +31,8 @@ type TaskSubmission = {
   is_hidden?: boolean | null;
 };
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
 function formatDate(dateString: string) {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "";
@@ -107,6 +109,9 @@ export default function SubmittedTasksList({
     null,
   );
   const [showHidden, setShowHidden] = useState(false);
+  const [pendingCheckInIds, setPendingCheckInIds] = useState<number[]>([]);
+  const [checkedInIds, setCheckedInIds] = useState<number[]>([]);
+  const [checkInError, setCheckInError] = useState<string | null>(null);
 
   const tasksById = new Map<number, Task>();
   for (const t of tasks) {
@@ -137,12 +142,56 @@ export default function SubmittedTasksList({
     }
   };
 
+  const handleCheckIn = async (submission: TaskSubmission) => {
+    if (pendingCheckInIds.includes(submission.id)) return;
+
+    setCheckInError(null);
+    setPendingCheckInIds((prev) => [...prev, submission.id]);
+
+    try {
+      const res = await fetch("/api/tasks/check-in", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ activationId: submission.id }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setCheckInError(
+          (data && (data as any).error) ||
+            "Failed to check in. Please try again.",
+        );
+        return;
+      }
+
+      setCheckedInIds((prev) =>
+        prev.includes(submission.id) ? prev : [...prev, submission.id],
+      );
+    } catch {
+      setCheckInError(
+        "Something went wrong while checking in. Please try again.",
+      );
+    } finally {
+      setPendingCheckInIds((prev) =>
+        prev.filter((id) => id !== submission.id),
+      );
+    }
+  };
+
   if (visibleSubmissions.length === 0 && hiddenSubmissions.length === 0) {
     return null;
   }
 
   return (
     <div className="space-y-3 max-h-[480px] overflow-y-auto scrollbar-thin pr-1">
+      {checkInError && (
+        <div className="rounded-lg border border-[var(--danger-less-saturated)] bg-[var(--danger-less-saturated)]/10 px-3 py-2 text-[0.7rem] text-[var(--danger)]">
+          {checkInError}
+        </div>
+      )}
       {visibleSubmissions.map((submission) => {
         const task = tasksById.get(submission.task_id);
         const baseStatus = statusBadge(submission.status);
@@ -160,6 +209,19 @@ export default function SubmittedTasksList({
 		const isOverturned =
 		  (submission as any).is_overturned === true ||
 		  (submission as any).isOverturned === true;
+
+    const checkInRequestedAtRaw =
+      (submission as any).check_in_requested_at as string | null;
+    const checkInRequestedAtDate = checkInRequestedAtRaw
+      ? new Date(checkInRequestedAtRaw)
+      : null;
+    const nowMs = Date.now();
+    const hasActiveCheckInRequest =
+      !!checkInRequestedAtDate &&
+      !Number.isNaN(checkInRequestedAtDate.getTime()) &&
+      nowMs - checkInRequestedAtDate.getTime() < ONE_DAY_MS;
+    const hasAlreadyCheckedIn = checkedInIds.includes(submission.id);
+    const needsCheckIn = hasActiveCheckInRequest && !hasAlreadyCheckedIn;
 
     const baseBadgeClass =
       "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase";
@@ -258,12 +320,25 @@ export default function SubmittedTasksList({
                   !isResubmissionRequested && (
                   <>
                     {!isPending && !isResubmission && (
-                      <Link
-                        href={`/listing/${task.id}/submit`}
-                        className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
-                      >
-                        Submit task
-                      </Link>
+                      needsCheckIn ? (
+                        <button
+                          type="button"
+                          disabled={pendingCheckInIds.includes(submission.id)}
+                          onClick={() => handleCheckIn(submission)}
+                          className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)] disabled:opacity-60"
+                        >
+                          {pendingCheckInIds.includes(submission.id)
+                            ? "Checking in..."
+                            : "Check in"}
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/listing/${task.id}/submit`}
+                          className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
+                        >
+                          Submit task
+                        </Link>
+                      )
                     )}
                     <Link
                       href={`/listing/${task.id}`}

@@ -17,6 +17,8 @@ type ActivationRow = {
 	user_id: string;
 	status: string | null;
 	created_at: string;
+	last_check_in_at?: string | null;
+	check_in_requested_at?: string | null;
 };
 
 type ProfileRow = {
@@ -63,7 +65,9 @@ export default async function ListingActivationsPage({ params }: PageParams) {
 
 	const { data: activationsData } = await supabase
 		.from("task_activations")
-		.select("id, user_id, status, created_at")
+		.select(
+			"id, user_id, status, created_at, last_check_in_at, check_in_requested_at",
+		)
 		.eq("task_id", task.id)
 		.order("created_at", { ascending: false });
 
@@ -108,6 +112,8 @@ export default async function ListingActivationsPage({ params }: PageParams) {
 		userId: a.user_id,
 		username: profilesById.get(a.user_id)?.username ?? null,
 		createdAt: a.created_at,
+		lastCheckInAt: a.last_check_in_at ?? null,
+		checkInRequestedAt: a.check_in_requested_at ?? null,
 		status: a.status,
 		hasSubmission: hasSubmissionByUser.get(a.user_id) ?? false,
 	}));

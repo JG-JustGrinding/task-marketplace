@@ -16,7 +16,7 @@ const plans = [
   },
   {
     name: "Earner Pro",
-    tagline: "For task earners and freelancers",
+    tagline: "For task completers and freelancers",
     accent: "var(--accent-secondary)",
     accentHover: "var(--accent-secondary-hover)",
     features: [

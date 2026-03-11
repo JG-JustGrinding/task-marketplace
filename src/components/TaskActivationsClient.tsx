@@ -19,6 +19,8 @@ type Activation = {
     userId: string;
     username: string | null;
     createdAt: string;
+    lastCheckInAt?: string | null;
+    checkInRequestedAt?: string | null;
     status: ActivationStatus;
     hasSubmission: boolean;
 };
@@ -43,6 +45,8 @@ function formatDate(dateString: string) {
 }
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function statusBadge(status: ActivationStatus) {
     const base =
@@ -89,34 +93,15 @@ function statusBadge(status: ActivationStatus) {
     return { label: "Unknown", className: `${base} bg-[var(--bg-muted)]` };
 }
 
-function canActOnActivation(
-    activation: Activation,
-    nowMs: number,
-): { canCancel: boolean; canReject: boolean; reason?: string } {
+function canCancelActivation(activation: Activation): {
+    canCancel: boolean;
+    reason?: string;
+} {
     const createdAt = new Date(activation.createdAt);
     if (Number.isNaN(createdAt.getTime())) {
         return {
             canCancel: false,
-            canReject: false,
             reason: "Invalid activation date",
-        };
-    }
-
-    const ageMs = nowMs - createdAt.getTime();
-
-    if (activation.hasSubmission) {
-        return {
-            canCancel: false,
-            canReject: false,
-            reason: "",
-        };
-    }
-    
-    if (ageMs < THREE_DAYS_MS) {
-        return {
-            canCancel: false,
-            canReject: false,
-            reason: "Activation must be active for at least 3 days before it can be rejected.",
         };
     }
 
@@ -131,12 +116,85 @@ function canActOnActivation(
     if (!activeStatuses.includes(status)) {
         return {
             canCancel: false,
-            canReject: false,
             reason: "Activation is no longer active.",
         };
     }
 
-    return { canCancel: true, canReject: true };
+    if (activation.hasSubmission) {
+        return {
+            canCancel: false,
+            reason: "You cannot cancel an activation that already has a submission.",
+        };
+    }
+
+    return { canCancel: true };
+}
+
+function canRequestCheckIn(
+    activation: Activation,
+    nowMs: number,
+): { canRequest: boolean; reason?: string } {
+    const createdAt = new Date(activation.createdAt);
+    if (Number.isNaN(createdAt.getTime())) {
+        return {
+            canRequest: false,
+            reason: "Invalid activation date",
+        };
+    }
+
+    const ageMs = nowMs - createdAt.getTime();
+
+    if (ageMs < THREE_DAYS_MS) {
+        return {
+            canRequest: false,
+            reason:
+                "Activation must be active for at least 3 days before you can request a check-in.",
+        };
+    }
+
+    const status = activation.status ?? "";
+    const activeStatuses = [
+        "waiting_submission",
+        "pending",
+        "resubmission",
+        "resubmission_requested",
+    ];
+
+    if (!activeStatuses.includes(status)) {
+        return {
+            canRequest: false,
+            reason: "Activation is no longer active.",
+        };
+    }
+
+    if (activation.hasSubmission) {
+        return {
+            canRequest: false,
+            reason: "You cannot request a check-in for an activation that already has a submission.",
+        };
+    }
+
+    const lastCheckInAt = activation.lastCheckInAt
+        ? new Date(activation.lastCheckInAt)
+        : null;
+    if (lastCheckInAt && nowMs - lastCheckInAt.getTime() < ONE_WEEK_MS) {
+        return {
+            canRequest: false,
+            reason: "You can only request a check-in once every 7 days.",
+        };
+    }
+
+    const checkInRequestedAt = activation.checkInRequestedAt
+        ? new Date(activation.checkInRequestedAt)
+        : null;
+    if (checkInRequestedAt && nowMs - checkInRequestedAt.getTime() < ONE_DAY_MS) {
+        return {
+            canRequest: false,
+            reason: "There is already an active check-in request for this activation.",
+        };
+    }
+
+    return { canRequest: true };
 }
 
 export default function TaskActivationsClient({
@@ -153,7 +211,7 @@ export default function TaskActivationsClient({
         activations,
     );
     const [confirmState, setConfirmState] = useState<
-        { type: "cancel" | "reject"; activation: Activation } | null
+        { type: "cancel" | "request_check_in"; activation: Activation } | null
     >(null);
 
     const nowMs = useMemo(() => Date.now(), []);
@@ -163,7 +221,7 @@ export default function TaskActivationsClient({
     const handleCancel = async (activation: Activation) => {
         if (pendingIds.includes(activation.id)) return;
 
-        const { canCancel, reason } = canActOnActivation(activation, nowMs);
+        const { canCancel, reason } = canCancelActivation(activation);
         if (!canCancel) {
             setError(reason ?? "This activation cannot be cancelled.");
             return;
@@ -204,13 +262,12 @@ export default function TaskActivationsClient({
             setPendingIds((prev) => prev.filter((id) => id !== activation.id));
         }
     };
-
-    const handleReject = async (activation: Activation) => {
+    const handleRequestCheckIn = async (activation: Activation) => {
         if (pendingIds.includes(activation.id)) return;
 
-        const { canReject, reason } = canActOnActivation(activation, nowMs);
-        if (!canReject) {
-            setError(reason ?? "This activation cannot be rejected.");
+        const { canRequest, reason } = canRequestCheckIn(activation, nowMs);
+        if (!canRequest) {
+            setError(reason ?? "You cannot request a check-in for this activation.");
             return;
         }
 
@@ -218,7 +275,7 @@ export default function TaskActivationsClient({
         setError(null);
 
         try {
-            const res = await fetch("/api/tasks/reject-activation", {
+            const res = await fetch("/api/tasks/request-checkin", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -231,20 +288,70 @@ export default function TaskActivationsClient({
             if (!res.ok) {
                 setError(
                     (data && (data as any).error) ||
-                        "Failed to reject activation. Please try again.",
+                        "Failed to request check-in. Please try again.",
                 );
                 return;
             }
 
             setLocalActivations((prev) =>
                 prev.map((a) =>
-                    a.id === activation.id ? { ...a, status: "rejected" } : a,
+                    a.id === activation.id
+                        ? { ...a, checkInRequestedAt: new Date().toISOString() }
+                        : a,
                 ),
             );
         } catch {
             setError(
-                "Something went wrong while rejecting. Please try again.",
+                "Something went wrong while requesting a check-in. Please try again.",
             );
+        } finally {
+            setPendingIds((prev) => prev.filter((id) => id !== activation.id));
+        }
+    };
+
+    const handleCheckIn = async (activation: Activation) => {
+        if (pendingIds.includes(activation.id)) return;
+
+        if (!activation.checkInRequestedAt) {
+            setError("There is no active check-in request for this activation.");
+            return;
+        }
+
+        setPendingIds((prev) => [...prev, activation.id]);
+        setError(null);
+
+        try {
+            const res = await fetch("/api/tasks/check-in", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ activationId: activation.id }),
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                setError(
+                    (data && (data as any).error) ||
+                        "Failed to check in. Please try again.",
+                );
+                return;
+            }
+
+            setLocalActivations((prev) =>
+                prev.map((a) =>
+                    a.id === activation.id
+                        ? {
+                              ...a,
+                              lastCheckInAt: new Date().toISOString(),
+                              checkInRequestedAt: null,
+                          }
+                        : a,
+                ),
+            );
+        } catch {
+            setError("Something went wrong while checking in. Please try again.");
         } finally {
             setPendingIds((prev) => prev.filter((id) => id !== activation.id));
         }
@@ -274,12 +381,22 @@ export default function TaskActivationsClient({
                         const { label, className } = statusBadge(
                             activation.status,
                         );
-                        const { canCancel, canReject, reason } =
-                            canActOnActivation(activation, nowMs);
+                        const { canCancel, reason: cancelReason } =
+                            canCancelActivation(activation);
+                        const { canRequest, reason: requestReason } =
+                            canRequestCheckIn(activation, nowMs);
                         const isPending = pendingIds.includes(activation.id);
 
                         const canShowCancel = isCurrentUser && canCancel;
-                        const canShowReject = isPoster && !isCurrentUser && canReject;
+                        const canShowRequestCheckIn =
+                            isPoster && !isCurrentUser && canRequest;
+
+                        const checkInRequestedAtDate = activation.checkInRequestedAt
+                            ? new Date(activation.checkInRequestedAt)
+                            : null;
+                        const isCheckInWindowActive =
+                            !!checkInRequestedAtDate &&
+                            nowMs - checkInRequestedAtDate.getTime() < ONE_DAY_MS;
 
                         return (
                             <article
@@ -294,6 +411,16 @@ export default function TaskActivationsClient({
                                         <p className="mt-1 text-[0.7rem] text-[var(--text-secondary)]">
                                             Started {formatDate(activation.createdAt)}
                                         </p>
+                                        {activation.lastCheckInAt && (
+                                            <p className="mt-0.5 text-[0.65rem] text-[var(--text-secondary)]">
+                                                Last check-in {formatDate(activation.lastCheckInAt)}
+                                            </p>
+                                        )}
+                                        {activation.checkInRequestedAt && isCheckInWindowActive && (
+                                            <p className="mt-0.5 text-[0.65rem] text-[var(--text-secondary)]">
+                                                Check-in requested · the worker has 24 hours to check in
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
                                         <span className={className}>{label}</span>
@@ -302,10 +429,12 @@ export default function TaskActivationsClient({
 
                                 <div className="mt-1 flex items-center justify-between gap-2 text-[0.65rem] text-[var(--text-secondary)]">
                                     <div className="flex flex-col">
-                                        {reason &&
-                                            !(canCancel || canReject) && (
-                                                <span>{reason}</span>
-                                            )}
+                                        {cancelReason && !canCancel && (
+                                            <span>{cancelReason}</span>
+                                        )}
+                                        {requestReason && !canShowRequestCheckIn && (
+                                            <span>{requestReason}</span>
+                                        )}
                                     </div>
                                     <div className="flex gap-2 items-center">
                                         {canShowCancel && (
@@ -325,21 +454,31 @@ export default function TaskActivationsClient({
                                                     : "Cancel activation"}
                                             </button>
                                         )}
-                                        {canShowReject && (
+                                        {canShowRequestCheckIn && (
                                             <button
                                                 type="button"
                                                 disabled={isPending}
                                                 onClick={() =>
                                                     setConfirmState({
-                                                        type: "reject",
+                                                        type: "request_check_in",
                                                         activation,
                                                     })
                                                 }
-                                                className="px-2 py-1 rounded-lg bg-[var(--danger)] text-[var(--white)] text-[0.7rem] font-semibold hover:opacity-90 disabled:opacity-60"
+                                                className="px-2 py-1 rounded-lg bg-[var(--accent-primary)] text-[var(--white)] text-[0.7rem] font-semibold hover:opacity-90 disabled:opacity-60"
                                             >
                                                 {isPending
-                                                    ? "Rejecting..."
-                                                    : "Reject activation"}
+                                                    ? "Requesting..."
+                                                    : "Request check-in"}
+                                            </button>
+                                        )}
+                                        {isCurrentUser && isCheckInWindowActive && (
+                                            <button
+                                                type="button"
+                                                disabled={isPending}
+                                                onClick={() => handleCheckIn(activation)}
+                                                className="px-2 py-1 rounded-lg bg-[var(--accent-primary)] text-[var(--white)] text-[0.7rem] font-semibold hover:opacity-90 disabled:opacity-60"
+                                            >
+                                                {isPending ? "Checking in..." : "Check in"}
                                             </button>
                                         )}
                                     </div>
@@ -369,14 +508,14 @@ export default function TaskActivationsClient({
                         id="confirm-activation-title"
                         className="text-base font-semibold text-[var(--text-primary)]"
                     >
-                        {isConfirmCancel
-                            ? "Cancel this activation?"
-                            : "Reject this activation?"}
+                        {confirmState?.type === "request_check_in"
+                            ? "Request a check-in?"
+                            : "Cancel this activation?"}
                     </h2>
                     <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                        {isConfirmCancel
-                            ? "If you cancel, you might not be able to start this task again."
-                            : "If you reject this activation, the submitter will no longer be working on this task so someone else can take it."}
+                        {confirmState?.type === "request_check_in"
+                            ? "The worker will have 24 hours to check in. If they do not, the activation will be automatically cancelled."
+                            : "If you cancel, you might not be able to start this task again."}
                     </p>
                     <div className="mt-4 flex items-center justify-end gap-2">
                         <button
@@ -391,15 +530,17 @@ export default function TaskActivationsClient({
                             className="rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
                             onClick={async () => {
                                 if (!confirmActivation) return;
-                                if (isConfirmCancel) {
+                                if (confirmState?.type === "request_check_in") {
+                                    await handleRequestCheckIn(confirmActivation);
+                                } else if (isConfirmCancel) {
                                     await handleCancel(confirmActivation);
-                                } else {
-                                    await handleReject(confirmActivation);
                                 }
                                 setConfirmState(null);
                             }}
                         >
-                            {isConfirmCancel ? "Yes, cancel" : "Yes, reject"}
+                            {confirmState?.type === "request_check_in"
+                                ? "Yes, request"
+                                : "Yes, cancel"}
                         </button>
                     </div>
                 </div>

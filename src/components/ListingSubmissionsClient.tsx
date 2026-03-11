@@ -39,6 +39,26 @@ function formatDate(dateString: string) {
   });
 }
 
+const AUTO_ACCEPT_MS = 3 * 24 * 60 * 60 * 1000; // 3 days; keep in sync with auto-accept backend
+
+function formatCountdown(msRemaining: number) {
+  if (!Number.isFinite(msRemaining) || msRemaining <= 0) {
+    return "soon";
+  }
+
+  const totalSeconds = Math.floor(msRemaining / 1000);
+  const days = Math.floor(totalSeconds / (24 * 60 * 60));
+  const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+  const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0 || days > 0) parts.push(`${hours}h`);
+  parts.push(`${minutes}m`);
+
+  return parts.join(" ");
+}
+
 function statusLabel(status: SubmissionStatus) {
   if (status === "accepted") return "Accepted";
   if (status === "rejected") return "Rejected";
@@ -79,6 +99,7 @@ export default function ListingSubmissionsClient({
   const [disputeOverturnAction, setDisputeOverturnAction] = useState<string>("keep_task");
   const [isSubmittingDispute, setIsSubmittingDispute] = useState<boolean>(false);
   const [disputeError, setDisputeError] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -116,6 +137,16 @@ export default function ListingSubmissionsClient({
       controller.abort();
     };
   }, [listingId]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 30_000); // update every 30s; fine-grained enough for a countdown label
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const handleUpdateStatus = (id: number, status: SubmissionStatus) => {
     setSubmissions((current) =>
@@ -364,6 +395,31 @@ export default function ListingSubmissionsClient({
             submission.status === "resubmission_requested" ||
             submission.status === "changes_requested";
 
+          // Auto-accept only applies when there is a single submission
+          // awaiting review (initial or resubmission) for the task. This
+          // mirrors the backend auto-accept rule.
+          let autoAcceptMessage: string | null = null;
+          const isOnlySubmission = submissions.length === 1;
+          const isAwaitingReview =
+            submission.status === "pending" ||
+            submission.status === "resubmission" ||
+            !submission.status;
+
+          if (isOnlySubmission && isAwaitingReview && !isTaskAccepted) {
+            const submittedTime = new Date(submission.submittedAt).getTime();
+            if (Number.isFinite(submittedTime)) {
+              const autoAcceptTime = submittedTime + AUTO_ACCEPT_MS;
+              const remainingMs = autoAcceptTime - nowMs;
+
+              if (remainingMs > 0) {
+                autoAcceptMessage = `Auto-accepts in ${formatCountdown(remainingMs)} if you take no action.`;
+              } else {
+                autoAcceptMessage =
+                  "This submission is eligible for auto-accept and may be accepted at any time if no action is taken.";
+              }
+            }
+          }
+
           return (
             <article
               key={submission.id}
@@ -390,6 +446,11 @@ export default function ListingSubmissionsClient({
                     {isDisputeUpheld && (
                       <span className="ml-2 inline-flex items-center rounded-full border border-[var(--danger-less-saturated)]/40 bg-[var(--danger-less-saturated)]/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-[var(--danger-less-saturated)]">
                         Dispute resolved (upheld)
+                      </span>
+                    )}
+                    {autoAcceptMessage && (
+                      <span className="ml-2 inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--bg-muted)]/70 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+                        {autoAcceptMessage}
                       </span>
                     )}
                   </p>

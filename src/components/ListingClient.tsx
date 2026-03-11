@@ -27,6 +27,8 @@ type ListingClientProps = {
     hasReachedTaskLimit?: boolean;
     hasActiveActivations?: boolean;
     canDeleteTask?: boolean;
+    needsCheckIn?: boolean;
+    checkInActivationId?: number | null;
 };
 
 export default function ListingClient({
@@ -47,6 +49,8 @@ export default function ListingClient({
     hasReachedTaskLimit = false,
     hasActiveActivations = false,
     canDeleteTask = false,
+    needsCheckIn = false,
+    checkInActivationId = null,
 }: ListingClientProps) {
     const [activeImage, setActiveImage] = useState<string | null>(null);
     const [showStartConfirm, setShowStartConfirm] = useState(false);
@@ -64,6 +68,9 @@ export default function ListingClient({
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
     const [reportError, setReportError] = useState<string | null>(null);
     const [reportSuccess, setReportSuccess] = useState(false);
+    const [isCheckingIn, setIsCheckingIn] = useState(false);
+    const [checkInError, setCheckInError] = useState<string | null>(null);
+    const [hasCheckedIn, setHasCheckedIn] = useState(false);
 
     const {
         title,
@@ -86,6 +93,39 @@ export default function ListingClient({
     const removeActions = false; // for when the user has cancelled the task
 
     const isFundedDeletionFlow = canDeleteTask && !taskUnavailable;
+
+    const handleCheckIn = async () => {
+        if (!checkInActivationId || isCheckingIn) return;
+        setCheckInError(null);
+        setIsCheckingIn(true);
+        try {
+            const res = await fetch("/api/tasks/check-in", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ activationId: checkInActivationId }),
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                setCheckInError(
+                    (data && (data as any).error) ||
+                        "Failed to check in. Please try again.",
+                );
+                return;
+            }
+
+            setHasCheckedIn(true);
+        } catch {
+            setCheckInError(
+                "Something went wrong while checking in. Please try again.",
+            );
+        } finally {
+            setIsCheckingIn(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
@@ -431,12 +471,25 @@ export default function ListingClient({
                                                 >
                                                     Cancel task
                                                 </button>
-                                                <Link
-                                                    href={`/listing/${listing.id}/submit`}
-                                                    className="none flex-1 py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-secondary)] text-white hover:bg-[var(--accent-secondary-hover)] text-center"
-                                                >
-                                                    Submit task
-                                                </Link>
+                                                {needsCheckIn && !hasCheckedIn ? (
+                                                    <button
+                                                        type="button"
+                                                        className="flex-1 py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-70"
+                                                        disabled={isCheckingIn || !checkInActivationId}
+                                                        onClick={handleCheckIn}
+                                                    >
+                                                        {isCheckingIn
+                                                            ? "Checking in..."
+                                                            : "Check in"}
+                                                    </button>
+                                                ) : (
+                                                    <Link
+                                                        href={`/listing/${listing.id}/submit`}
+                                                        className="none flex-1 py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-secondary)] text-white hover:bg-[var(--accent-secondary-hover)] text-center"
+                                                    >
+                                                        Submit task
+                                                    </Link>
+                                                )}
                                             </>
                                         )}
                                     </div>

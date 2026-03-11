@@ -34,6 +34,7 @@ type TaskSubmission = {
   is_hidden?: boolean | null;
   has_dispute?: boolean | null;
   is_overturned?: boolean | null;
+  check_in_requested_at?: string | null;
 };
 
 type HubDashboardProps = {

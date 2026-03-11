@@ -30,6 +30,7 @@ type TaskSubmission = {
 	status: SubmissionStatus;
 	created_at: string;
 	is_hidden?: boolean | null;
+	check_in_requested_at?: string | null;
 	has_dispute?: boolean | null;
 	// True when a dispute on this submission has been resolved in favor of the creator
 	// and the original acceptance was effectively overturned.
@@ -131,7 +132,9 @@ export default async function HubPage() {
 
 	const { data: mySubmissionsData } = await supabase
 		.from("task_activations")
-		.select("id, task_id, status, created_at, is_hidden, resubmission_message")
+		.select(
+			"id, task_id, status, created_at, is_hidden, resubmission_message, check_in_requested_at",
+		)
 		.eq("user_id", user.id)
 		.order("created_at", { ascending: false });
 

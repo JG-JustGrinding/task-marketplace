@@ -104,6 +104,8 @@ export default async function ListingPage({
     let submissionRejected = false;
     let taskTaken = false;
     let isResubmission = false;
+    let needsCheckIn = false;
+    let checkInActivationId: number | null = null;
     let hasReachedTaskLimit = false;
     let hasActiveActivations = false;
     const taskAccepted = !!data && data.status === "task_accepted";
@@ -138,7 +140,7 @@ export default async function ListingPage({
 
         const { data: activation } = await supabase
             .from("task_activations")
-            .select("id, status")
+            .select("id, status, check_in_requested_at")
             .eq("user_id", user.id)
             .eq("task_id", data.id)
             .maybeSingle();
@@ -150,6 +152,20 @@ export default async function ListingPage({
             wasCancelled = status === "cancelled";
             submissionRejected = status === "rejected";
             isResubmission = status === "resubmission";
+
+            const checkInRequestedAt = (activation as any)
+                .check_in_requested_at as string | null;
+            if (checkInRequestedAt) {
+                const requestedAtDate = new Date(checkInRequestedAt);
+                if (!Number.isNaN(requestedAtDate.getTime())) {
+                    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+                    const ageMs = Date.now() - requestedAtDate.getTime();
+                    if (ageMs < ONE_DAY_MS) {
+                        needsCheckIn = true;
+                        checkInActivationId = (activation as any).id as number;
+                    }
+                }
+            }
         }
 
         // Check if any other user has an active (non-cancelled) activation for this task.
@@ -207,6 +223,8 @@ export default async function ListingPage({
             hasReachedTaskLimit={hasReachedTaskLimit}
             hasActiveActivations={hasActiveActivations}
             canDeleteTask={canDeleteTask}
+            needsCheckIn={needsCheckIn}
+            checkInActivationId={checkInActivationId}
         />
     );
 }
