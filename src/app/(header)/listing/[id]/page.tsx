@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { type Listing } from "@/data/listings";
@@ -22,6 +23,70 @@ type TaskRow = {
     price: number;
     status: string | null;
 };
+
+export async function generateMetadata({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+    const { id } = await params;
+    const numericId = Number(id);
+
+    if (!Number.isFinite(numericId)) {
+        return {
+            title: "Task not found",
+            robots: {
+                index: false,
+                follow: false,
+            },
+        };
+    }
+
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from("tasks")
+        .select("title, short_description, references")
+        .eq("id", numericId)
+        .single<TaskRow>();
+
+    if (error || !data) {
+        return {
+            title: "Task not found",
+            robots: {
+                index: false,
+                follow: false,
+            },
+        };
+    }
+
+    const refs = (data.references ?? []) as ReferenceItem[];
+    const imageUrls = refs
+        .filter((ref) => ref.type === "image" && ref.url)
+        .map((ref) => ref.url);
+
+    const title = data.title || `Task #${numericId}`;
+    const description =
+        data.short_description ||
+        "View full task details, requirements, and payout information on Bountask.";
+
+    return {
+        title,
+        description,
+        openGraph: {
+            title,
+            description,
+            type: "article",
+            images: imageUrls.length
+                ? imageUrls.map((url) => ({ url }))
+                : undefined,
+        },
+        twitter: {
+            card: "summary_large_image",
+            title,
+            description,
+        },
+    };
+}
 
 export default async function ListingPage({
     params,

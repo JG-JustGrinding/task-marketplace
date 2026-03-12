@@ -1,6 +1,17 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AccountClient from "@/components/AccountClient";
+
+export const metadata: Metadata = {
+  title: "Account settings",
+  description:
+    "Manage your Bountask account details, email, and security settings.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AccountPage() {
   const supabase = await createClient();

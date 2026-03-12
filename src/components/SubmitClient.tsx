@@ -118,6 +118,7 @@ export default function SubmitClient({
 
       if (!response.ok || result.error) {
         setError(result.error || "Failed to submit task. Please try again.");
+        setIsSubmitting(false);
         return;
       }
 
@@ -127,7 +128,6 @@ export default function SubmitClient({
     } catch (err) {
       console.error(err);
       setError("Something went wrong while submitting. Please try again.");
-    } finally {
       setIsSubmitting(false);
     }
   };

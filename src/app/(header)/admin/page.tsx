@@ -1,7 +1,18 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AdminEarningsClient from "@/components/AdminEarningsClient";
+
+export const metadata: Metadata = {
+	title: "Admin earnings",
+	description:
+		"Internal Bountask admin earnings dashboard for reviewing platform earnings and claims.",
+	robots: {
+		index: false,
+		follow: false,
+	},
+};
 
 type SearchParams = {
 	[key: string]: string | string[] | undefined;

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import TaskActivationsClient from "@/components/TaskActivationsClient";
@@ -24,6 +25,16 @@ type ActivationRow = {
 type ProfileRow = {
 	id: string;
 	username: string | null;
+};
+
+export const metadata: Metadata = {
+	title: "Task activations",
+	description:
+		"View and manage worker activations for this Bountask listing as the task creator.",
+	robots: {
+		index: false,
+		follow: false,
+	},
 };
 
 export default async function ListingActivationsPage({ params }: PageParams) {

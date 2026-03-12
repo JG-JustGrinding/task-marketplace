@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type SubmissionStatus =
@@ -50,7 +50,8 @@ function statusBadge(status: SubmissionStatus) {
   if (status === "waiting_submission") {
     return {
       label: "Waiting submission",
-      className: "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase bg-[var(--bg-muted)] text-[var(--text-secondary)]",
+      className:
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase bg-[var(--bg-muted)] text-[var(--text-secondary)]",
     };
   }
 
@@ -104,6 +105,10 @@ export default function SubmittedTasksList({
   submissions,
   tasks,
 }: SubmittedTasksListProps) {
+  const [allSubmissions, setAllSubmissions] = useState<TaskSubmission[]>(
+    submissions,
+  );
+  const [allTasks, setAllTasks] = useState<Task[]>(tasks);
   const [hiddenIds, setHiddenIds] = useState<number[]>([]);
   const [expandedDetailsId, setExpandedDetailsId] = useState<number | null>(
     null,
@@ -112,17 +117,27 @@ export default function SubmittedTasksList({
   const [pendingCheckInIds, setPendingCheckInIds] = useState<number[]>([]);
   const [checkedInIds, setCheckedInIds] = useState<number[]>([]);
   const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [paginationError, setPaginationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAllSubmissions(submissions);
+    setAllTasks(tasks);
+  }, [submissions, tasks]);
 
   const tasksById = new Map<number, Task>();
-  for (const t of tasks) {
+  for (const t of allTasks) {
     tasksById.set(t.id, t);
   }
 
   const isLocallyHidden = (s: TaskSubmission) =>
     !!s.is_hidden || hiddenIds.includes(s.id);
 
-  const visibleSubmissions = submissions.filter((s) => !isLocallyHidden(s));
-  const hiddenSubmissions = submissions.filter((s) => isLocallyHidden(s));
+  const visibleSubmissions = allSubmissions.filter(
+    (s) => !isLocallyHidden(s),
+  );
+  const hiddenSubmissions = allSubmissions.filter((s) => isLocallyHidden(s));
 
   const handleHide = async (id: number) => {
     setHiddenIds((prev) =>
@@ -181,12 +196,80 @@ export default function SubmittedTasksList({
     }
   };
 
+  async function handleScroll(event: any) {
+    const el = event.currentTarget as HTMLElement | null;
+    if (!el) return;
+    if (isLoadingMore || !hasMore) return;
+
+    const threshold = 80;
+    if (el.scrollTop + el.clientHeight < el.scrollHeight - threshold) return;
+
+    setIsLoadingMore(true);
+    setPaginationError(null);
+
+    try {
+      const offset = allSubmissions.length;
+      const params = new URLSearchParams({
+        offset: String(offset),
+        limit: String(20),
+      });
+      const res = await fetch(
+        `/api/account/hub/started-tasks?${params.toString()}`,
+      );
+      if (!res.ok) {
+        throw new Error("Failed to load more started tasks");
+      }
+      const data = await res.json();
+      const newSubmissions = (data?.submissions ?? []) as TaskSubmission[];
+      const newTasks = (data?.tasks ?? []) as Task[];
+
+      if (!Array.isArray(newSubmissions) || newSubmissions.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      setAllSubmissions((prev) => {
+        const existingIds = new Set(prev.map((s) => s.id));
+        const merged = [...prev];
+        for (const sub of newSubmissions) {
+          if (!existingIds.has(sub.id)) {
+            merged.push(sub as TaskSubmission);
+          }
+        }
+        return merged;
+      });
+
+      setAllTasks((prev) => {
+        const existingIds = new Set(prev.map((t) => t.id));
+        const merged = [...prev];
+        for (const task of newTasks) {
+          if (!existingIds.has(task.id)) {
+            merged.push(task as Task);
+          }
+        }
+        return merged;
+      });
+
+      setHasMore(Boolean(data?.hasMore));
+    } catch (error) {
+      console.error("Error loading more started tasks for hub", error);
+      setPaginationError(
+        "We couldn't load more of your started tasks. Please try again.",
+      );
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
+
   if (visibleSubmissions.length === 0 && hiddenSubmissions.length === 0) {
     return null;
   }
 
   return (
-    <div className="space-y-3 max-h-[480px] overflow-y-auto scrollbar-thin pr-1">
+    <div
+      className="space-y-3 max-h-[480px] overflow-y-auto scrollbar-thin pr-1"
+      onScroll={handleScroll}
+    >
       {checkInError && (
         <div className="rounded-lg border border-[var(--danger-less-saturated)] bg-[var(--danger-less-saturated)]/10 px-3 py-2 text-[0.7rem] text-[var(--danger)]">
           {checkInError}
@@ -203,33 +286,33 @@ export default function SubmittedTasksList({
         const isAccepted = submission.status === "accepted";
         const isPending = submission.status === "pending";
         const showDetails = expandedDetailsId === submission.id;
-		const hasDispute =
-		  (submission as any).has_dispute === true ||
-		  (submission as any).hasDispute === true;
-		const isOverturned =
-		  (submission as any).is_overturned === true ||
-		  (submission as any).isOverturned === true;
+        const hasDispute =
+          (submission as any).has_dispute === true ||
+          (submission as any).hasDispute === true;
+        const isOverturned =
+          (submission as any).is_overturned === true ||
+          (submission as any).isOverturned === true;
 
-    const checkInRequestedAtRaw =
-      (submission as any).check_in_requested_at as string | null;
-    const checkInRequestedAtDate = checkInRequestedAtRaw
-      ? new Date(checkInRequestedAtRaw)
-      : null;
-    const nowMs = Date.now();
-    const hasActiveCheckInRequest =
-      !!checkInRequestedAtDate &&
-      !Number.isNaN(checkInRequestedAtDate.getTime()) &&
-      nowMs - checkInRequestedAtDate.getTime() < ONE_DAY_MS;
-    const hasAlreadyCheckedIn = checkedInIds.includes(submission.id);
-    const needsCheckIn = hasActiveCheckInRequest && !hasAlreadyCheckedIn;
+        const checkInRequestedAtRaw =
+          (submission as any).check_in_requested_at as string | null;
+        const checkInRequestedAtDate = checkInRequestedAtRaw
+          ? new Date(checkInRequestedAtRaw)
+          : null;
+        const nowMs = Date.now();
+        const hasActiveCheckInRequest =
+          !!checkInRequestedAtDate &&
+          !Number.isNaN(checkInRequestedAtDate.getTime()) &&
+          nowMs - checkInRequestedAtDate.getTime() < ONE_DAY_MS;
+        const hasAlreadyCheckedIn = checkedInIds.includes(submission.id);
+        const needsCheckIn = hasActiveCheckInRequest && !hasAlreadyCheckedIn;
 
-    const baseBadgeClass =
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase";
-    const label = isOverturned && isAccepted ? "Overturned" : baseStatus.label;
-    const className =
-      isOverturned && isAccepted
-      ? `${baseBadgeClass} badge-danger`
-      : baseStatus.className;
+        const baseBadgeClass =
+          "inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase";
+        const label = isOverturned && isAccepted ? "Overturned" : baseStatus.label;
+        const className =
+          isOverturned && isAccepted
+            ? `${baseBadgeClass} badge-danger`
+            : baseStatus.className;
 
         return (
           <article
@@ -284,7 +367,7 @@ export default function SubmittedTasksList({
 
             <div className="mt-1 flex items-center justify-between gap-2 text-[0.65rem] text-[var(--text-secondary)]">
               <div className="flex flex-col">
-		        <span>Started {formatDate(submission.created_at)}</span>
+                <span>Started {formatDate(submission.created_at)}</span>
                 {hasDispute && (
                   <span className="mt-1 max-w-xs text-[0.6rem] text-[var(--text-secondary)]">
                     There is an open dispute on this task. Your payout may be removed if the dispute is resolved in favor of the task poster.
@@ -365,6 +448,16 @@ export default function SubmittedTasksList({
           </article>
         );
       })}
+      {isLoadingMore && (
+        <div className="py-2 text-[0.7rem] text-[var(--text-secondary)] text-center">
+          Loading more tasks...
+        </div>
+      )}
+      {paginationError && (
+        <div className="py-2 text-[0.7rem] text-[var(--danger-less-saturated)] text-center">
+          {paginationError}
+        </div>
+      )}
       {hiddenSubmissions.length > 0 && (
         <div className="mt-2 border-t border-[var(--border-color)] pt-2 space-y-2">
           <button

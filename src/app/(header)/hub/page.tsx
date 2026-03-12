@@ -1,8 +1,21 @@
+const dynamic = "force-dynamic";
+
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import HubDashboard from "@/components/HubDashboard";
 import stripe from "@/lib/stripe";
 import { maturePendingEarningsForUser } from "@/lib/earnings";
+
+export const metadata: Metadata = {
+	title: "Your hub",
+	description:
+		"View your Bountask earnings, balances, submissions, and task activity in one dashboard.",
+	robots: {
+		index: false,
+		follow: false,
+	},
+};
 
 type Task = {
 	id: number;
@@ -37,6 +50,9 @@ type TaskSubmission = {
 	is_overturned?: boolean | null;
 };
 
+const CREATED_PAGE_SIZE = 20;
+const STARTED_PAGE_SIZE = 20;
+
 export default async function HubPage() {
 	const supabase = await createClient();
 
@@ -52,12 +68,47 @@ export default async function HubPage() {
 	// before we load and display them in the dashboard.
 	await maturePendingEarningsForUser(user.id);
 
-	// Load the current user's payout balance, pending balance, and Stripe account status
-	const { data: profileData } = await supabase
-		.from("profiles")
-		.select("available_balance_cents, pending_balance_cents, stripe_account_id")
-		.eq("id", user.id)
-		.single();
+	// Load the current user's payout balance, pending balance, Stripe account
+	// status, created tasks, submissions, and pending earnings in grouped
+	// parallel queries (after earnings have been matured).
+	const [
+		{ data: profileData },
+		{ data: createdTasksData, error: createdError },
+		{ data: mySubmissionsData },
+		{ data: pendingEarningsData },
+	] = await Promise.all([
+		supabase
+			.from("profiles")
+			.select(
+				"available_balance_cents, pending_balance_cents, stripe_account_id",
+			)
+			.eq("id", user.id)
+			.single(),
+		supabase
+			.from("tasks")
+			.select(
+				"id, title, short_description, price, categories, status, created_at",
+			)
+				.eq("user_id", user.id)
+				.order("created_at", { ascending: false })
+				.limit(CREATED_PAGE_SIZE),
+		supabase
+			.from("task_activations")
+			.select(
+				"id, task_id, status, created_at, is_hidden, resubmission_message, check_in_requested_at",
+			)
+			.eq("user_id", user.id)
+			.order("created_at", { ascending: false })
+			.limit(STARTED_PAGE_SIZE),
+		supabase
+			.from("task_earnings")
+			.select(
+				"id, task_id, submission_id, amount_cents, available_at, tasks(title)",
+			)
+			.eq("submitter_id", user.id)
+			.eq("status", "pending")
+			.order("available_at", { ascending: true }),
+	]);
 
 	const availableBalanceCents =
 		(typeof profileData?.available_balance_cents === "number"
@@ -69,51 +120,91 @@ export default async function HubPage() {
 			? profileData.pending_balance_cents
 			: 0) || 0;
 
-	const hasStripeAccount = Boolean(profileData?.stripe_account_id);
+	const stripeAccountId = profileData?.stripe_account_id as string | undefined;
+	const hasStripeAccount = Boolean(stripeAccountId);
+
+	const [stripeAccount, creatorDisputesData, createdSubmissionsData, workerDisputesData, submittedTasksData, pendingEarningDisputesData] =
+		await Promise.all([
+			stripeAccountId
+				? stripe.accounts.retrieve(stripeAccountId).catch((err: unknown) => {
+						console.error("Error checking Stripe onboarding status", err);
+						return null;
+				  })
+				: Promise.resolve(null),
+			// The following queries depend on IDs derived from created and submitted tasks.
+			(async () => {
+				const createdTasksRaw: Task[] = createdTasksData ?? [];
+				const createdTaskIds = createdTasksRaw.map((t) => t.id);
+				if (createdTaskIds.length === 0) return null;
+				const { data } = await supabase
+					.from("task_submission_disputes")
+					.select("task_id, status")
+					.eq("creator_id", user.id)
+					.eq("status", "open")
+					.in("task_id", createdTaskIds);
+				return data ?? null;
+			})(),
+			(async () => {
+				const createdTasksRaw: Task[] = createdTasksData ?? [];
+				const createdTaskIds = createdTasksRaw.map((t) => t.id);
+				if (createdTaskIds.length === 0) return null;
+				const { data } = await supabase
+					.from("task_submissions")
+					.select("id, task_id, status, created_at")
+					.in("task_id", createdTaskIds);
+				return data ?? null;
+			})(),
+			(async () => {
+				const rawMySubmissions: TaskSubmission[] = mySubmissionsData ?? [];
+				const submittedTaskIds = rawMySubmissions.map((s) => s.task_id);
+				if (submittedTaskIds.length === 0) return null;
+				const { data } = await supabase
+					.from("task_submission_disputes")
+					.select("task_id, status")
+					.eq("worker_id", user.id)
+					.in("task_id", submittedTaskIds);
+				return data ?? null;
+			})(),
+			(async () => {
+				const rawMySubmissions: TaskSubmission[] = mySubmissionsData ?? [];
+				const submittedTaskIds = rawMySubmissions.map((s) => s.task_id);
+				if (submittedTaskIds.length === 0) return null;
+				const { data } = await supabase
+					.from("tasks")
+					.select(
+						"id, title, short_description, price, categories, created_at",
+					)
+					.in("id", submittedTaskIds);
+				return data ?? null;
+			})(),
+			(async () => {
+				const pendingSubmissionIds = (pendingEarningsData ?? [])
+					.map((row: any) => row.submission_id as number | null)
+					.filter((id): id is number => id != null);
+				if (pendingSubmissionIds.length === 0) return null;
+				const { data } = await supabase
+					.from("task_submission_disputes")
+					.select("submission_id")
+					.eq("worker_id", user.id)
+					.eq("status", "open")
+					.in("submission_id", pendingSubmissionIds);
+				return data ?? null;
+			})(),
+		]);
 
 	let hasCompletedStripeOnboarding = false;
-
-	if (profileData?.stripe_account_id) {
-		try {
-			const account = await stripe.accounts.retrieve(
-				profileData.stripe_account_id as string,
-			);
-
-			hasCompletedStripeOnboarding = Boolean(
-				// "details_submitted" indicates the onboarding flow was completed
-				(account as any).details_submitted && (account as any).charges_enabled,
-			);
-		} catch (err) {
-			console.error("Error checking Stripe onboarding status", err);
-		}
+	if (stripeAccount) {
+		hasCompletedStripeOnboarding = Boolean(
+			(stripeAccount as any).details_submitted &&
+				(stripeAccount as any).charges_enabled,
+		);
 	}
 
-	const { data: createdTasksData, error: createdError } = await supabase
-		.from("tasks")
-		.select("id, title, short_description, price, categories, status, created_at")
-		.eq("user_id", user.id)
-		.order("created_at", { ascending: false });
-
 	const createdTasksRaw: Task[] = createdTasksData ?? [];
-	const createdTaskIds = createdTasksRaw.map((t) => t.id);
-
-	// Determine which of the creator's tasks currently have an open dispute
-	// so we can surface a clear "Dispute open" pill in the hub.
 	const openDisputedTaskIds = new Set<number>();
-	if (createdTaskIds.length > 0) {
-		const { data: creatorDisputes } = await supabase
-			.from("task_submission_disputes")
-			.select("task_id, status")
-			.eq("creator_id", user.id)
-			.eq("status", "open")
-			.in("task_id", createdTaskIds);
-
-		for (const row of creatorDisputes ?? []) {
-			const taskId = (row as any).task_id as number | null;
-			if (taskId != null) {
-				openDisputedTaskIds.add(taskId);
-			}
-		}
+	for (const row of (creatorDisputesData ?? []) as any[]) {
+		const taskId = row.task_id as number | null;
+		if (taskId != null) openDisputedTaskIds.add(taskId);
 	}
 
 	const createdTasks: Task[] = createdTasksRaw.map((task) => ({
@@ -121,48 +212,18 @@ export default async function HubPage() {
 		has_dispute: openDisputedTaskIds.has(task.id),
 	}));
 
-	let createdSubmissions: TaskSubmission[] = [];
-	if (createdTaskIds.length > 0) {
-		const { data } = await supabase
-			.from("task_submissions")
-			.select("id, task_id, status, created_at")
-			.in("task_id", createdTaskIds);
-		createdSubmissions = data ?? [];
-	}
-
-	const { data: mySubmissionsData } = await supabase
-		.from("task_activations")
-		.select(
-			"id, task_id, status, created_at, is_hidden, resubmission_message, check_in_requested_at",
-		)
-		.eq("user_id", user.id)
-		.order("created_at", { ascending: false });
+	const createdSubmissions: TaskSubmission[] =
+		(createdSubmissionsData as TaskSubmission[] | null) ?? [];
 
 	const rawMySubmissions: TaskSubmission[] = mySubmissionsData ?? [];
-	const submittedTaskIds = rawMySubmissions.map((s) => s.task_id);
-
-	// Track both currently open disputes and disputes that have been resolved
-	// in favor of the creator (overturned) so the worker sees accurate status.
 	const disputedTaskIds = new Set<number>();
 	const overturnedTaskIds = new Set<number>();
-	if (submittedTaskIds.length > 0) {
-		const { data: disputesData } = await supabase
-			.from("task_submission_disputes")
-			.select("task_id, status")
-			.eq("worker_id", user.id)
-			.in("task_id", submittedTaskIds);
-
-		for (const row of disputesData ?? []) {
-			const taskId = (row as any).task_id as number | null;
-			const status = (row as any).status as string | null;
-			if (taskId == null) continue;
-			if (status === "open") {
-				disputedTaskIds.add(taskId);
-			}
-			if (status === "resolved_upheld") {
-				overturnedTaskIds.add(taskId);
-			}
-		}
+	for (const row of (workerDisputesData ?? []) as any[]) {
+		const taskId = row.task_id as number | null;
+		const status = row.status as string | null;
+		if (taskId == null) continue;
+		if (status === "open") disputedTaskIds.add(taskId);
+		if (status === "resolved_upheld") overturnedTaskIds.add(taskId);
 	}
 
 	const mySubmissions: TaskSubmission[] = rawMySubmissions.map((s) => ({
@@ -170,46 +231,13 @@ export default async function HubPage() {
 		has_dispute: disputedTaskIds.has(s.task_id),
 		is_overturned: overturnedTaskIds.has(s.task_id),
 	}));
-	const submittedTaskIdsWithDetails = mySubmissions.map((s) => s.task_id);
 
-	let submittedTasks: Task[] = [];
-	if (submittedTaskIdsWithDetails.length > 0) {
-		const { data } = await supabase
-			.from("tasks")
-			.select("id, title, short_description, price, categories, created_at")
-			.in("id", submittedTaskIdsWithDetails);
-		submittedTasks = data ?? [];
-	}
+	const submittedTasks: Task[] = (submittedTasksData as Task[] | null) ?? [];
 
-	// Load individual pending earnings so the dashboard can show a detailed list.
-	const { data: pendingEarningsData } = await supabase
-		.from("task_earnings")
-		.select("id, task_id, submission_id, amount_cents, available_at, tasks(title)")
-		.eq("submitter_id", user.id)
-		.eq("status", "pending")
-		.order("available_at", { ascending: true });
-
-	// Determine which of the pending earnings currently have an open dispute
-	// for this worker so we can highlight disputed payouts in the UI.
-	const pendingSubmissionIds = (pendingEarningsData ?? [])
-		.map((row: any) => row.submission_id as number | null)
-		.filter((id): id is number => id != null);
-
-	let disputedSubmissionIds = new Set<number>();
-	if (pendingSubmissionIds.length > 0) {
-		const { data: disputedRows } = await supabase
-			.from("task_submission_disputes")
-			.select("submission_id")
-			.eq("worker_id", user.id)
-			.eq("status", "open")
-			.in("submission_id", pendingSubmissionIds);
-
-		for (const row of disputedRows ?? []) {
-			const sid = (row as any).submission_id as number | null;
-			if (sid != null) {
-				disputedSubmissionIds.add(sid);
-			}
-		}
+	const disputedSubmissionIds = new Set<number>();
+	for (const row of (pendingEarningDisputesData ?? []) as any[]) {
+		const sid = row.submission_id as number | null;
+		if (sid != null) disputedSubmissionIds.add(sid);
 	}
 
 	const pendingEarnings = (pendingEarningsData ?? []).map((row: any) => ({

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SubmitClient from "@/components/SubmitClient";
@@ -5,6 +6,16 @@ import SubmitClient from "@/components/SubmitClient";
 type TaskRow = {
 	id: number;
 	title: string | null;
+};
+
+export const metadata: Metadata = {
+	title: "Submit work",
+	description:
+		"Submit your completed work for this Bountask listing and track its review status.",
+	robots: {
+		index: false,
+		follow: false,
+	},
 };
 
 export default async function SubmitPage({

@@ -73,15 +73,21 @@ type ListingSubmissionsClientProps = {
   listingId: number;
   listingTitle: string | null;
   isTaskAccepted?: boolean;
+  initialSubmissions?: ListingSubmission[];
 };
 
 export default function ListingSubmissionsClient({
   listingId,
   listingTitle,
   isTaskAccepted = false,
+  initialSubmissions,
 }: ListingSubmissionsClientProps) {
-  const [submissions, setSubmissions] = useState<ListingSubmission[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [submissions, setSubmissions] = useState<ListingSubmission[]>(
+    initialSubmissions ?? [],
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(
+    !initialSubmissions || initialSubmissions.length === 0,
+  );
   const [error, setError] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [isRejecting, setIsRejecting] = useState<boolean>(false);
@@ -102,6 +108,12 @@ export default function ListingSubmissionsClient({
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   useEffect(() => {
+    if (initialSubmissions && initialSubmissions.length > 0) {
+      // Data was already loaded on the server; no client fetch needed.
+      setIsLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
 
     async function loadSubmissions() {
@@ -136,7 +148,7 @@ export default function ListingSubmissionsClient({
     return () => {
       controller.abort();
     };
-  }, [listingId]);
+  }, [listingId, initialSubmissions]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -211,7 +223,6 @@ export default function ListingSubmissionsClient({
       const message =
         err instanceof Error ? err.message : "Failed to accept submission";
       setAcceptError(message);
-    } finally {
       setIsAccepting(false);
     }
   };
@@ -318,7 +329,12 @@ export default function ListingSubmissionsClient({
       setSubmissions((current) =>
         current.map((submission) =>
           submission.id === disputeId
-            ? { ...submission, hasDispute: true, canOpenDispute: false }
+            ? {
+                ...submission,
+                hasDispute: true,
+                canOpenDispute: false,
+                disputeStatus: "open",
+              }
             : submission,
         ),
       );
@@ -524,7 +540,16 @@ export default function ListingSubmissionsClient({
                 {submission.status === "accepted" && (
                   <button
                     type="button"
-                    onClick={() => handleOpenDispute(submission.id)}
+                    onClick={() => {
+                      if (disputeId === submission.id) {
+                        setDisputeId(null);
+                        setDisputeReason("");
+                        setDisputeDescription("");
+                        setDisputeOverturnAction("keep_task");
+                      } else {
+                        handleOpenDispute(submission.id);
+                      }
+                    }}
                     disabled={
                       submission.hasDispute === true ||
                       submission.canOpenDispute === false ||

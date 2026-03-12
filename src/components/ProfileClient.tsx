@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ListingCard from "@/components/ListingCard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCaretDown } from "@fortawesome/free-solid-svg-icons";
@@ -15,23 +15,35 @@ type Task = {
 };
 
 interface ProfileClientProps {
+  userId: string;
   userName: string;
   memberSince?: string | null;
   isCurrentUser: boolean;
   createdTasks: Task[];
+  initialHasMore?: boolean;
+  initialNextCursor?: string | null;
 }
 
 export default function ProfileClient({
+  userId,
   userName,
   memberSince,
   isCurrentUser,
   createdTasks,
+  initialHasMore = false,
+  initialNextCursor = null,
 }: ProfileClientProps) {
   const [createdExpanded, setCreatedExpanded] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>(createdTasks);
+  const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const userInitial = userName.charAt(0).toUpperCase();
 
-  const createdListings = (createdTasks ?? []).map((task) => ({
+  const createdListings = (tasks ?? []).map((task) => ({
     id: task.id,
     title: task.title,
     categories: task.categories ?? [],
@@ -39,6 +51,71 @@ export default function ProfileClient({
     price: task.price,
     status: task.status,
   }));
+
+  const handleLoadMore = async () => {
+    if (!hasMore || !nextCursor || isLoadingMore) return;
+
+    setIsLoadingMore(true);
+    setLoadError(null);
+
+    try {
+      const params = new URLSearchParams();
+      params.set("userId", userId);
+      params.set("cursor", nextCursor);
+
+      const res = await fetch(`/api/tasks/by-user?${params.toString()}`);
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error((body as any)?.error || "Failed to load more listings");
+      }
+
+      const { tasks: newTasks = [], hasMore: more, nextCursor: cursor } = body as {
+        tasks?: Task[];
+        hasMore?: boolean;
+        nextCursor?: string | null;
+      };
+
+      setTasks((prev) => [...prev, ...newTasks]);
+      setHasMore(Boolean(more));
+      setNextCursor(cursor ?? null);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to load more listings";
+      setLoadError(message);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasMore || !nextCursor || !createdExpanded) return;
+
+    const target = loadMoreRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && !isLoadingMore) {
+          void handleLoadMore();
+        }
+      },
+      { rootMargin: "200px 0px" },
+    );
+
+    observer.observe(target);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, nextCursor, isLoadingMore, createdExpanded]);
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
@@ -122,15 +199,32 @@ export default function ProfileClient({
           {createdExpanded && (
             <div id="created-listings">
               {createdListings.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {createdListings.map((listing) => (
-                    <ListingCard
-                      key={listing.id}
-                      listing={listing}
-                      showStatus={isCurrentUser}
-                    />
-                  ))}
-                </div>
+                <>
+                  {loadError && (
+                    <p className="mb-2 text-xs text-[var(--danger)]">{loadError}</p>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {createdListings.map((listing) => (
+                      <ListingCard
+                        key={listing.id}
+                        listing={listing}
+                        showStatus={isCurrentUser}
+                      />
+                    ))}
+                  </div>
+                  {hasMore && (
+                    <div ref={loadMoreRef} className="mt-4 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={handleLoadMore}
+                        disabled={isLoadingMore}
+                        className="px-4 py-2 text-xs font-semibold rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-muted)] disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {isLoadingMore ? "Loading more..." : "Load more"}
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="card p-8 text-center">
                   <p className="text-sm text-[var(--text-secondary)]">

@@ -1,3 +1,11 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Premium plans",
+  description:
+    "Explore Creator Pro and Earner Pro premium plans on Bountask to unlock better visibility, lower fees, and priority support.",
+};
+
 const plans = [
   {
     name: "Creator Pro",

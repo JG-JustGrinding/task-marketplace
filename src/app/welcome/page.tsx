@@ -1,5 +1,12 @@
-import Link from 'next/link';
-import Image from 'next/image';
+import type { Metadata } from "next";
+import Link from "next/link";
+import Image from "next/image";
+
+export const metadata: Metadata = {
+  title: "Welcome",
+  description:
+    "Welcome to Bountask, the modern marketplace that connects task creators with skilled workers to get things done and earn money.",
+};
 
 export default function WelcomePage() {
   return (

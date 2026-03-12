@@ -96,6 +96,12 @@ export default function HubDashboard({
   hasStripeAccount,
   hasCompletedStripeOnboarding,
 }: HubDashboardProps) {
+  const [createdTasksState, setCreatedTasksState] = useState<Task[]>(createdTasks);
+  const [createdSubmissionsState, setCreatedSubmissionsState] = useState<TaskSubmission[]>(createdSubmissions);
+  const [isLoadingMoreCreated, setIsLoadingMoreCreated] = useState(false);
+  const [hasMoreCreated, setHasMoreCreated] = useState(true);
+  const [createdPaginationError, setCreatedPaginationError] = useState<string | null>(null);
+
   const [view, setView] = useState<"activity" | "earnings">("activity");
   const [activityTab, setActivityTab] = useState<"posted" | "started">(
     "posted"
@@ -109,12 +115,75 @@ export default function HubDashboard({
     | null
   >(null);
 
-  const createdSubmissionsByTask = useSubmissionsByTask(createdSubmissions);
+  const createdSubmissionsByTask = useSubmissionsByTask(createdSubmissionsState);
 
   const available = (availableBalanceCents ?? 0) / 100;
 	const pending = (pendingBalanceCents ?? 0) / 100;
 
-  const someoneHasCreatedTasks = createdTasks.length > 0;
+  const someoneHasCreatedTasks = createdTasksState.length > 0;
+
+  async function handleCreatedScroll(event: any) {
+  const el = event.currentTarget as HTMLElement | null;
+  if (!el) return;
+  if (isLoadingMoreCreated || !hasMoreCreated) return;
+
+  const threshold = 80;
+  if (el.scrollTop + el.clientHeight < el.scrollHeight - threshold) return;
+
+  setIsLoadingMoreCreated(true);
+  setCreatedPaginationError(null);
+
+  try {
+    const offset = createdTasksState.length;
+    const params = new URLSearchParams({
+      offset: String(offset),
+      limit: String(20),
+    });
+    const res = await fetch(`/api/account/hub/created-tasks?${params.toString()}`);
+    if (!res.ok) {
+      throw new Error("Failed to load more created tasks");
+    }
+    const data = await res.json();
+    const newTasks = (data?.tasks ?? []) as Task[];
+    const newSubmissions = (data?.submissions ?? []) as TaskSubmission[];
+
+    if (!Array.isArray(newTasks) || newTasks.length === 0) {
+      setHasMoreCreated(false);
+      return;
+    }
+
+    setCreatedTasksState((prev) => {
+      const existingIds = new Set(prev.map((t) => t.id));
+      const merged = [...prev];
+      for (const task of newTasks) {
+        if (!existingIds.has(task.id)) {
+          merged.push(task);
+        }
+      }
+      return merged;
+    });
+
+    setCreatedSubmissionsState((prev) => {
+      const existingIds = new Set(prev.map((s) => s.id));
+      const merged = [...prev];
+      for (const sub of newSubmissions) {
+        if (!existingIds.has(sub.id)) {
+          merged.push(sub as TaskSubmission);
+        }
+      }
+      return merged;
+    });
+
+    setHasMoreCreated(Boolean(data?.hasMore));
+  } catch (error) {
+    console.error("Error loading more created tasks for hub", error);
+    setCreatedPaginationError(
+      "We couldn't load more of your posted tasks. Please try again.",
+    );
+  } finally {
+    setIsLoadingMoreCreated(false);
+  }
+  }
 
   return (
     <>
@@ -240,8 +309,11 @@ export default function HubDashboard({
               </p>
             )}
 
-            <div className="space-y-3 max-h-[420px] sm:max-h-[480px] overflow-y-auto scrollbar-thin pr-1">
-              {createdTasks.map((task) => {
+            <div
+				className="space-y-3 max-h-[420px] sm:max-h-[480px] overflow-y-auto scrollbar-thin pr-1"
+				onScroll={handleCreatedScroll}
+			>
+              {createdTasksState.map((task) => {
                 const submissions = createdSubmissionsByTask.get(task.id) ?? [];
                 const totalSubs = submissions.length;
                 const acceptedSub = submissions.find(
@@ -355,6 +427,16 @@ export default function HubDashboard({
                   </article>
                 );
               })}
+              {isLoadingMoreCreated && (
+        <div className="py-2 text-[0.7rem] text-[var(--text-secondary)] text-center">
+          Loading more tasks...
+        </div>
+      )}
+              {createdPaginationError && (
+        <div className="py-2 text-[0.7rem] text-[var(--danger-less-saturated)] text-center">
+          {createdPaginationError}
+        </div>
+      )}
             </div>
           </section>
 
