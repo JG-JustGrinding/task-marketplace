@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faHouse } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faHouse, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 
 interface HeaderProps {
@@ -49,6 +49,13 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
     router.push(`/search${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
+  const initialQuery = pathname === "/search" ? (searchParams.get("q") || "") : "";
+  const trimmedInitialQuery = initialQuery.trim();
+  const trimmedCurrentQuery = localSearch.trim();
+  const isSearchEmpty = trimmedCurrentQuery.length === 0;
+  const isSameAsInitial = trimmedCurrentQuery === trimmedInitialQuery;
+  const isSearchButtonActive = !isSearchEmpty && !isSameAsInitial;
+
   return (
     <header className="w-full border-b border-[var(--border-color)] bg-[var(--bg-secondary)]/80 backdrop-blur-sm sticky top-0 z-20">
       <div className="mx-auto max-w-7xl px-4 py-3 flex items-center gap-4">
@@ -77,8 +84,21 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
               value={localSearch}
               onChange={(e) => handleChange(e.target.value)}
               placeholder="Search tasks, skills, or keywords..."
-              className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)]/60 px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+              className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)]/60 pl-3 pr-9 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
             />
+            <button
+              type="submit"
+              disabled={!isSearchButtonActive}
+              aria-label="Search"
+              className={
+                "absolute inset-y-0 right-2 my-1 flex h-7 w-7 items-center justify-center rounded-md text-xs transition-colors " +
+                (isSearchButtonActive
+                  ? "bg-[var(--accent-primary)] text-white hover:brightness-110"
+                  : "bg-transparent text-[var(--text-muted)] cursor-default")
+              }
+            >
+              <FontAwesomeIcon icon={faMagnifyingGlass} className="h-3 w-3" />
+            </button>
           </form>
         </div>
 

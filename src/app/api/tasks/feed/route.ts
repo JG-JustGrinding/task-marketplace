@@ -11,6 +11,10 @@ export async function GET(request: Request) {
     const rawQuery = url.searchParams.get("q") ?? "";
     const searchQuery = rawQuery.trim();
     const seedParam = url.searchParams.get("seed");
+    const categoryParam = url.searchParams.get("category");
+
+    const categoryFilter =
+      categoryParam && categoryParam !== "All" ? categoryParam : null;
 
     const seed = seedParam ? Number(seedParam) : NaN;
     if (!Number.isFinite(seed)) {
@@ -45,6 +49,7 @@ export async function GET(request: Request) {
       p_page_size: PAGE_SIZE,
       p_search: searchQuery || null,
       p_seed: seed,
+      p_category: categoryFilter,
     });
 
     if (error) {
