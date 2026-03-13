@@ -14,7 +14,16 @@ interface ListingCardProps {
   showStatus?: boolean;
 }
 
-export default function ListingCard({ listing, showStatus = false }: ListingCardProps) {
+interface ListingWithState extends Listing {
+  stateLabel?: "open" | "unavailable" | null;
+}
+
+interface ListingCardWithStateProps extends ListingCardProps {
+  listing: ListingWithState;
+  stateLabel?: "open" | "unavailable" | null;
+}
+
+export default function ListingCard({ listing, showStatus = false, stateLabel }: ListingCardWithStateProps) {
   const { title, categories, description, price, currency = "USD", status } = listing;
   const thumbnail = listing.images?.[0] || "https://placehold.co/600x340/e5e7eb/6b7280?text=Task+Preview";
 
@@ -29,6 +38,15 @@ export default function ListingCard({ listing, showStatus = false }: ListingCard
       <div className="flex flex-col flex-1 p-5">
         {/* Categories */}
         <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          {stateLabel === "open" && (
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.7rem] font-semibold tracking-wide uppercase ${
+                "border-[2px] border-[var(--success)] bg-[var(--bg-muted)] text-[var(--text-primary)]"
+              }`}
+            >
+              Open
+            </span>
+          )}
           {showStatus && (isFinished || isPendingPayment) && (
             <span
               className={`${

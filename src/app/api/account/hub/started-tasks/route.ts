@@ -33,22 +33,18 @@ export async function GET(req: NextRequest) {
 			: DEFAULT_PAGE_SIZE;
 		const pageSize = Math.min(pageSizeBase, MAX_PAGE_SIZE);
 
-		// Request one extra row so we can determine if another page exists.
-		const rangeFrom = offset;
-		const rangeTo = offset + pageSize;
-
+		// Request one extra row via RPC so we can determine if another page exists.
+		const rpcLimit = pageSize + 1;
 		const { data: activationsData, error: activationsError } = await supabase
-			.from("task_activations")
-			.select(
-				"id, task_id, status, created_at, is_hidden, resubmission_message, check_in_requested_at",
-			)
-			.eq("user_id", user.id)
-			.order("created_at", { ascending: false })
-			.range(rangeFrom, rangeTo);
+			.rpc("hub_started_tasks", {
+				_worker_id: user.id,
+				_limit: rpcLimit,
+				_offset: offset,
+			});
 
 		if (activationsError) {
 			console.error(
-				"Error loading started task activations page for hub",
+				"Error loading started task activations page for hub via hub_started_tasks RPC",
 				activationsError,
 			);
 			return NextResponse.json(
@@ -63,12 +59,15 @@ export async function GET(req: NextRequest) {
 			status: string | null;
 			created_at: string;
 			is_hidden?: boolean | null;
-			resubmission_message?: string | null;
 			check_in_requested_at?: string | null;
+			// has_dispute is also returned by the RPC but we recompute it below per page.
+			has_dispute?: boolean | null;
 		}>;
 
 		const hasMore = rawActivations.length > pageSize;
-		const pageActivations = rawActivations.slice(0, pageSize);
+		const pageActivations = hasMore
+			? rawActivations.slice(0, pageSize)
+			: rawActivations;
 
 		if (pageActivations.length === 0) {
 			return NextResponse.json({ submissions: [], tasks: [], hasMore: false });

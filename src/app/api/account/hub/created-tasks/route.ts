@@ -33,21 +33,19 @@ export async function GET(req: NextRequest) {
 			: DEFAULT_PAGE_SIZE;
 		const pageSize = Math.min(pageSizeBase, MAX_PAGE_SIZE);
 
-		// Request one extra row so we can determine if another page exists.
-		const rangeFrom = offset;
-		const rangeTo = offset + pageSize;
-
-		const { data: tasksData, error: tasksError } = await supabase
-			.from("tasks")
-			.select(
-				"id, title, short_description, price, categories, status, created_at",
-			)
-			.eq("user_id", user.id)
-			.order("created_at", { ascending: false })
-			.range(rangeFrom, rangeTo);
+		// Request one extra row via RPC so we can determine if another page exists.
+		const rpcLimit = pageSize + 1;
+		const { data: tasksData, error: tasksError } = await supabase.rpc(
+			"hub_created_tasks",
+			{
+				_creator_id: user.id,
+				_limit: rpcLimit,
+				_offset: offset,
+			},
+		);
 
 		if (tasksError) {
-			console.error("Error loading created tasks page for hub", tasksError);
+			console.error("Error loading created tasks page for hub via hub_created_tasks RPC", tasksError);
 			return NextResponse.json(
 				{ error: "Failed to load created tasks." },
 				{ status: 500 },
@@ -62,10 +60,11 @@ export async function GET(req: NextRequest) {
 			categories: string[] | null;
 			status?: string | null;
 			created_at: string;
+			has_dispute?: boolean | null;
 		}>;
 
 		const hasMore = rows.length > pageSize;
-		const pageTasks = rows.slice(0, pageSize);
+		const pageTasks = hasMore ? rows.slice(0, pageSize) : rows;
 
 		if (pageTasks.length === 0) {
 			return NextResponse.json({ tasks: [], submissions: [], hasMore: false });
@@ -73,23 +72,10 @@ export async function GET(req: NextRequest) {
 
 		const createdTaskIds = pageTasks.map((t) => t.id);
 
-		// Open disputes for tasks this user created.
-		const { data: creatorDisputesData } = await supabase
-			.from("task_submission_disputes")
-			.select("task_id, status")
-			.eq("creator_id", user.id)
-			.eq("status", "open")
-			.in("task_id", createdTaskIds);
-
-		const openDisputedTaskIds = new Set<number>();
-		for (const row of (creatorDisputesData ?? []) as any[]) {
-			const taskId = row.task_id as number | null;
-			if (taskId != null) openDisputedTaskIds.add(taskId);
-		}
-
+		// The RPC already includes has_dispute, but we keep the mapping step for a stable shape.
 		const tasks = pageTasks.map((task) => ({
 			...task,
-			has_dispute: openDisputedTaskIds.has(task.id),
+			has_dispute: Boolean(task.has_dispute),
 		}));
 
 		// Submissions for these created tasks.

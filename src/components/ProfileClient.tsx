@@ -12,6 +12,8 @@ type Task = {
   price: number;
   categories: string[] | null;
   status?: string | null;
+  is_taken?: boolean;
+  has_started_for_viewer?: boolean;
 };
 
 interface ProfileClientProps {
@@ -20,6 +22,7 @@ interface ProfileClientProps {
   memberSince?: string | null;
   isCurrentUser: boolean;
   createdTasks: Task[];
+  totalCreatedCount?: number;
   initialHasMore?: boolean;
   initialNextCursor?: string | null;
 }
@@ -30,6 +33,7 @@ export default function ProfileClient({
   memberSince,
   isCurrentUser,
   createdTasks,
+  totalCreatedCount,
   initialHasMore = false,
   initialNextCursor = null,
 }: ProfileClientProps) {
@@ -43,14 +47,33 @@ export default function ProfileClient({
 
   const userInitial = userName.charAt(0).toUpperCase();
 
-  const createdListings = (tasks ?? []).map((task) => ({
-    id: task.id,
-    title: task.title,
-    categories: task.categories ?? [],
-    description: task.short_description ?? undefined,
-    price: task.price,
-    status: task.status,
-  }));
+  const totalCreated = totalCreatedCount ?? createdTasks.length;
+
+  const createdListings = (tasks ?? []).map((task) => {
+    const status = task.status ?? "";
+    const isActive = status === "active";
+    const isPendingPayment = status === "pending_payment";
+    const isTaken = Boolean(task.is_taken);
+    const hasStarted = Boolean(task.has_started_for_viewer);
+
+    let stateLabel: "open" | "unavailable" | null = null;
+
+    if (!isCurrentUser) {
+      if (isActive && !isPendingPayment && !isTaken && !hasStarted) {
+        stateLabel = "open";
+      }
+    }
+
+    return {
+      id: task.id,
+      title: task.title,
+      categories: task.categories ?? [],
+      description: task.short_description ?? undefined,
+      price: task.price,
+      status: task.status,
+      stateLabel,
+    };
+  });
 
   const handleLoadMore = async () => {
     if (!hasMore || !nextCursor || isLoadingMore) return;
@@ -140,7 +163,7 @@ export default function ProfileClient({
               <div className="flex flex-wrap gap-4 justify-center sm:justify-start text-sm pt-1">
                 <div className="flex items-center gap-1">
                   <span className="font-semibold text-[var(--text-primary)]">
-                    {createdListings.length}
+                    {totalCreated}
                   </span>
                   <span className="text-[var(--text-secondary)]">Created</span>
                 </div>
@@ -178,7 +201,7 @@ export default function ProfileClient({
             <h2 className="text-lg font-semibold">Created listings</h2>
             <div className="flex items-center gap-3">
               <span className="text-xs text-[var(--text-secondary)]">
-                {createdListings.length} {createdListings.length === 1 ? "listing" : "listings"}
+                {totalCreated} {totalCreated === 1 ? "listing" : "listings"}
               </span>
               <button
                 type="button"
@@ -204,13 +227,19 @@ export default function ProfileClient({
                     <p className="mb-2 text-xs text-[var(--danger)]">{loadError}</p>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {createdListings.map((listing) => (
-                      <ListingCard
-                        key={listing.id}
-                        listing={listing}
-                        showStatus={isCurrentUser}
-                      />
-                    ))}
+                    {createdListings.map((listing) => {
+                      const shouldShowStatus =
+                        isCurrentUser || listing.status === "task_accepted";
+
+                      return (
+                        <ListingCard
+                          key={listing.id}
+                          listing={listing}
+                          stateLabel={listing.stateLabel}
+                          showStatus={shouldShowStatus}
+                        />
+                      );
+                    })}
                   </div>
                   {hasMore && (
                     <div ref={loadMoreRef} className="mt-4 flex justify-center">

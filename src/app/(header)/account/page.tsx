@@ -27,7 +27,7 @@ export default async function AccountPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username")
+    .select("username, allow_important_emails, allow_promotional_emails, allow_activity_emails")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -35,5 +35,21 @@ export default async function AccountPage() {
   const fallbackUsername = email ? email.split("@")[0] : "";
   const username = profile?.username || fallbackUsername || "User";
 
-  return <AccountClient username={username} email={email} userId={user.id} />;
+  const allowImportantEmails =
+    (profile as any)?.allow_important_emails ?? true;
+  const allowPromotionalEmails =
+    (profile as any)?.allow_promotional_emails ?? false;
+  const allowActivityEmails =
+    (profile as any)?.allow_activity_emails ?? true;
+
+  return (
+    <AccountClient
+      username={username}
+      email={email}
+      userId={user.id}
+      allowImportantEmails={allowImportantEmails}
+      allowPromotionalEmails={allowPromotionalEmails}
+      allowActivityEmails={allowActivityEmails}
+    />
+  );
 }

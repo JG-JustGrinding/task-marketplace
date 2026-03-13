@@ -43,18 +43,96 @@ export default function SubmitClient({
   }, [demoFile]);
 
   const handleDemoFileChange = (file: File | null) => {
-    setDemoFile(file);
+    setDemoFile(null);
     setDemoPreviewUrl(null);
 
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (typeof e.target?.result === "string") {
-          setDemoPreviewUrl(e.target.result);
+    if (!file) {
+      return;
+    }
+
+    // For non-image files, just store the file as-is without a watermark.
+    if (!file.type.startsWith("image/")) {
+      setDemoFile(file);
+      return;
+    }
+
+    // For images, render into a canvas with a DEMO watermark and upload
+    // the watermarked version instead of the original.
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = (e.target?.result as string) || null;
+      if (!dataUrl) {
+        setDemoFile(file);
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 1600;
+          const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            setDemoFile(file);
+            setDemoPreviewUrl(dataUrl);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          // Apply a large diagonal DEMO watermark.
+          const fontSize = Math.max(canvas.width, canvas.height) / 6;
+          ctx.save();
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate((-20 * Math.PI) / 180);
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.font = `bold ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+          ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+          ctx.fillText("DEMO", 0, 0);
+          ctx.restore();
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                setDemoFile(file);
+                setDemoPreviewUrl(dataUrl);
+                return;
+              }
+
+              const watermarkedFile = new File([blob], file.name, {
+                type: blob.type || "image/jpeg",
+              });
+
+              setDemoFile(watermarkedFile);
+              const objectUrl = URL.createObjectURL(blob);
+              setDemoPreviewUrl(objectUrl);
+            },
+            "image/jpeg",
+            0.9,
+          );
+        } catch (err) {
+          console.error("Error creating watermarked demo image", err);
+          setDemoFile(file);
+          setDemoPreviewUrl(dataUrl);
         }
       };
-      reader.readAsDataURL(file);
-    }
+      img.onerror = () => {
+        setDemoFile(file);
+        setDemoPreviewUrl(dataUrl);
+      };
+      img.src = dataUrl;
+    };
+
+    reader.onerror = () => {
+      setDemoFile(file);
+    };
+
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -227,20 +305,14 @@ export default function SubmitClient({
                         alt="Demo preview"
                         className="w-full h-64 object-cover opacity-80"
                       />
-                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                        <span className="text-4xl md:text-5xl font-extrabold tracking-[0.3em] text-white/70 mix-blend-overlay rotate-[-20deg]">
-                          DEMO
-                        </span>
-                      </div>
                     </div>
-                    <p className="text-[0.65rem] text-[var(--text-muted)]">
-                      In the app we overlay this large DEMO watermark so the
-                      preview isn&apos;t cleanly reusable. For non-image files,
-                      consider uploading a watermarked or partial version
-                      yourself.
-                    </p>
                   </div>
                 )}
+
+                
+                {demoFile && <p className="text-xs text-[var(--text-muted)]">
+                  {isDemoImage ? "This image will be watermarked with a DEMO overlay." : "Tip: add a watermark or use a partial version of your file for the demo to prevent unauthorized reuse"}
+                </p>}
               </div>
             )}
 

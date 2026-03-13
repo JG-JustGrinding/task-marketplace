@@ -17,6 +17,8 @@ type Task = {
   categories: string[] | null;
   status?: string | null;
   created_at: string;
+  is_taken?: boolean;
+  has_started_for_viewer?: boolean;
 };
 
 interface ProfilePageProps {
@@ -99,23 +101,26 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   const currentUserId = authData?.user?.id ?? null;
   const isCurrentUser = !!currentUserId && currentUserId === profile.id;
+  const [{ data: createdTasksData }, { count: totalCreatedTasksCount }] =
+    await Promise.all([
+      supabase.rpc("profile_tasks", {
+        _profile_user_id: profile.id,
+        _viewer_user_id: currentUserId,
+        _limit: TASKS_PAGE_SIZE + 1,
+        _offset: 0,
+      }),
+      supabase
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", profile.id),
+    ] as const);
 
-  const { data: createdTasksData } = await supabase
-    .from("tasks")
-    .select("id, title, short_description, price, categories, status, created_at")
-    .eq("user_id", profile.id)
-    .order("id", { ascending: false })
-    .limit(TASKS_PAGE_SIZE + 1);
-
-  const rawTasks: Task[] = createdTasksData ?? [];
-  const hasMore = rawTasks.length > TASKS_PAGE_SIZE;
+  const rows = (createdTasksData as Task[] | null) ?? [];
+  const hasMore = rows.length > TASKS_PAGE_SIZE;
   const createdTasks: Task[] = hasMore
-    ? rawTasks.slice(0, TASKS_PAGE_SIZE)
-    : rawTasks;
-  const nextCursor =
-    hasMore && createdTasks.length > 0
-      ? String(createdTasks[createdTasks.length - 1].id)
-      : null;
+    ? rows.slice(0, TASKS_PAGE_SIZE)
+    : rows;
+  const nextCursor = hasMore ? "1" : null;
 
   let memberSince: string | null = null;
   if (profile.created_at) {
@@ -134,6 +139,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       memberSince={memberSince}
       isCurrentUser={isCurrentUser}
       createdTasks={createdTasks}
+      totalCreatedCount={totalCreatedTasksCount ?? createdTasks.length}
       initialHasMore={hasMore}
       initialNextCursor={nextCursor}
     />

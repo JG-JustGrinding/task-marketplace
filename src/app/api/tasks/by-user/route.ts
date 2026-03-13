@@ -14,36 +14,33 @@ export async function GET(request: Request) {
     }
 
     const supabase = await createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id ?? null;
 
-    let query = supabase
-      .from("tasks")
-      .select(
-        "id, title, short_description, price, categories, status, created_at",
-      )
-      .eq("user_id", userId)
-      .order("id", { ascending: false })
-      .limit(PAGE_SIZE + 1);
+    const pageIndexRaw = cursor ? Number(cursor) : 0;
+    const pageIndex = Number.isFinite(pageIndexRaw) && pageIndexRaw >= 0 ? pageIndexRaw : 0;
+    const limit = PAGE_SIZE + 1;
+    const offset = pageIndex * PAGE_SIZE;
 
-    const cursorId = cursor ? Number(cursor) : null;
-    if (cursorId && Number.isFinite(cursorId)) {
-      query = query.lt("id", cursorId);
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await supabase.rpc("profile_tasks", {
+      _profile_user_id: userId,
+      _viewer_user_id: currentUserId,
+      _limit: limit,
+      _offset: offset,
+    });
 
     if (error) {
-      console.error("Error fetching tasks by user", error);
+      console.error("Error fetching tasks by user via profile_tasks RPC", error);
       return NextResponse.json(
         { error: "Failed to fetch user tasks" },
         { status: 500 },
       );
     }
 
-    const rows = data ?? [];
+    const rows = (data as any[] | null) ?? [];
     const hasMore = rows.length > PAGE_SIZE;
     const page = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
-    const nextCursor =
-      hasMore && page.length > 0 ? String(page[page.length - 1].id) : null;
+    const nextCursor = hasMore ? String(pageIndex + 1) : null;
 
     return NextResponse.json({ tasks: page, hasMore, nextCursor });
   } catch (error) {

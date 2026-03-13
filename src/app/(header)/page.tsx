@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import HomeFeedClient from "@/components/HomeFeedClient";
 
 export const metadata: Metadata = {
-  title: "Browse tasks",
   description:
     "Browse active tasks on Bountask and find work you can complete for cash payouts.",
 };

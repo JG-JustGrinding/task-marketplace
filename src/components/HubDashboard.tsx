@@ -281,7 +281,7 @@ export default function HubDashboard({
               activityTab === "started" ? "hidden md:block" : ""
             }`}
           >
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <h2 className="text-sm font-semibold">Tasks you posted</h2>
                 <p className="text-[0.7rem] text-[var(--text-secondary)]">
@@ -290,9 +290,9 @@ export default function HubDashboard({
               </div>
               <Link
                 href="/create"
-                className="button none px-3 py-1.5 text-center rounded-lg bg-[var(--accent-primary)] text-white text-[0.7rem] font-semibold hover:bg-[var(--accent-hover)]"
+                className="button none px-3 py-1.5 text-center rounded-lg bg-[var(--accent-primary)] text-white text-[0.7rem] font-semibold hover:bg-[var(--accent-hover)] w-full sm:w-auto mt-1 sm:mt-0"
               >
-                Post new
+                Post new task
               </Link>
             </div>
 
@@ -314,14 +314,17 @@ export default function HubDashboard({
 				onScroll={handleCreatedScroll}
 			>
               {createdTasksState.map((task) => {
-                const submissions = createdSubmissionsByTask.get(task.id) ?? [];
-                const totalSubs = submissions.length;
-                const acceptedSub = submissions.find(
-                  (s) => s.status === "accepted"
-                );
-                const pendingSub = submissions.find(
-                  (s) => s.status === "pending"
-                );
+              const submissions = createdSubmissionsByTask.get(task.id) ?? [];
+              const activeSubmissions = submissions.filter(
+                (s) => s.status !== "cancelled" && s.status !== "rejected",
+              );
+              const totalSubs = activeSubmissions.length;
+              const acceptedSub = activeSubmissions.find(
+                (s) => s.status === "accepted"
+              );
+              const pendingSub = activeSubmissions.find(
+                (s) => s.status === "pending"
+              );
                 const isFinished = !!acceptedSub;
 
                 let statusLabel = "Open";
@@ -668,7 +671,7 @@ export default function HubDashboard({
                 })}
               </p>
               <p className="text-[0.7rem] text-[var(--text-secondary)]">
-                Available to withdraw to your bank account.
+                Available to withdraw to your account.
               </p>
               </article>
 
@@ -725,7 +728,7 @@ export default function HubDashboard({
                       : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
                   }`}
                 >
-                  {isWithdrawLoading ? "Processing..." : "Withdraw to bank"}
+                  {isWithdrawLoading ? "Processing..." : "Withdraw to account"}
                 </button>
                 {hasStripeAccount && (
                   <button

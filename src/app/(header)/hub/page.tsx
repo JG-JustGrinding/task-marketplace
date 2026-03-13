@@ -84,22 +84,16 @@ export default async function HubPage() {
 			)
 			.eq("id", user.id)
 			.single(),
-		supabase
-			.from("tasks")
-			.select(
-				"id, title, short_description, price, categories, status, created_at",
-			)
-				.eq("user_id", user.id)
-				.order("created_at", { ascending: false })
-				.limit(CREATED_PAGE_SIZE),
-		supabase
-			.from("task_activations")
-			.select(
-				"id, task_id, status, created_at, is_hidden, resubmission_message, check_in_requested_at",
-			)
-			.eq("user_id", user.id)
-			.order("created_at", { ascending: false })
-			.limit(STARTED_PAGE_SIZE),
+		supabase.rpc("hub_created_tasks", {
+			_creator_id: user.id,
+			_limit: CREATED_PAGE_SIZE,
+			_offset: 0,
+		}),
+		supabase.rpc("hub_started_tasks", {
+			_worker_id: user.id,
+			_limit: STARTED_PAGE_SIZE,
+			_offset: 0,
+		}),
 		supabase
 			.from("task_earnings")
 			.select(

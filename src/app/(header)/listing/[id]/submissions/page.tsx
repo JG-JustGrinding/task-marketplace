@@ -126,9 +126,7 @@ export default async function ListingSubmissionsPage({ params }: PageParams) {
         status: a.status,
         hasSubmission: hasSubmissionByUser.get(a.user_id) ?? false,
     }));
-
-    // Fetch submissions on the server so the client component
-    // can render them immediately without doing its own fetch.
+    
     let initialSubmissions: unknown[] = [];
     try {
 		const headersList = await headers();
