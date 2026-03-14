@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -22,6 +22,16 @@ export default function SignupClient() {
 			? redirectParam
 			: "/";
 
+	const errorParam = searchParams.get("error");
+
+	useEffect(() => {
+		if (!errorParam) return;
+
+		if (errorParam === "oauth_error" || errorParam === "exchange_error") {
+			setError("Unable to sign up with Google. Please try again.");
+		}
+	}, [errorParam]);
+
 	const handleBack = () => {
 		if (typeof document !== "undefined" && typeof window !== "undefined") {
 			const referrer = document.referrer;
@@ -38,6 +48,35 @@ export default function SignupClient() {
 		}
 
 		router.push("/");
+	};
+
+	const handleGoogleSignIn = async () => {
+		setError("");
+		setLoading(true);
+
+		try {
+			const origin = window.location.origin;
+			const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(
+				redirectPath,
+			)}&origin=signup`;
+
+			const { error: authError } = await supabase.auth.signInWithOAuth({
+				provider: "google",
+				options: {
+					redirectTo,
+				},
+			});
+
+			if (authError) {
+				console.error("Google signup error:", authError);
+				setError("Unable to sign up with Google. Please try again.");
+				setLoading(false);
+			}
+		} catch (err) {
+			console.error("Google signup unexpected error:", err);
+			setError("An error occurred. Please try again.");
+			setLoading(false);
+		}
 	};
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -259,6 +298,7 @@ export default function SignupClient() {
 
 						<button
 							type="button"
+							onClick={handleGoogleSignIn}
 							disabled={loading}
 							className="btn-outline uncolored w-full rounded-lg px-4 py-2 text-sm font-semibold body-font transition-colors btn-outline flex items-center justify-center gap-2 disabled:opacity-50"
 							aria-label="Sign up with Google account"
