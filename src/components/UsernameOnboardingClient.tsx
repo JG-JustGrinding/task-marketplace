@@ -88,7 +88,7 @@ export default function UsernameOnboardingClient({
           <header className="mb-6 text-center">
             <h1 className="mb-1 text-2xl font-bold title-font">Choose your username</h1>
             <p className="text-sm body-font text-[var(--text-secondary)]">
-              We created a suggestion based on your Google name{emailHint}. You can change it now or later in
+              We created a suggestion based on your Google account{emailHint}. You can change it now or later in
               your account settings.
             </p>
           </header>

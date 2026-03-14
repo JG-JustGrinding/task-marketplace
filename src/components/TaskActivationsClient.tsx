@@ -429,12 +429,22 @@ export default function TaskActivationsClient({
 
                                 <div className="mt-1 flex items-center justify-between gap-2 text-[0.65rem] text-[var(--text-secondary)]">
                                     <div className="flex flex-col">
-                                        {cancelReason && !canCancel && (
-                                            <span>{cancelReason}</span>
-                                        )}
-                                        {requestReason && !canShowRequestCheckIn && (
-                                            <span>{requestReason}</span>
-                                        )}
+                                        {(() => {
+                                            const messages: string[] = [];
+                                            if (cancelReason && !canCancel) {
+                                                messages.push(cancelReason);
+                                            }
+                                            if (
+                                                requestReason &&
+                                                !canShowRequestCheckIn &&
+                                                requestReason !== cancelReason
+                                            ) {
+                                                messages.push(requestReason);
+                                            }
+                                            return messages.map((msg) => (
+                                                <span key={msg}>{msg}</span>
+                                            ));
+                                        })()}
                                     </div>
                                     <div className="flex gap-2 items-center">
                                         {canShowCancel && (

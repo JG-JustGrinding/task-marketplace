@@ -234,6 +234,15 @@ export default function HomeFeedClient({
 
         <section className="mt-6 flex-1">
           <div className="mb-6 space-y-1">
+            {initialSearch.trim() && filteredListings.length > 0 && (
+              <button
+                type="button"
+                onClick={() => (window.location.href = "/")}
+                className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
+              >
+                Back to tasks
+              </button>
+            )}
             {initialSearch.trim() && (
               <h2 className="text-lg text-[var(--text-muted)]">
                 Search results for {""}

@@ -86,7 +86,7 @@ export default function ListingSubmissionsClient({
     initialSubmissions ?? [],
   );
   const [isLoading, setIsLoading] = useState<boolean>(
-    !initialSubmissions || initialSubmissions.length === 0,
+    typeof initialSubmissions === "undefined",
   );
   const [error, setError] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
@@ -108,8 +108,9 @@ export default function ListingSubmissionsClient({
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   useEffect(() => {
-    if (initialSubmissions && initialSubmissions.length > 0) {
-      // Data was already loaded on the server; no client fetch needed.
+    if (typeof initialSubmissions !== "undefined") {
+      // Data was already loaded on the server (even if empty);
+      // no client fetch needed.
       setIsLoading(false);
       return;
     }
@@ -354,7 +355,7 @@ export default function ListingSubmissionsClient({
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col-reverse gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-lg font-semibold">Submissions</h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -368,7 +369,7 @@ export default function ListingSubmissionsClient({
         </div>
         <Link
           href={`/listing/${listingId}`}
-          className="text-sm font-medium text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
+          className="text-sm font-medium text-[var(--accent-primary)] hover:text-[var(--accent-hover)] self-start md:self-auto"
         >
           View task
         </Link>

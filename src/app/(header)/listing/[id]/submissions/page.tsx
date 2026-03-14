@@ -83,7 +83,32 @@ export default async function ListingSubmissionsPage({ params }: PageParams) {
         return notFound();
     }
 
-    const activations = (activationsData ?? []) as ActivationRow[];
+    const rawActivations = (activationsData ?? []) as ActivationRow[];
+
+    const activeStatuses = [
+        "waiting_submission",
+        "pending",
+        "resubmission",
+        "resubmission_requested",
+    ];
+
+    const activations = [...rawActivations].sort((a, b) => {
+        const aActive = activeStatuses.includes(a.status ?? "");
+        const bActive = activeStatuses.includes(b.status ?? "");
+
+        if (aActive !== bActive) {
+            return aActive ? -1 : 1;
+        }
+
+        const aTime = new Date(a.created_at).getTime();
+        const bTime = new Date(b.created_at).getTime();
+
+        if (Number.isNaN(aTime) || Number.isNaN(bTime)) {
+            return 0;
+        }
+
+        return bTime - aTime;
+    });
 
     const userIds = Array.from(new Set(activations.map((a) => a.user_id))).filter(
         Boolean,
