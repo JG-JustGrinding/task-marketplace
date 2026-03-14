@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SubmitClient from "@/components/SubmitClient";
 
@@ -59,6 +59,18 @@ export default async function SubmitPage({
 			activationStatus = (activation as any).status ?? null;
 			resubmissionMessage = (activation as any).resubmission_message ?? null;
 		}
+	}
+
+	// Only allow users who have an active activation for this task
+	// to access the submission page. Others are redirected back to
+	// the main listing view where they can activate the task first.
+	const allowedActivationStatuses = new Set([
+		"waiting_submission",
+		"resubmission_requested",
+	]);
+
+	if (!activationStatus || !allowedActivationStatuses.has(activationStatus)) {
+		return redirect(`/listing/${id}`);
 	}
 
 	return (

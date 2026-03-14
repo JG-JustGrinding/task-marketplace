@@ -237,7 +237,7 @@ export default function AccountClient({
                 {/* Top row: avatar + basic info */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-6">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="h-20 w-20 rounded-full bg-[var(--accent-primary)] flex items-center justify-center text-xl font-semibold text-[var(--text-primary)]">
+                    <div className="h-20 w-20 rounded-full bg-[var(--accent-primary)] flex items-center justify-center text-xl font-semibold text-white">
                       {profileUsername.charAt(0).toUpperCase()}
                     </div>
                     {false && (

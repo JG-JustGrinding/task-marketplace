@@ -88,7 +88,34 @@ export async function POST(request: Request) {
       console.error("Error fetching task activation for submission", activationFetchError);
     }
 
-    const isResubmission = activation?.status === "resubmission_requested";
+    if (!activation) {
+      return NextResponse.json(
+        { error: "You must activate this task before submitting." },
+        { status: 400 },
+      );
+    }
+
+    const activationStatus = (activation as any).status as string | null;
+
+    if (
+      activationStatus === "cancelled" ||
+      activationStatus === "rejected" ||
+      activationStatus === "accepted"
+    ) {
+      return NextResponse.json(
+        { error: "You cannot submit work for this task in its current state." },
+        { status: 400 },
+      );
+    }
+
+    if (activationStatus === "pending" || activationStatus === "resubmission") {
+      return NextResponse.json(
+        { error: "You already have a submission pending review for this task." },
+        { status: 400 },
+      );
+    }
+
+    const isResubmission = activationStatus === "resubmission_requested";
 
     const demoFile = demoFileRaw instanceof File ? demoFileRaw : null;
     const finalFile = finalFileRaw instanceof File ? finalFileRaw : null;

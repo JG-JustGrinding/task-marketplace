@@ -173,6 +173,7 @@ export default async function ListingPage({
     let checkInActivationId: number | null = null;
     let hasReachedTaskLimit = false;
     let hasActiveActivations = false;
+    let hasReportedTask = false;
     const taskAccepted = !!data && data.status === "task_accepted";
     const taskUnavailable = !!data && data.status === "pending_payment";
 
@@ -189,6 +190,16 @@ export default async function ListingPage({
     }
 
     if (user && data) {
+        // Check if the current user has already reported this task
+        const { count: reportCount } = await supabase
+            .from("reports")
+            .select("id", { count: "exact", head: true })
+            .eq("task_id", data.id)
+            .eq("reporter_id", user.id);
+
+        hasReportedTask = (reportCount ?? 0) > 0;
+
+                
         // Count how many active tasks this user currently has.
         const { count: activeCount } = await supabase
             .from("task_activations")
@@ -285,6 +296,7 @@ export default async function ListingPage({
             paymentStatus={paymentStatus}
             hasSubmissions={hasSubmissions}
             isLoggedIn={!!user}
+            hasReportedTask={hasReportedTask}
             hasReachedTaskLimit={hasReachedTaskLimit}
             hasActiveActivations={hasActiveActivations}
             canDeleteTask={canDeleteTask}

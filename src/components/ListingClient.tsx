@@ -24,6 +24,7 @@ type ListingClientProps = {
     paymentStatus?: "success" | "cancel" | null;
     hasSubmissions?: boolean;
     isLoggedIn?: boolean;
+    hasReportedTask?: boolean;
     hasReachedTaskLimit?: boolean;
     hasActiveActivations?: boolean;
     canDeleteTask?: boolean;
@@ -46,6 +47,7 @@ export default function ListingClient({
     paymentStatus = null,
     hasSubmissions = false,
     isLoggedIn = false,
+    hasReportedTask = false,
     hasReachedTaskLimit = false,
     hasActiveActivations = false,
     canDeleteTask = false,
@@ -68,6 +70,7 @@ export default function ListingClient({
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
     const [reportError, setReportError] = useState<string | null>(null);
     const [reportSuccess, setReportSuccess] = useState(false);
+    const [hasJustReported, setHasJustReported] = useState(false); // to remove the report button immediately after reporting without needing to refresh the page
     const [isCheckingIn, setIsCheckingIn] = useState(false);
     const [checkInError, setCheckInError] = useState<string | null>(null);
     const [hasCheckedIn, setHasCheckedIn] = useState(false);
@@ -275,18 +278,21 @@ export default function ListingClient({
                         </div>
                     )}
 
-                    {isLoggedIn && !isPoster && (
+                    {!isPoster && !hasReportedTask && !hasJustReported && (
                         <div className="pt-2">
                             <button
                                 type="button"
-                                className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
+                                className="text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--accent-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!isLoggedIn || hasReportedTask || hasJustReported}
                                 onClick={() => {
+                                    if (!isLoggedIn || hasReportedTask || hasJustReported) return;
                                     setReportError(null);
                                     setReportSuccess(false);
                                     setShowReportModal(true);
+                                    setHasJustReported(true);
                                 }}
                             >
-                                Report this task
+                                {(hasReportedTask || hasJustReported) ? "Task reported" : "Report this task"}
                             </button>
                         </div>
                     )}
