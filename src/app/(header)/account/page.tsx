@@ -4,9 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import AccountClient from "@/components/AccountClient";
 
 export const metadata: Metadata = {
-  title: "Account settings",
+  title: "Account Settings",
   description:
-    "Manage your Bountask account details, email, and security settings.",
+    "Manage your Bountask account details, subscription, and email settings.",
   robots: {
     index: false,
     follow: false,

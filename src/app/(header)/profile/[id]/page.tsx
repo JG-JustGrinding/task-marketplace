@@ -51,20 +51,20 @@ export async function generateMetadata({
     };
   }
 
-  const userName = profile.username || "Marketplace user";
+  const userName = profile.username || "Marketplace User";
   const description = `View ${userName}'s profile on Bountask, including their posted tasks and activity.`;
 
   return {
-    title: `${userName}'s profile`,
+    title: `${userName}'s Profile`,
     description,
     openGraph: {
-      title: `${userName}'s profile`,
+      title: `${userName}'s Profile`,
       description,
       type: "profile",
     },
     twitter: {
       card: "summary",
-      title: `${userName}'s profile`,
+      title: `${userName}'s Profile`,
       description,
     },
   };
@@ -130,7 +130,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     });
   }
 
-  const userName = profile.username || "Marketplace user";
+  const userName = profile.username || "Marketplace User";
 
   return (
     <ProfileClient

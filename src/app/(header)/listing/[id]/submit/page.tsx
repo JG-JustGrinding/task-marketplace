@@ -9,7 +9,7 @@ type TaskRow = {
 };
 
 export const metadata: Metadata = {
-	title: "Submit work",
+	title: "Submit Work",
 	description:
 		"Submit your completed work for this Bountask listing and track its review status.",
 	robots: {

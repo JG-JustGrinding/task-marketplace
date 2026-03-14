@@ -1,326 +1,442 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBolt, faClock, faCoins, faPuzzlePiece, faShieldHalved, faUsers } from "@fortawesome/free-solid-svg-icons";
+
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "Bountask";
+const siteTagline =
+    process.env.NEXT_PUBLIC_SITE_SLOGAN ||
+    "Turn problems into bounties. Post tasks, accept solutions, and pay only when a solution is accepted.";
+
+const useCompleterLanguage = process.env.NEXT_USE_COMPLETER_LANGUAGE === "true";
 
 export const metadata: Metadata = {
-  title: "Welcome",
-  description:
-    "Welcome to Bountask, the modern marketplace that connects task creators with skilled workers to get things done and earn money.",
+    title: "Welcome",
+    description: siteTagline,
 };
 
 export default function WelcomePage() {
-  return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Header */}
-      <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-color)] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-            <div className="relative h-10 w-10">
-              <Image
-                src="/logos/bountask_logo_icon.svg"
-                alt={`${process.env.NEXT_PUBLIC_SITE_NAME} Logo`}
-                fill
-                sizes="40px"
-                className="object-contain"
-                priority
-              />
-            </div>
-            <div className="hidden sm:block">
-              <span className="text-xl font-bold text-[var(--text-primary)]">
-                Boun<span className="text-[var(--accent-primary)]">task</span>
-              </span>
-            </div>
-          </Link>
+    return (
+        <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col">
+            <header className="sticky top-0 z-40 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]/95 backdrop-blur">
+                <div className="text-center mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+                    <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+                        <div className="relative h-10 w-10">
+                            <Image
+                                src="/logos/bountask_logo_icon.svg"
+                                alt={`${process.env.NEXT_PUBLIC_SITE_NAME} Logo`}
+                                fill
+                                sizes="40px"
+                                className="object-contain"
+                                priority
+                            />
+                        </div>
+                        <div className="hidden sm:block">
+                            <span className="text-xl font-bold text-[var(--text-primary)]">
+                                Boun<span className="text-[var(--accent-primary)]">task</span>
+                            </span>
+                        </div>
+                    </Link>
 
-          {/* Navigation */}
-          <nav className="flex items-center gap-3 sm:gap-4">
-            <Link 
-              href="/"
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm sm:text-base font-medium"
-            >
-              Browse Tasks
-            </Link>
-            <Link 
-              href="/login"
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm sm:text-base font-medium"
-            >
-              Log in
-            </Link>
-            <Link 
-              href="/signup"
-              className="px-4 sm:px-6 py-2 bg-[var(--accent-primary)] text-white rounded-full font-semibold text-sm sm:text-base hover:bg-[var(--accent-hover)] transition-all shadow-md"
-            >
-              Sign up
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white">
-        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-32">
-          <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-              Get Things Done.<br />
-              <span className="text-white/90">Earn While You Work.</span>
-            </h1>
-            <p className="text-xl sm:text-2xl text-white/90 mb-10 max-w-3xl mx-auto">
-              The marketplace that connects task creators with skilled workers. 
-              Post your tasks or start earning today.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link 
-                href="/signup"
-                className="px-8 py-4 bg-white text-[var(--accent-primary)] rounded-lg font-semibold text-lg hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                Get Started Free
-              </Link>
-              <Link 
-                href="/"
-                className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white rounded-lg font-semibold text-lg hover:bg-white/20 transition-all border-2 border-white/30"
-              >
-                Browse Tasks
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)] mb-4">
-            Why Choose {process.env.NEXT_PUBLIC_SITE_NAME}?
-          </h2>
-          <p className="text-lg text-[var(--text-secondary)] max-w-2xl mx-auto">
-            A modern platform built for efficiency, trust, and growth.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="bg-[var(--bg-secondary)] p-8 rounded-xl shadow-[var(--shadow-soft)] hover:shadow-xl transition-shadow">
-            <div className="w-14 h-14 bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-[var(--text-primary)] mb-3">
-              Fast & Simple
-            </h3>
-            <p className="text-[var(--text-secondary)]">
-              Post a task in minutes or start working immediately. No complicated processes, just results.
-            </p>
-          </div>
-
-          <div className="bg-[var(--bg-secondary)] p-8 rounded-xl shadow-[var(--shadow-soft)] hover:shadow-xl transition-shadow">
-            <div className="w-14 h-14 bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-[var(--text-primary)] mb-3">
-              Secure Payments
-            </h3>
-            <p className="text-[var(--text-secondary)]">
-              Payments held securely until work is complete. Powered by Stripe for your peace of mind.
-            </p>
-          </div>
-
-          <div className="bg-[var(--bg-secondary)] p-8 rounded-xl shadow-[var(--shadow-soft)] hover:shadow-xl transition-shadow">
-            <div className="w-14 h-14 bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-secondary)] rounded-lg flex items-center justify-center mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-[var(--text-primary)] mb-3">
-              Quality Community
-            </h3>
-            <p className="text-[var(--text-secondary)]">
-              Join thousands of verified users. Build your reputation and grow your opportunities.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[var(--bg-muted)]">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)] mb-4">
-              How It Works
-            </h2>
-            <p className="text-lg text-[var(--text-secondary)]">
-              Get started in three simple steps
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-12 lg:gap-16">
-            {/* For Task Creators */}
-            <div>
-              <h3 className="text-2xl font-bold text-[var(--text-primary)] mb-8 text-center md:text-left">
-                For Task Creators
-              </h3>
-              <div className="space-y-6">
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-[var(--accent-primary)] text-white rounded-full flex items-center justify-center font-bold">
-                    1
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-[var(--text-primary)] mb-1">Post Your Task</h4>
-                    <p className="text-[var(--text-secondary)]">Describe what you need done and set your budget</p>
-                  </div>
+                    <nav className="flex items-center gap-3 sm:gap-5">
+                        <Link
+                            href="/"
+                            className="text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                        >
+                            Browse tasks
+                        </Link>
+                        <Link
+                            href="/create"
+                            className="hidden text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:inline"
+                        >
+                            Post a task
+                        </Link>
+                        <Link
+                            href="/login"
+                            className="inline-flex items-center justify-center rounded-full border border-[var(--border-color)] bg-transparent px-4 py-2 text-xs sm:text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-muted)]/70 transition-colors"
+                        >
+                            Log in
+                        </Link>
+                        <Link
+                            href="/signup"
+                            className="rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[var(--accent-hover)] sm:px-6"
+                        >
+                            Sign up
+                        </Link>
+                    </nav>
                 </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-[var(--accent-primary)] text-white rounded-full flex items-center justify-center font-bold">
-                    2
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-[var(--text-primary)] mb-1">Review Submissions</h4>
-                    <p className="text-[var(--text-secondary)]">Workers complete your task and submit their work</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-[var(--accent-primary)] text-white rounded-full flex items-center justify-center font-bold">
-                    3
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-[var(--text-primary)] mb-1">Approve & Pay</h4>
-                    <p className="text-[var(--text-secondary)]">Accept the best submission and payment is released</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            </header>
 
-            {/* For Workers */}
-            <div>
-              <h3 className="text-2xl font-bold text-[var(--text-primary)] mb-8 text-center md:text-left">
-                For Workers
-              </h3>
-              <div className="space-y-6">
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-[var(--accent-secondary)] text-white rounded-full flex items-center justify-center font-bold">
-                    1
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-[var(--text-primary)] mb-1">Browse Tasks</h4>
-                    <p className="text-[var(--text-secondary)]">Find tasks that match your skills and interests</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-[var(--accent-secondary)] text-white rounded-full flex items-center justify-center font-bold">
-                    2
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-[var(--text-primary)] mb-1">Complete Work</h4>
-                    <p className="text-[var(--text-secondary)]">Activate and submit your high-quality work</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-[var(--accent-secondary)] text-white rounded-full flex items-center justify-center font-bold">
-                    3
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-[var(--text-primary)] mb-1">Get Paid</h4>
-                    <p className="text-[var(--text-secondary)]">Receive payment once your submission is approved</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+            <main className="flex-1 bg-gradient-to-b from-[var(--bg-primary)] via-[var(--bg-primary)] to-[var(--bg-muted)]">
+                <section className="relative overflow-hidden border-b border-[var(--border-color)] bg-gradient-to-br from-[var(--accent-primary)] via-[var(--accent-primary)] to-[var(--accent-secondary)] text-white">
+                    <div className="pointer-events-none absolute inset-0 opacity-15" aria-hidden="true">
+                        <div className="bg-grid-pattern h-full w-full" />
+                    </div>
 
-      {false && 
-      (<section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-[var(--accent-primary)] mb-2">10K+</div>
-              <div className="text-[var(--text-secondary)]">Tasks Completed</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-[var(--accent-primary)] mb-2">5K+</div>
-              <div className="text-[var(--text-secondary)]">Active Users</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-[var(--accent-primary)] mb-2">$500K+</div>
-              <div className="text-[var(--text-secondary)]">Paid Out</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-[var(--accent-primary)] mb-2">4.9★</div>
-              <div className="text-[var(--text-secondary)]">Average Rating</div>
-            </div>
-          </div>
-        </div>
-      </section>)}
+                    <div className="relative mx-auto flex max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:flex-row lg:items-center lg:gap-16 lg:py-24 lg:px-8">
+                        <div className="max-w-xl lg:max-w-2xl">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/80 ring-1 ring-white/20">
+                                {useCompleterLanguage
+                                    ? "Post tasks. Earn by completing them."
+                                    : "Post tasks. Earn by solving them."}
+                            </span>
+                            <h1 className="mt-5 text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+                                Turn problems into bounties.
+                                <span className="block text-white/90">
+                                    {useCompleterLanguage
+                                        ? "Post tasks or earn by completing them."
+                                        : "Post tasks or earn by solving them."}
+                                </span>
+                            </h1>
+                            <p className="mt-5 text-base text-white/85 sm:text-lg">
+                                {useCompleterLanguage
+                                    ? "Post a problem with a bounty and let completers submit their work. Accept the best submission, pay the reward, and keep everything in one simple flow on "
+                                    : "Post a problem with a bounty and let solvers submit their solutions. Accept the best solution, pay the reward, and keep everything in one simple flow on "}
+                                {siteName}.
+                            </p>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] text-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-            Ready to Get Started?
-          </h2>
-          <p className="text-xl text-white/90 mb-10">
-            Join {process.env.NEXT_PUBLIC_SITE_NAME} today and experience a better way to work.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link 
-              href="/signup"
-              className="px-8 py-4 bg-white text-[var(--accent-primary)] rounded-lg font-semibold text-lg hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              Create Free Account
-            </Link>
-            <Link 
-              href="/pricing"
-              className="px-8 py-4 bg-transparent text-white rounded-lg font-semibold text-lg hover:bg-white/10 transition-all border-2 border-white"
-            >
-              View Pricing
-            </Link>
-          </div>
-        </div>
-      </section>
+                            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                                <Link
+                                    href="/create"
+                                    className="inline-flex items-center justify-center rounded-lg border border-white/40 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 sm:px-8"
+                                >
+                                    Post a task
+                                </Link>
+                                <Link
+                                    href="/signup"
+                                    className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-sm font-semibold text-[var(--accent-primary)] shadow-lg shadow-black/10 transition hover:-translate-y-0.5 hover:bg-gray-100 hover:shadow-xl sm:px-8"
+                                >
+                                    Sign up
+                                </Link>
+                            </div>
 
-      {/* Footer */}
-      <footer className="bg-[var(--bg-secondary)] border-t border-[var(--border-color)] py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8 mb-8">
-            <div>
-              <h3 className="font-bold text-[var(--text-primary)] mb-3">{process.env.NEXT_PUBLIC_SITE_NAME}</h3>
-              <p className="text-[var(--text-secondary)] text-sm">
-                {process.env.NEXT_PUBLIC_SITE_SLOGAN}
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-[var(--text-primary)] mb-3">Product</h4>
-              <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
-                <li><Link href="/" className="hover:text-[var(--accent-primary)]">Browse Tasks</Link></li>
-                <li><Link href="/create" className="hover:text-[var(--accent-primary)]">Post a Task</Link></li>
-                <li><Link href="/premium" className="hover:text-[var(--accent-primary)]">Upgrade</Link></li>
-              </ul>
-            </div>
-            {false && (<div>
-              <h4 className="font-semibold text-[var(--text-primary)] mb-4">Company</h4>
-              <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
-                <li><Link href="/about" className="hover:text-[var(--accent-primary)]">About Us</Link></li>
-                <li><Link href="/contact" className="hover:text-[var(--accent-primary)]">Contact</Link></li>
-                <li><Link href="/careers" className="hover:text-[var(--accent-primary)]">Careers</Link></li>
-              </ul>
-            </div>)}
-            <div>
-              <h4 className="font-semibold text-[var(--text-primary)] mb-3">Legal</h4>
-              <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
-                <li><Link href="/terms" className="hover:text-[var(--accent-primary)]">Terms of Service</Link></li>
-                <li><Link href="/privacy" className="hover:text-[var(--accent-primary)]">Privacy Policy</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-[var(--border-color)] pt-8 text-center text-sm text-[var(--text-secondary)]">
-            <p>&copy; {new Date().getFullYear()} {process.env.NEXT_PUBLIC_SITE_NAME}. All rights reserved.</p>
-          </div>
+                            {false && <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-white/75 sm:text-sm">
+                                <div className="flex items-center gap-2">
+                                    <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Escrowed payments</span>
+                                    <span>Powered by Stripe</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-base">★</span>
+                                    <span>
+                                        Built for creative makers and freelancers
+                                    </span>
+                                </div>
+                            </div>}
+                        </div>
+
+                        <div className="flex flex-1 justify-center lg:justify-end">
+                            <div className="w-full max-w-md rounded-2xl bg-[var(--bg-secondary)]/95 p-5 text-[var(--text-primary)] shadow-2xl shadow-black/20 backdrop-blur">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
+                                    Take a look
+                                </p>
+                                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                    {useCompleterLanguage
+                                        ? "A glimpse of the kinds of problems people post and complete on "
+                                        : "A glimpse of the kinds of problems people post and solve on "}
+                                    {siteName}.
+                                </p>
+
+                                <div className="mt-6 space-y-3">
+                                    <div className="flex items-start gap-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-3">
+                                        <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-xs font-semibold text-[var(--accent-primary)]">
+                                            ART
+                                        </span>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-semibold">Create Animations for this Pixel Art Character</p>
+                                            <p className="text-xs text-[var(--text-secondary)]">$25</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-3">
+                                        <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-secondary)]/10 text-xs font-semibold text-[var(--accent-secondary)]">
+                                            MUS
+                                        </span>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-semibold">Soundtrack for My Game's "Sky Castle" Stage</p>
+                                            <p className="text-xs text-[var(--text-secondary)]">$10</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-3">
+                                        <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-xs font-semibold text-[var(--accent-primary)]">
+                                            MOD
+                                        </span>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-semibold">Model a New Enemy for my Minecraft Mod</p>
+                                            <p className="text-xs text-[var(--text-secondary)]">$30</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--bg-muted)]/60 px-3 py-3">
+                                        <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-secondary)]/5 text-xs font-semibold text-[var(--accent-secondary)]">
+                                            +
+                                        </span>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-semibold">Your next task</p>
+                                            <p className="text-xs text-[var(--text-secondary)]">
+                                                {useCompleterLanguage
+                                                    ? "Post a problem, set a bounty, & accept a completion."
+                                                    : "Post a problem, set a bounty, & accept a solution."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="border-y border-[var(--border-color)] bg-[var(--bg-secondary)] py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-7xl">
+                        <div className="mx-auto max-w-2xl text-center">
+                            <h2 className="mt-2 text-2xl font-bold sm:text-3xl">Why Choose Bountask?</h2>
+                            <p className="mt-2 text-sm text-[var(--text-secondary)] sm:text-base">
+                                {useCompleterLanguage
+                                    ? "Post a task, let completers submit work, and pay only when you accept a result."
+                                    : "Post a task, let solvers submit solutions, and pay only when you accept a result."}
+                            </p>
+                        </div>
+
+                        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-5 shadow-sm">
+                                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+                                    <FontAwesomeIcon icon={faCoins} className="h-4 w-4" />
+                                </div>
+                                <h3 className="text-base font-semibold">Pay Only for Results</h3>
+                                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                    Set a reward for the task and release payment only when you accept a submission. No hourly contracts or surprise invoices.
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-5 shadow-sm">
+                                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-secondary)]/10 text-[var(--accent-secondary)]">
+                                    <FontAwesomeIcon icon={faUsers} className="h-4 w-4" />
+                                </div>
+                                <h3 className="text-base font-semibold">
+                                    {useCompleterLanguage ? "Anyone can Complete Tasks" : "Anyone can Solve Tasks"}
+                                </h3>
+                                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                    Tasks aren&apos;t limited to professionals. Anyone with the right idea or skill can jump in and earn the reward.
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-5 shadow-sm">
+                                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+                                    <FontAwesomeIcon icon={faPuzzlePiece} className="h-4 w-4" />
+                                </div>
+                                <h3 className="text-base font-semibold">Perfect for Small Tasks</h3>
+                                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                    Not every problem needs a long contract. {siteName} is built for quick tasks you want solved fast.
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-5 shadow-sm">
+                                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-secondary)]/10 text-[var(--accent-secondary)]">
+                                    <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
+                                </div>
+                                <h3 className="text-base font-semibold">Fast and Simple</h3>
+                                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                    {useCompleterLanguage
+                                        ? "Posting a task takes minutes and completers can start immediately without a long application process."
+                                        : "Posting a task takes minutes and solvers can start immediately without a long application process."}
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-5 shadow-sm">
+                                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+                                    <FontAwesomeIcon icon={faClock} className="h-4 w-4" />
+                                </div>
+                                <h3 className="text-base font-semibold">Earn on Your Own Time</h3>
+                                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                    Browse tasks whenever you want, pick the tasks that interest you, and earn rewards on your own schedule.
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-5 shadow-sm">
+                                <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-secondary)]/10 text-[var(--accent-secondary)]">
+                                    <FontAwesomeIcon icon={faShieldHalved} className="h-4 w-4" />
+                                </div>
+                                <h3 className="text-base font-semibold">Safe Payments</h3>
+                                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                    Rewards are held securely until a task is accepted, so both sides know the money is there.                                
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="bg-[var(--bg-secondary)] border-b border-[var(--border-color)] py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-7xl">
+                        <div className="mx-auto max-w-2xl text-center">
+                            <h2 className="text-2xl font-bold sm:text-3xl">How it works</h2>
+                            <p className="mt-2 text-sm text-[var(--text-secondary)] sm:text-base">
+                                {useCompleterLanguage
+                                    ? "A simple three-step flow for both task creators and completers, from problem to submission to payout."
+                                    : "A simple three-step flow for both task creators and solvers, from problem to solution to payout."}
+                            </p>
+                        </div>
+
+                        <div className="mt-10 grid gap-8 md:grid-cols-2">
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-6 shadow-sm">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                                    For task creators
+                                </p>
+                                <h3 className="mt-2 text-base font-semibold">Post a problem, reward a solution</h3>
+                                <div className="mt-5 space-y-4">
+                                    <div className="flex gap-4">
+                                        <div className="inline-flex h-8 w-8 aspect-square items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-xs font-semibold text-[var(--accent-primary)]">
+                                            1
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold">Post your task</p>
+                                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                                Describe what you need done and set a payout amount.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="inline-flex h-8 w-8 aspect-square items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-xs font-semibold text-[var(--accent-primary)]">
+                                            2
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold">
+                                                {useCompleterLanguage ? "Review completions" : "Review solutions"}
+                                            </p>
+                                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                                {useCompleterLanguage
+                                                    ? "Completers finish your task and submit their work."
+                                                    : "Solvers finish your task and submit their work."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="inline-flex h-8 w-8 aspect-square items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-xs font-semibold text-[var(--accent-primary)]">
+                                            3
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold">Accept & pay</p>
+                                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                                {useCompleterLanguage
+                                                    ? "Approve the best completion and the reward is released to the completer. You can also request revisions or reject submissions if they don't meet your needs."
+                                                    : "Approve the best solution and the reward is released to the solver. You can also request revisions or reject submissions if they don't meet your needs."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-6 shadow-sm">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                                    {useCompleterLanguage ? "For completers" : "For solvers"}
+                                </p>
+                                <h3 className="mt-2 text-base font-semibold">
+                                    {useCompleterLanguage
+                                        ? "Browse tasks, complete work, earn rewards"
+                                        : "Browse tasks, solve problems, earn rewards"}
+                                </h3>
+                                <div className="mt-5 space-y-4">
+                                    <div className="flex gap-4">
+                                        <div className="inline-flex h-8 w-8 aspect-square items-center justify-center rounded-full bg-[var(--accent-secondary)]/10 text-xs font-semibold text-[var(--accent-secondary)]">
+                                            1
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold">Browse tasks</p>
+                                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                                Find tasks that match your skills and interests
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="inline-flex h-8 w-8 aspect-square items-center justify-center rounded-full bg-[var(--accent-secondary)]/10 text-xs font-semibold text-[var(--accent-secondary)]">
+                                            2
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold">
+                                                {useCompleterLanguage ? "Complete tasks" : "Solve tasks"}
+                                            </p>
+                                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                                {useCompleterLanguage
+                                                    ? "Start the task, complete the work, and submit it for review."
+                                                    : "Start the task, solve the problem, and submit your solution for review."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="inline-flex h-8 w-8 aspect-square items-center justify-center rounded-full bg-[var(--accent-secondary)]/10 text-xs font-semibold text-[var(--accent-secondary)]">
+                                            3
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold">Get paid</p>
+                                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                                {useCompleterLanguage
+                                                    ? "If the creator accepts your completion, the payout is released to your balance and you can withdraw your earnings."
+                                                    : "If the creator accepts your solution, the payout is released to your balance and you can withdraw your earnings."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="bg-[var(--bg-primary)] py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-4xl text-center">
+                        <h2 className="text-2xl font-bold sm:text-3xl">Ready to Join {siteName}?</h2>
+                        <p className="mt-2 text-sm text-[var(--text-secondary)] sm:text-base">
+                            {useCompleterLanguage
+                                ? "Create an account to start posting tasks and completing tasks for rewards."
+                                : "Create an account to start posting tasks and solving tasks for rewards."}
+                        </p>
+                        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:justify-center">
+                            <Link
+                                href="/"
+                                className="inline-flex items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-8 py-3 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--bg-muted)]"
+                            >
+                                Browse tasks
+                            </Link>
+                            <Link
+                                href="/signup"
+                                className="inline-flex items-center justify-center rounded-lg bg-[var(--accent-primary)] px-8 py-3 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-[var(--accent-hover)] hover:shadow-lg"
+                            >
+                                Create your account
+                            </Link>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <footer className="bg-[var(--bg-secondary)] border-t border-[var(--border-color)] py-12 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto">
+                <div className="grid md:grid-cols-3 gap-8 mb-8">
+                    <div>
+                    <h3 className="font-bold text-[var(--text-primary)] mb-3">{process.env.NEXT_PUBLIC_SITE_NAME}</h3>
+                    <p className="text-[var(--text-secondary)] text-sm">
+                        {process.env.NEXT_PUBLIC_SITE_SLOGAN}
+                    </p>
+                    </div>
+                    <div>
+                    <h4 className="font-semibold text-[var(--text-primary)] mb-3">Product</h4>
+                    <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+                        <li><Link href="/" className="hover:text-[var(--accent-primary)]">Browse Tasks</Link></li>
+                        <li><Link href="/create" className="hover:text-[var(--accent-primary)]">Post a Task</Link></li>
+                        <li><Link href="/premium" className="hover:text-[var(--accent-primary)]">Upgrade</Link></li>
+                    </ul>
+                    </div>
+                    {false && (<div>
+                    <h4 className="font-semibold text-[var(--text-primary)] mb-4">Company</h4>
+                    <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+                        <li><Link href="/about" className="hover:text-[var(--accent-primary)]">About Us</Link></li>
+                        <li><Link href="/contact" className="hover:text-[var(--accent-primary)]">Contact</Link></li>
+                        <li><Link href="/careers" className="hover:text-[var(--accent-primary)]">Careers</Link></li>
+                    </ul>
+                    </div>)}
+                    <div>
+                    <h4 className="font-semibold text-[var(--text-primary)] mb-3">Legal</h4>
+                    <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+                        <li><Link href="/terms" className="hover:text-[var(--accent-primary)]">Terms of Service</Link></li>
+                        <li><Link href="/privacy" className="hover:text-[var(--accent-primary)]">Privacy Policy</Link></li>
+                    </ul>
+                    </div>
+                </div>
+                <div className="border-t border-[var(--border-color)] pt-8 text-center text-sm text-[var(--text-secondary)]">
+                    <p>&copy; {new Date().getFullYear()} {process.env.NEXT_PUBLIC_SITE_NAME}. All rights reserved.</p>
+                </div>
+                </div>
+            </footer>
         </div>
-      </footer>
-    </div>
-  );
+    );
 }

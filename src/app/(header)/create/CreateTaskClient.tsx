@@ -473,14 +473,40 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                       key={category}
                       type="button"
                       onClick={() => toggleCategory(category)}
-                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-900 ${
-                        active
-                          ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/10 dark:text-indigo-200"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-50/60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/10"
-                      }`}
+                      style={{
+                        borderRadius: '9999px',
+                        border: `1px solid ${active ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                        background: active ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                        color: active ? 'white' : 'var(--text-secondary)',
+                        padding: '0.25rem 0.75rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        transition: 'background 0.2s, border 0.2s, color 0.2s',
+                        boxShadow: active ? '0 1px 2px rgba(99,102,241,0.08)' : undefined,
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                      onMouseOver={e => {
+                        if (active) {
+                          e.currentTarget.style.background = 'var(--accent-hover)';
+                        } else {
+                          e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                          e.currentTarget.style.background = 'var(--bg-muted)';
+                          e.currentTarget.style.color = 'var(--accent-primary)';
+                        }
+                      }}
+                      onMouseOut={e => {
+                        if (active) {
+                          e.currentTarget.style.background = 'var(--accent-primary)';
+                        } else {
+                          e.currentTarget.style.borderColor = 'var(--border-color)';
+                          e.currentTarget.style.background = 'var(--bg-secondary)';
+                          e.currentTarget.style.color = 'var(--text-secondary)';
+                        }
+                      }}
                       aria-pressed={active}
                     >
-                      <span className="truncate max-w-[9rem]">{category}</span>
+                      <span style={{ maxWidth: '9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>{category}</span>
                       {active && (
                         <svg
                           className="ml-1 h-3.5 w-3.5"
@@ -969,7 +995,20 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                       (stepIndex === 0 && Object.keys(basicErrors).length > 0) ||
                       (stepIndex === 2 && (!form.price.trim() || priceValue < 5))
                     }
-                    className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-400/60"
+                    style={{
+                      backgroundColor: 'var(--accent-primary)',
+                      color: 'white',
+                      borderRadius: '0.75rem',
+                      padding: '0.375rem 1rem',
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                      opacity: isSubmitting || (stepIndex === 0 && Object.keys(basicErrors).length > 0) || (stepIndex === 2 && (!form.price.trim() || priceValue < 5)) ? 0.6 : 1,
+                      cursor: isSubmitting || (stepIndex === 0 && Object.keys(basicErrors).length > 0) || (stepIndex === 2 && (!form.price.trim() || priceValue < 5)) ? 'not-allowed' : 'pointer',
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseOver={e => (e.currentTarget.style.backgroundColor = 'var(--accent-hover)')}
+                    onMouseOut={e => (e.currentTarget.style.backgroundColor = 'var(--accent-primary)')}
                   >
                     Next
                   </button>
@@ -978,7 +1017,20 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                     type="button"
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-400/60"
+                    style={{
+                      backgroundColor: 'var(--accent-primary)',
+                      color: 'white',
+                      borderRadius: '0.75rem',
+                      padding: '0.375rem 1rem',
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                      opacity: isSubmitting ? 0.6 : 1,
+                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseOver={e => (e.currentTarget.style.backgroundColor = 'var(--accent-hover)')}
+                    onMouseOut={e => (e.currentTarget.style.backgroundColor = 'var(--accent-primary)')}
                   >
                     {isSubmitting ? "Posting..." : "Post & Pay"}
                   </button>
@@ -1026,34 +1078,56 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
               Your task draft is saved and will be restored after you log in or sign up
             </p>
             <div className="mb-4 flex gap-2 text-xs font-medium body-font">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode("login");
-                  setAuthError(null);
-                }}
-                className={`flex-1 rounded-lg px-3 py-1.5 ${
-                  authMode === "login"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
-                }`}
-              >
-                Log in
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode("signup");
-                  setAuthError(null);
-                }}
-                className={`flex-1 rounded-lg px-3 py-1.5 ${
-                  authMode === "signup"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
-                }`}
-              >
-                Sign up
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("login");
+                    setAuthError(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    borderRadius: '0.5rem',
+                    padding: '0.375rem 0.75rem',
+                    backgroundColor: authMode === "login" ? 'var(--accent-primary)' : 'var(--bg-muted)',
+                    color: authMode === "login" ? 'white' : 'var(--text-secondary)',
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseOver={e => {
+                    if (authMode === "login") e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
+                  }}
+                  onMouseOut={e => {
+                    if (authMode === "login") e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
+                  }}
+                >
+                  Log in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("signup");
+                    setAuthError(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    borderRadius: '0.5rem',
+                    padding: '0.375rem 0.75rem',
+                    backgroundColor: authMode === "signup" ? 'var(--accent-primary)' : 'var(--bg-muted)',
+                    color: authMode === "signup" ? 'white' : 'var(--text-secondary)',
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseOver={e => {
+                    if (authMode === "signup") e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
+                  }}
+                  onMouseOut={e => {
+                    if (authMode === "signup") e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
+                  }}
+                >
+                  Sign up
+                </button>
             </div>
             {authError && (
               <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -1099,7 +1173,22 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="mt-2 w-full rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-400/70"
+                  style={{
+                    marginTop: '0.5rem',
+                    width: '100%',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--accent-primary)',
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    padding: '0.5rem 1rem',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                    opacity: authLoading ? 0.7 : 1,
+                    cursor: authLoading ? 'not-allowed' : 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.backgroundColor = 'var(--accent-hover)')}
+                  onMouseOut={e => (e.currentTarget.style.backgroundColor = 'var(--accent-primary)')}
                 >
                   {authLoading ? "Logging in..." : "Log in"}
                 </button>
@@ -1177,7 +1266,22 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="mt-2 w-full rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-400/70"
+                  style={{
+                    marginTop: '0.5rem',
+                    width: '100%',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--accent-primary)',
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    padding: '0.5rem 1rem',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                    opacity: authLoading ? 0.7 : 1,
+                    cursor: authLoading ? 'not-allowed' : 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.backgroundColor = 'var(--accent-hover)')}
+                  onMouseOut={e => (e.currentTarget.style.backgroundColor = 'var(--accent-primary)')}
                 >
                   {authLoading ? "Creating account..." : "Create account"}
                 </button>

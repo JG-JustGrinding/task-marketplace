@@ -33,7 +33,7 @@ type PageParams = {
 };
 
 export const metadata: Metadata = {
-    title: "Task submissions",
+    title: "Task Submissions",
     description:
         "Review submissions and activations for your Bountask listing",
     robots: {

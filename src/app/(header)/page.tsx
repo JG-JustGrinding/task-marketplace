@@ -7,7 +7,7 @@ import HomeFeedClient from "@/components/HomeFeedClient";
 
 export const metadata: Metadata = {
   description:
-    "Browse active tasks on Bountask and find work you can complete for cash payouts.",
+    "Browse Bountask and help others with simple creative tasks that can be completed for cash payouts.",
 };
 
 const PAGE_SIZE = 12;

@@ -8,7 +8,7 @@ import stripe from "@/lib/stripe";
 import { maturePendingEarningsForUser } from "@/lib/earnings";
 
 export const metadata: Metadata = {
-	title: "Your hub",
+	title: "Your Hub",
 	description:
 		"View your Bountask earnings, balances, submissions, and task activity in one dashboard.",
 	robots: {

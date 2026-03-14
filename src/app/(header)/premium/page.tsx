@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Premium plans",
+  title: "Upgrade to Premium",
   description:
-    "Explore Creator Pro and Earner Pro premium plans on Bountask to unlock better visibility, lower fees, and priority support.",
+    "Explore Creator Pro and Earner Pro premium plans on Bountask to unlock a range of exciting features and benefits.",
 };
 
 const plans = [
@@ -63,7 +63,7 @@ export default function PricingPage() {
             Choose Your Plan
           </h1>
           <p style={{ color: "var(--text-secondary)" }} className="text-base max-w-xl mx-auto">
-            Unlock premium features and take your experience with {process.env.NEXT_PUBLIC_SITE_NAME} to the next level
+            Unlock premium features and take your experience with {process.env.NEXT_PUBLIC_SITE_NAME} to the next level.
           </p>
         </div>
 

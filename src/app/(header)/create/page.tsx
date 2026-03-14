@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import CreateTaskClient from "./CreateTaskClient";
 
 export const metadata: Metadata = {
-	title: "Create a task",
+	title: "Create a Task",
 	description:
-		"Create a new task on Bountask with details, requirements, references, and pricing for workers.",
+		"Create a new task on Bountask with details, requirements, references, and the payout amount for completion.",
 	robots: {
 		index: false,
 		follow: false,

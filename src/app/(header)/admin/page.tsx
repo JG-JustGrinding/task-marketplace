@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import AdminEarningsClient from "@/components/AdminEarningsClient";
 
 export const metadata: Metadata = {
-	title: "Admin earnings",
+	title: "Admin Earnings",
 	description:
 		"Internal Bountask admin earnings dashboard for reviewing platform earnings and claims.",
 	robots: {
