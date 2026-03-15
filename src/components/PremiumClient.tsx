@@ -41,7 +41,7 @@ const plans: Array<{
       "Increase in max active task limit from 3 to 10",
       "Decrease in earning fee from 10% to 3%",
       "Increased submission file upload limit",
-      "Priority support for disputes",
+      "Priority support for dispute resolution",
       "Verified earner badge",
     ],
     cta: "Get Earner Pro",
@@ -72,7 +72,9 @@ export default function PremiumClient() {
           (res.status === 401
             ? "Please sign in to upgrade your account."
             : "There was a problem starting checkout. Please try again.");
-        setError(message);
+        //setError(message);
+        //setLoadingPlan(null);
+        window.location.href = "/login?redirect=/premium";
         return;
       }
 
@@ -80,6 +82,7 @@ export default function PremiumClient() {
 
       if (!url) {
         setError("No checkout URL was returned. Please try again.");
+        setLoadingPlan(null);
         return;
       }
 

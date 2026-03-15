@@ -114,6 +114,7 @@ export async function POST(req: Request) {
     }
 
     if (
+      event.type === "customer.subscription.created" ||
       event.type === "customer.subscription.updated" ||
       event.type === "customer.subscription.deleted"
     ) {
