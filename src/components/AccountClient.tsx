@@ -14,6 +14,11 @@ interface AccountClientProps {
   allowImportantEmails: boolean;
   allowPromotionalEmails: boolean;
   allowActivityEmails: boolean;
+  creatorProActive: boolean;
+  creatorProExpiresAt: string | null;
+  earnerProActive: boolean;
+  earnerProExpiresAt: string | null;
+  initialTab?: Tab;
 }
 
 export default function AccountClient({
@@ -23,8 +28,13 @@ export default function AccountClient({
   allowImportantEmails: initialAllowImportantEmails,
   allowPromotionalEmails: initialAllowPromotionalEmails,
   allowActivityEmails: initialAllowActivityEmails,
+  creatorProActive,
+  creatorProExpiresAt,
+  earnerProActive,
+  earnerProExpiresAt,
+  initialTab,
 }: AccountClientProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("My Profile");
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "My Profile");
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -208,11 +218,97 @@ export default function AccountClient({
           {/* Main content */}
           <section className="flex-1 min-w-0 space-y-6">
             {activeTab === "Subscription" && (
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold">Subscription</h2>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  Manage your Bountask subscription.
-                </p>
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-semibold">Subscription</h2>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Manage your Bountask subscription.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="flex h-full flex-col rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] p-4 space-y-2">
+                    <div className="flex justify-start">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          creatorProActive
+                            ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+                            : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
+                        }`}
+                      >
+                        {creatorProActive ? "Active" : "Not active"}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Creator Pro</p>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        For task creators and businesses.
+                      </p>
+                    </div>
+                    {creatorProActive && creatorProExpiresAt && (
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Renews on {new Date(creatorProExpiresAt).toLocaleDateString()}
+                      </p>
+                    )}
+                    {!creatorProActive && (
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Unlock premium creator features, such as adding task banners and task timers.
+                      </p>
+                    )}
+                    <div className="pt-2 mt-auto">
+                      <a
+                        href="/premium"
+                        className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-white bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]"
+                      >
+                        {creatorProActive ? "Manage in Premium" : "Upgrade to Creator Pro"}
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="flex h-full flex-col rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] p-4 space-y-2">
+                    <div className="flex justify-start">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          earnerProActive
+                            ? "bg-[var(--accent-secondary)]/10 text-[var(--accent-secondary)]"
+                            : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
+                        }`}
+                      >
+                        {earnerProActive ? "Active" : "Not active"}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Earner Pro</p>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        For task completers and freelancers.
+                      </p>
+                    </div>
+                    {earnerProActive && earnerProExpiresAt && (
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Renews on {new Date(earnerProExpiresAt).toLocaleDateString()}
+                      </p>
+                    )}
+                    {!earnerProActive && (
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Unlock premium earning features, such as increasing your task limits and reducing fees.
+                      </p>
+                    )}
+                    <div className="pt-2 mt-auto">
+                      <a
+                        href="/premium"
+                        className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-white bg-[var(--accent-secondary)] hover:bg-[var(--accent-secondary-hover)]"
+                      >
+                        {earnerProActive ? "Manage in Premium" : "Upgrade to Earner Pro"}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {false && (
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Subscriptions are billed using <a href="https://stripe.com" className="text-[var(--accent-primary)]">Stripe</a>. 
+                  </p>
+                )}
               </div>
             )}
 
