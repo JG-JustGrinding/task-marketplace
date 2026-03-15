@@ -18,6 +18,8 @@ interface AccountClientProps {
   creatorProExpiresAt: string | null;
   earnerProActive: boolean;
   earnerProExpiresAt: string | null;
+  creatorProSubscriptionId: string | null;
+  earnerProSubscriptionId: string | null;
   initialTab?: Tab;
 }
 
@@ -32,6 +34,8 @@ export default function AccountClient({
   creatorProExpiresAt,
   earnerProActive,
   earnerProExpiresAt,
+  creatorProSubscriptionId,
+  earnerProSubscriptionId,
   initialTab,
 }: AccountClientProps) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "My Profile");
@@ -51,6 +55,11 @@ export default function AccountClient({
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
+  const [cancelSubscriptionPlan, setCancelSubscriptionPlan] = useState<"creator" | "earner" | null>(null);
+  const [cancelInput, setCancelInput] = useState("");
+  const [isCancellingSubscription, setIsCancellingSubscription] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
 
   const handleConfirmSignOut = async () => {
     setIsSigningOut(true);
@@ -79,6 +88,11 @@ export default function AccountClient({
   const resetSettingsMessages = () => {
     setSettingsError(null);
     setSettingsSuccess(null);
+  };
+
+  const resetCancelMessages = () => {
+    setCancelError(null);
+    setCancelSuccess(null);
   };
 
   const handleSaveProfile = async () => {
@@ -175,6 +189,44 @@ export default function AccountClient({
     }
   };
 
+  const handleOpenCancelModal = (plan: "creator" | "earner") => {
+    setCancelSubscriptionPlan(plan);
+    setCancelInput("");
+    resetCancelMessages();
+  };
+
+  const handleConfirmCancelSubscription = async () => {
+    if (!cancelSubscriptionPlan) return;
+    setIsCancellingSubscription(true);
+    resetCancelMessages();
+
+    try {
+      const res = await fetch("/api/account/cancel-subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ plan: cancelSubscriptionPlan }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setCancelError(data?.error || "There was a problem cancelling your subscription.");
+      } else {
+        setCancelSuccess("Subscription cancelled. This may take a moment to reflect.");
+        // Optionally refresh page to pick up updated status once webhook runs.
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    } catch (err) {
+      setCancelError("There was a problem cancelling your subscription. Please try again.");
+    } finally {
+      setIsCancellingSubscription(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <main className="mx-auto max-w-5xl px-4 py-8">
@@ -245,23 +297,35 @@ export default function AccountClient({
                         For task creators and businesses.
                       </p>
                     </div>
-                    {creatorProActive && creatorProExpiresAt && (
+                    {creatorProExpiresAt && (
                       <p className="text-xs text-[var(--text-secondary)]">
-                        Renews on {new Date(creatorProExpiresAt).toLocaleDateString()}
+                        {creatorProActive
+                          ? `Renews on ${new Date(creatorProExpiresAt).toLocaleDateString()}`
+                          : `Ended on ${new Date(creatorProExpiresAt).toLocaleDateString()}`}
                       </p>
                     )}
-                    {!creatorProActive && (
+                    {!creatorProActive && !creatorProExpiresAt && (
                       <p className="text-xs text-[var(--text-secondary)]">
                         Unlock premium creator features, such as adding task banners and task timers.
                       </p>
                     )}
                     <div className="pt-2 mt-auto">
-                      <a
-                        href="/premium"
-                        className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-white bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]"
-                      >
-                        {creatorProActive ? "Manage in Premium" : "Upgrade to Creator Pro"}
-                      </a>
+                      {creatorProActive && creatorProSubscriptionId ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCancelModal("creator")}
+                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--danger)] bg-transparent hover:bg-[var(--danger)]/5"
+                        >
+                          Cancel subscription
+                        </button>
+                      ) : (
+                        <a
+                          href="/premium"
+                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-white bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]"
+                        >
+                          Upgrade to Creator Pro
+                        </a>
+                      )}
                     </div>
                   </div>
 
@@ -283,23 +347,35 @@ export default function AccountClient({
                         For task completers and freelancers.
                       </p>
                     </div>
-                    {earnerProActive && earnerProExpiresAt && (
+                    {earnerProExpiresAt && (
                       <p className="text-xs text-[var(--text-secondary)]">
-                        Renews on {new Date(earnerProExpiresAt).toLocaleDateString()}
+                        {earnerProActive
+                          ? `Renews on ${new Date(earnerProExpiresAt).toLocaleDateString()}`
+                          : `Ended on ${new Date(earnerProExpiresAt).toLocaleDateString()}`}
                       </p>
                     )}
-                    {!earnerProActive && (
+                    {!earnerProActive && !earnerProExpiresAt && (
                       <p className="text-xs text-[var(--text-secondary)]">
                         Unlock premium earning features, such as increasing your task limits and reducing fees.
                       </p>
                     )}
                     <div className="pt-2 mt-auto">
-                      <a
-                        href="/premium"
-                        className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-white bg-[var(--accent-secondary)] hover:bg-[var(--accent-secondary-hover)]"
-                      >
-                        {earnerProActive ? "Manage in Premium" : "Upgrade to Earner Pro"}
-                      </a>
+                      {earnerProActive && earnerProSubscriptionId ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCancelModal("earner")}
+                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--danger-less-saturated)] border border-[var(--danger-less-saturated)] bg-transparent hover:bg-[var(--danger)]/5"
+                        >
+                          Cancel subscription
+                        </button>
+                      ) : (
+                        <a
+                          href="/premium"
+                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-white bg-[var(--accent-secondary)] hover:bg-[var(--accent-secondary-hover)]"
+                        >
+                          Upgrade to Earner Pro
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -561,6 +637,59 @@ export default function AccountClient({
                 className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-70"
               >
                 {isSigningOut ? "Signing out..." : "Sign out"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelSubscriptionPlan && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+          <div className="card max-w-sm w-full mx-4 p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Cancel subscription</h2>
+            <p className="text-sm text-[var(--text-secondary)]">
+              To confirm, type <span className="font-semibold">cancel</span> in the box below. This will cancel your {cancelSubscriptionPlan === "creator" ? "Creator Pro" : "Earner Pro"} subscription.
+            </p>
+
+            {(cancelError || cancelSuccess) && (
+              <p className={`text-xs ${cancelError ? "text-[var(--danger)]" : "text-[var(--success)]"}`}>
+                {cancelError || cancelSuccess}
+              </p>
+            )}
+
+            <input
+              type="text"
+              value={cancelInput}
+              onChange={(e) => {
+                setCancelInput(e.target.value);
+                resetCancelMessages();
+              }}
+              className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--danger)] focus:border-transparent"
+              placeholder="Type cancel to confirm"
+            />
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isCancellingSubscription) {
+                    setCancelSubscriptionPlan(null);
+                    resetCancelMessages();
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancelSubscription}
+                disabled={
+                  isCancellingSubscription || cancelInput.trim().toLowerCase() !== "cancel"
+                }
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--danger)] text-white hover:bg-[var(--danger-less-saturated)] disabled:opacity-70"
+              >
+                {isCancellingSubscription ? "Cancelling..." : "Cancel subscription"}
               </button>
             </div>
           </div>

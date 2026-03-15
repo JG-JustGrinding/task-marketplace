@@ -33,7 +33,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "username, allow_important_emails, allow_promotional_emails, allow_activity_emails, creator_pro_active, creator_pro_expires_at, earner_pro_active, earner_pro_expires_at",
+      "username, allow_important_emails, allow_promotional_emails, allow_activity_emails, creator_pro_active, creator_pro_expires_at, creator_pro_subscription_id, earner_pro_active, earner_pro_expires_at, earner_pro_subscription_id",
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -51,8 +51,10 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
 
   const creatorProActive = (profile as any)?.creator_pro_active === true;
   const creatorProExpiresAt = (profile as any)?.creator_pro_expires_at as string | null | undefined;
+  const creatorProSubscriptionId = (profile as any)?.creator_pro_subscription_id as string | null | undefined;
   const earnerProActive = (profile as any)?.earner_pro_active === true;
   const earnerProExpiresAt = (profile as any)?.earner_pro_expires_at as string | null | undefined;
+  const earnerProSubscriptionId = (profile as any)?.earner_pro_subscription_id as string | null | undefined;
 
   const rawTab = resolved.tab;
   const normalizedTab = typeof rawTab === "string" ? rawTab.toLowerCase() : "";
@@ -81,6 +83,8 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       creatorProExpiresAt={creatorProExpiresAt ?? null}
       earnerProActive={earnerProActive}
       earnerProExpiresAt={earnerProExpiresAt ?? null}
+      creatorProSubscriptionId={creatorProSubscriptionId ?? null}
+      earnerProSubscriptionId={earnerProSubscriptionId ?? null}
       initialTab={initialTab}
     />
   );

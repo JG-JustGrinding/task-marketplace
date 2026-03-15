@@ -163,8 +163,7 @@ export async function POST(req: Request) {
         }
 
         const isActive =
-          (subscription.status === "active" || subscription.status === "trialing") &&
-          !subscription.cancel_at_period_end;
+          subscription.status === "active" || subscription.status === "trialing";
 
         const rawCurrentPeriodEnd = (subscription as any).current_period_end as
           | number
