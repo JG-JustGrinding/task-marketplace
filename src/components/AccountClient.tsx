@@ -61,6 +61,9 @@ export default function AccountClient({
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
 
+  const earnerProWillExpire = earnerProActive ? false : earnerProExpiresAt ? new Date(earnerProExpiresAt).getTime() > Date.now() : false;
+  const creatorProWillExpire = creatorProActive ? false : creatorProExpiresAt ? new Date(creatorProExpiresAt).getTime() > Date.now() : false;
+
   const handleConfirmSignOut = async () => {
     setIsSigningOut(true);
     setSignOutError(null);
@@ -213,6 +216,7 @@ export default function AccountClient({
 
       if (!res.ok) {
         setCancelError(data?.error || "There was a problem cancelling your subscription.");
+        setIsCancellingSubscription(false);
       } else {
         setCancelSuccess("Subscription cancelled. This may take a moment to reflect.");
         // Optionally refresh page to pick up updated status once webhook runs.
@@ -222,7 +226,6 @@ export default function AccountClient({
       }
     } catch (err) {
       setCancelError("There was a problem cancelling your subscription. Please try again.");
-    } finally {
       setIsCancellingSubscription(false);
     }
   };
@@ -286,7 +289,10 @@ export default function AccountClient({
                           creatorProActive
                             ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
                             : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
-                        }`}
+                        } ${
+                          creatorProWillExpire || creatorProActive ? "border border-[var(--accent-primary)]" : "border border-[var(--bg-secondary)]"
+                        }
+                        `}
                       >
                         {creatorProActive ? "Active" : "Not active"}
                       </span>
@@ -301,7 +307,10 @@ export default function AccountClient({
                       <p className="text-xs text-[var(--text-secondary)]">
                         {creatorProActive
                           ? `Renews on ${new Date(creatorProExpiresAt).toLocaleDateString()}`
-                          : `Ended on ${new Date(creatorProExpiresAt).toLocaleDateString()}`}
+                          : creatorProWillExpire
+                            ? `Expires on ${new Date(creatorProExpiresAt).toLocaleDateString()}`
+                            : `Ended on ${new Date(creatorProExpiresAt).toLocaleDateString()}`
+                          }
                       </p>
                     )}
                     {!creatorProActive && !creatorProExpiresAt && (
@@ -314,7 +323,7 @@ export default function AccountClient({
                         <button
                           type="button"
                           onClick={() => handleOpenCancelModal("creator")}
-                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--danger)] bg-transparent hover:bg-[var(--danger)]/5"
+                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--danger)] border border-[var(--danger)] bg-transparent hover:bg-[var(--danger)]/5"
                         >
                           Cancel subscription
                         </button>
@@ -323,7 +332,7 @@ export default function AccountClient({
                           href="/premium"
                           className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-white bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)]"
                         >
-                          Upgrade to Creator Pro
+                        {creatorProWillExpire ? "Renew Creator Pro Subscription" : "Upgrade to Creator Pro"}
                         </a>
                       )}
                     </div>
@@ -336,9 +345,18 @@ export default function AccountClient({
                           earnerProActive
                             ? "bg-[var(--accent-secondary)]/10 text-[var(--accent-secondary)]"
                             : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
-                        }`}
+                        } ${
+                          earnerProWillExpire || earnerProActive ? "border border-[var(--accent-secondary)]" : "border border-[var(--bg-secondary)]"
+                        }
+                        `}
                       >
-                        {earnerProActive ? "Active" : "Not active"}
+                        {
+                        earnerProActive
+                        ? "Active"
+                        : earnerProWillExpire
+                          ? "Will expire"
+                          : "Not active"
+                        }
                       </span>
                     </div>
                     <div>
@@ -351,7 +369,10 @@ export default function AccountClient({
                       <p className="text-xs text-[var(--text-secondary)]">
                         {earnerProActive
                           ? `Renews on ${new Date(earnerProExpiresAt).toLocaleDateString()}`
-                          : `Ended on ${new Date(earnerProExpiresAt).toLocaleDateString()}`}
+                          : earnerProWillExpire
+                            ? `Expires on ${new Date(earnerProExpiresAt).toLocaleDateString()}`
+                            : `Ended on ${new Date(earnerProExpiresAt).toLocaleDateString()}`
+                        }
                       </p>
                     )}
                     {!earnerProActive && !earnerProExpiresAt && (
@@ -373,7 +394,7 @@ export default function AccountClient({
                           href="/premium"
                           className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-white bg-[var(--accent-secondary)] hover:bg-[var(--accent-secondary-hover)]"
                         >
-                          Upgrade to Earner Pro
+                          {earnerProWillExpire ? "Renew Earner Pro Subscription" : "Upgrade to Earner Pro"}
                         </a>
                       )}
                     </div>
@@ -651,7 +672,7 @@ export default function AccountClient({
               To confirm, type <span className="font-semibold">cancel</span> in the box below. This will cancel your {cancelSubscriptionPlan === "creator" ? "Creator Pro" : "Earner Pro"} subscription.
             </p>
 
-            {(cancelError || cancelSuccess) && (
+            {(cancelError || (cancelSuccess && false)) && (
               <p className={`text-xs ${cancelError ? "text-[var(--danger)]" : "text-[var(--success)]"}`}>
                 {cancelError || cancelSuccess}
               </p>
