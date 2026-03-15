@@ -66,8 +66,53 @@ export default function UsernameOnboardingClient({
     }
   };
 
-  const handleSkip = () => {
-    router.push(redirectPath || "/");
+  const handleSkip = async () => {
+    if (!initialUsername) {
+      router.push(redirectPath || "/");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error: rpcError } = await supabase.rpc("update_profile", {
+        p_display_name: initialUsername || "Bountask User",
+        p_avatar_url: null,
+      });
+
+      if (rpcError) {
+        console.error(
+          "Error updating profile username from onboarding (skip):",
+          rpcError,
+        );
+        if (
+          rpcError.message?.toLowerCase().includes("already exists") ||
+          rpcError.message?.toLowerCase().includes("duplicate")
+        ) {
+          setError(
+            "That username is already taken. Please choose a different username.",
+          );
+        } else {
+          setError(
+            "There was a problem saving your username. Please try again.",
+          );
+        }
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.error(
+        "Unexpected error saving username from onboarding (skip):",
+        err,
+      );
+      setError(
+        "There was a problem saving your username. Please try again.",
+      );
+      setLoading(false);
+    } finally {
+      router.push(redirectPath || "/");
+    }
   };
 
   const emailHint = email ? ` (${email})` : "";

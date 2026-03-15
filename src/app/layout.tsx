@@ -18,7 +18,7 @@ const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "Bountask";
 const siteTagline =
   process.env.NEXT_PUBLIC_SITE_SLOGAN ||
   "Post tasks, complete work, and get paid.";
-const defaultDescription = `${siteName} is a modern task marketplace where you can post tasks, complete high-quality work, and get paid securely.`;
+const defaultDescription = `${siteName} is a modern task marketplace where anyone can post tasks, complete work, and get paid.`;
 
 export const metadata: Metadata = {
   title: {
