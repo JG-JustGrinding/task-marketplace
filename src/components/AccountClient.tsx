@@ -290,11 +290,13 @@ export default function AccountClient({
                             ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
                             : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
                         } ${
-                          creatorProWillExpire || creatorProActive ? "border border-[var(--accent-primary)]" : "border border-[var(--bg-secondary)]"
+                          (creatorProWillExpire || creatorProActive) ? "border border-[var(--accent-primary)]" : "border border-[var(--bg-secondary)]"
                         }
                         `}
                       >
-                        {creatorProActive ? "Active" : "Not active"}
+                        {creatorProActive ? "Active" :
+                         creatorProWillExpire ? "Will expire" : "Not active"
+                         }
                       </span>
                     </div>
                     <div>

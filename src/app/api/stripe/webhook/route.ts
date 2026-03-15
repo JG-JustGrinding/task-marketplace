@@ -4,8 +4,169 @@ import Stripe from "stripe";
 import stripe from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// This route receives Stripe webhooks and updates task status after payment.
+// This route receives Stripe webhooks and:
+// - Activates one-off task payments
+// - Manages Creator/Earner Pro subscriptions on the profiles table
 
+type ProPlan = "creator" | "earner";
+
+const normalizePlanFromMetadata = (raw: string | null | undefined): ProPlan | null => {
+  if (!raw) return null;
+  const value = raw.toLowerCase();
+
+  if (value === "creator" || value === "creator_pro") return "creator";
+  if (value === "earner" || value === "earner_pro") return "earner";
+
+  return null;
+};
+
+const syncProfileSubscription = async (
+  subscription: Stripe.Subscription,
+  explicitUserId?: string | null,
+  explicitPlan?: ProPlan | null
+) => {
+  try {
+    const supabase = createAdminClient();
+
+    const metadata = subscription.metadata ?? {};
+
+    // ---------------------------
+    // Resolve user ID
+    // ---------------------------
+
+    let userId =
+      explicitUserId ||
+      (metadata.userId as string | undefined) ||
+      (metadata.user_id as string | undefined) ||
+      null;
+
+    const customerRaw = subscription.customer;
+    const stripeCustomerId =
+      typeof customerRaw === "string"
+        ? customerRaw
+        : customerRaw && typeof customerRaw === "object"
+        ? (customerRaw as Stripe.Customer).id
+        : null;
+
+    // Fallback lookup via stripe_customer_id
+    if (!userId && stripeCustomerId) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("stripe_customer_id", stripeCustomerId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error looking up profile via stripe_customer_id", error);
+      }
+
+      if (data?.id) {
+        userId = data.id;
+      }
+    }
+
+    // ---------------------------
+    // Resolve plan type
+    // ---------------------------
+
+    const plan: ProPlan | null =
+      explicitPlan ||
+      normalizePlanFromMetadata(
+        (metadata.planType as string | undefined) ??
+        (metadata.plan as string | undefined)
+      );
+
+    if (!userId || !plan) {
+      console.error("Subscription webhook missing user or plan metadata", {
+        subscriptionId: subscription.id,
+        userId,
+        plan,
+      });
+      return;
+    }
+
+    const columnPrefix = plan === "creator" ? "creator_pro" : "earner_pro";
+
+    // ---------------------------
+    // Subscription state
+    // ---------------------------
+
+    const status = subscription.status;
+    const cancelAtPeriodEnd = subscription.cancel_at_period_end ?? false;
+
+    const isActive =
+      (status === "active" || status === "trialing") && !cancelAtPeriodEnd;
+
+    // ---------------------------
+    // Expiration date
+    // ---------------------------
+
+    const subscriptionAny = subscription as any;
+
+    const rawCurrentPeriodEnd =
+      subscriptionAny?.items?.data?.[0]?.current_period_end ??
+      subscriptionAny?.current_period_end ??
+      subscriptionAny?.ended_at ??
+      null;
+
+    const expiresAtIso = rawCurrentPeriodEnd
+      ? new Date(rawCurrentPeriodEnd * 1000).toISOString()
+      : null;
+
+    // ---------------------------
+    // Build update payload
+    // ---------------------------
+
+    const updatePayload: Record<string, any> = {
+      [`${columnPrefix}_subscription_id`]: subscription.id,
+      [`${columnPrefix}_active`]: isActive,
+    };
+
+    // Always update expires_at if Stripe provides it
+    if (expiresAtIso) {
+      updatePayload[`${columnPrefix}_expires_at`] = expiresAtIso;
+    }
+
+    if (stripeCustomerId) {
+      updatePayload.stripe_customer_id = stripeCustomerId;
+    }
+
+    // ---------------------------
+    // Update database
+    // ---------------------------
+
+    const { error } = await supabase
+      .from("profiles")
+      .update(updatePayload)
+      .eq("id", userId);
+
+    if (error) {
+      console.error("Error updating profile subscription from webhook", {
+        userId,
+        plan,
+        subscriptionId: subscription.id,
+        error,
+      });
+    } else {
+      console.log("Updated profile subscription from webhook", {
+        userId,
+        plan,
+        subscriptionId: subscription.id,
+        active: isActive,
+        expiresAtIso,
+        cancelAtPeriodEnd,
+        status,
+      });
+    }
+  } catch (err) {
+    console.error(
+      "Unexpected error syncing profile subscription from webhook",
+      err
+    );
+  }
+};
+
+// Main webhook handler
 export async function POST(req: Request) {
   const body = await req.text();
   const headerList = await headers();
@@ -72,43 +233,39 @@ export async function POST(req: Request) {
         }
       }
 
-      // Subscription checkouts (Creator Pro / Earner Pro)
+      // Subscription checkout completion (Creator/Earner Pro)
       if (session.mode === "subscription") {
-        const userIdFromMetadata = session.metadata?.userId as string | undefined;
-        const planType = session.metadata?.planType as string | undefined;
+        try {
+          const subscriptionRaw = session.subscription;
+          let subscriptionId: string | null = null;
 
-        const subscriptionRaw = session.subscription;
-        const subscriptionId =
-          typeof subscriptionRaw === "string"
-            ? subscriptionRaw
-            : subscriptionRaw && typeof subscriptionRaw === "object"
-              ? (subscriptionRaw as Stripe.Subscription).id
-              : null;
-
-        if (userIdFromMetadata && planType && subscriptionId) {
-          try {
-            const supabase = createAdminClient();
-            const updates: Record<string, any> = {};
-
-            if (planType === "creator_pro") {
-              updates.creator_pro_subscription_id = subscriptionId;
-            } else if (planType === "earner_pro") {
-              updates.earner_pro_subscription_id = subscriptionId;
-            }
-
-            if (Object.keys(updates).length > 0) {
-              const { error } = await supabase
-                .from("profiles")
-                .update(updates)
-                .eq("id", userIdFromMetadata);
-
-              if (error) {
-                console.error("Error updating profile after subscription checkout", error);
-              }
-            }
-          } catch (innerErr) {
-            console.error("Error handling subscription checkout completion", innerErr);
+          if (typeof subscriptionRaw === "string") {
+            subscriptionId = subscriptionRaw;
+          } else if (subscriptionRaw && typeof subscriptionRaw === "object") {
+            subscriptionId = (subscriptionRaw as Stripe.Subscription).id ?? null;
           }
+
+          if (!subscriptionId) {
+            console.error("Subscription checkout.session.completed missing subscription id", {
+              sessionId: session.id,
+            });
+          } else {
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+            const sessionMetadata = session.metadata ?? {};
+            const explicitUserId =
+              (sessionMetadata.userId as string | undefined) ||
+              (sessionMetadata.user_id as string | undefined) ||
+              null;
+            const explicitPlan = normalizePlanFromMetadata(
+              (sessionMetadata.planType as string | undefined) ??
+                (sessionMetadata.plan as string | undefined),
+            );
+
+            await syncProfileSubscription(subscription, explicitUserId, explicitPlan);
+          }
+        } catch (err) {
+          console.error("Error handling subscription checkout completion", err);
         }
       }
     }
@@ -118,226 +275,10 @@ export async function POST(req: Request) {
       event.type === "customer.subscription.updated" ||
       event.type === "customer.subscription.deleted"
     ) {
-      const subscription = event.data.object as Stripe.Subscription;
-      const planType = subscription.metadata?.planType as string | undefined;
-
-      let userId = subscription.metadata?.userId as string | undefined;
-
-      const supabase = createAdminClient();
-
-      let customerId: string | null = null;
-      if (typeof subscription.customer === "string") {
-        customerId = subscription.customer;
-      } else if (subscription.customer && typeof subscription.customer === "object") {
-        customerId = (subscription.customer as Stripe.Customer).id ?? null;
-      }
-
-      if (!userId && customerId) {
-        const { data: profileLookup, error: profileLookupError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("stripe_customer_id", customerId)
-          .maybeSingle();
-
-        if (profileLookupError) {
-          console.error("Error looking up profile by stripe_customer_id", profileLookupError);
-        }
-
-        if (profileLookup && profileLookup.id) {
-          userId = profileLookup.id as string;
-        }
-      }
-
-      if (!userId || !planType) {
-        console.error("Missing userId or planType on subscription event");
-      } else {
-        if (customerId) {
-          const { error: customerUpdateError } = await supabase
-            .from("profiles")
-            .update({ stripe_customer_id: customerId })
-            .eq("id", userId);
-
-          if (customerUpdateError) {
-            console.error("Error ensuring stripe_customer_id on profile", customerUpdateError);
-          }
-        }
-
-        const isActive =
-          subscription.status === "active" || subscription.status === "trialing";
-
-        const rawCurrentPeriodEnd =
-          subscription.items?.data?.[0]?.current_period_end ??
-          (subscription as any).current_period_end ??
-          subscription.ended_at ??
-          null;
-
-        const currentPeriodEnd = rawCurrentPeriodEnd
-          ? new Date(rawCurrentPeriodEnd * 1000).toISOString()
-          : null;
-
-        console.log(currentPeriodEnd, rawCurrentPeriodEnd);
-
-        const updates: Record<string, any> = {};
-
-        if (planType === "creator_pro") {
-          updates.creator_pro_subscription_id = subscription.id;
-          updates.creator_pro_active = isActive;
-          if (rawCurrentPeriodEnd != null && currentPeriodEnd != null)
-          {
-            updates.creator_pro_expires_at = currentPeriodEnd;
-          }
-        } else if (planType === "earner_pro") {
-          updates.earner_pro_subscription_id = subscription.id;
-          updates.earner_pro_active = isActive;
-          if (rawCurrentPeriodEnd != null && currentPeriodEnd != null)
-          {
-            updates.earner_pro_expires_at = currentPeriodEnd;
-          }
-        }
-
-        if (Object.keys(updates).length > 0) {
-          const { error: updateError } = await supabase
-            .from("profiles")
-            .update(updates)
-            .eq("id", userId);
-
-          if (updateError) {
-            console.error("Error updating subscription fields on profile", updateError);
-          }
-        }
-      }
+      const partial = event.data.object as Stripe.Subscription;
+      const subscription = await stripe.subscriptions.retrieve(partial.id);
+      await syncProfileSubscription(subscription);
     }
-
-    // Use invoice.payment_succeeded to consistently set the current period end (expires_at)
-    // and ensure the subscription is marked active once the first (or next) payment succeeds.
-    /*
-    if (event.type === "invoice.payment_succeeded") {
-      const invoice = event.data.object as Stripe.Invoice;
-
-      const subscriptionRawFromInvoice = (invoice as any).subscription as
-        | string
-        | Stripe.Subscription
-        | null
-        | undefined;
-
-      if (!subscriptionRawFromInvoice) {
-        return NextResponse.json({ received: true }, { status: 200 });
-      }
-
-      let customerId: string | null = null;
-      if (typeof invoice.customer === "string") {
-        customerId = invoice.customer;
-      } else if (invoice.customer && typeof invoice.customer === "object") {
-        customerId = (invoice.customer as Stripe.Customer).id ?? null;
-      }
-
-      if (!customerId) {
-        console.error("invoice.payment_succeeded missing customer id");
-        return NextResponse.json({ received: true }, { status: 200 });
-      }
-
-      const supabase = createAdminClient();
-
-      const { data: profileLookup, error: profileLookupError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("stripe_customer_id", customerId)
-        .maybeSingle();
-
-      if (profileLookupError) {
-        console.error(
-          "Error looking up profile by stripe_customer_id (invoice.payment_succeeded)",
-          profileLookupError,
-        );
-        return NextResponse.json({ received: true }, { status: 200 });
-      }
-
-      if (!profileLookup || !profileLookup.id) {
-        console.error("No profile found for customer on invoice.payment_succeeded");
-        return NextResponse.json({ received: true }, { status: 200 });
-      }
-
-      const userIdForInvoice = profileLookup.id as string;
-
-      const creatorPriceId = process.env.STRIPE_CREATOR_PRO_PRICE_ID ?? null;
-      const earnerPriceId = process.env.STRIPE_EARNER_PRO_PRICE_ID ?? null;
-
-      const lines = invoice.lines?.data ?? [];
-
-      let planTypeFromInvoice: "creator_pro" | "earner_pro" | null = null;
-      let periodEndUnix: number | null = null;
-
-      for (const line of lines) {
-        const lineAny = line as any;
-        const price = lineAny.price as Stripe.Price | null | undefined;
-        const priceId = price?.id ?? null;
-        const candidateEnd = lineAny.period?.end ?? null;
-
-        if (!priceId || !candidateEnd) {
-          continue;
-        }
-
-        if (creatorPriceId && priceId === creatorPriceId) {
-          planTypeFromInvoice = "creator_pro";
-          periodEndUnix = candidateEnd;
-          break;
-        }
-
-        if (earnerPriceId && priceId === earnerPriceId) {
-          planTypeFromInvoice = "earner_pro";
-          periodEndUnix = candidateEnd;
-          break;
-        }
-      }
-
-      if (!planTypeFromInvoice || !periodEndUnix) {
-        // Not one of our subscription plans; ignore.
-        return NextResponse.json({ received: true }, { status: 200 });
-      }
-
-      const currentPeriodEnd = new Date(periodEndUnix * 1000).toISOString();
-
-      const subscriptionRaw = subscriptionRawFromInvoice;
-      const subscriptionId =
-        typeof subscriptionRaw === "string"
-          ? subscriptionRaw
-          : subscriptionRaw && typeof subscriptionRaw === "object"
-            ? (subscriptionRaw as Stripe.Subscription).id
-            : null;
-
-      const updatesFromInvoice: Record<string, any> = {};
-
-      if (planTypeFromInvoice === "creator_pro") {
-        if (subscriptionId) {
-          updatesFromInvoice.creator_pro_subscription_id = subscriptionId;
-        }
-        updatesFromInvoice.creator_pro_active = true;
-        updatesFromInvoice.creator_pro_expires_at = currentPeriodEnd;
-      } else if (planTypeFromInvoice === "earner_pro") {
-        if (subscriptionId) {
-          updatesFromInvoice.earner_pro_subscription_id = subscriptionId;
-        }
-        updatesFromInvoice.earner_pro_active = true;
-        updatesFromInvoice.earner_pro_expires_at = currentPeriodEnd;
-      }
-
-      if (Object.keys(updatesFromInvoice).length > 0) {
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update(updatesFromInvoice)
-          .eq("id", userIdForInvoice);
-
-        if (updateError) {
-          console.error(
-            "Error updating subscription fields from invoice.payment_succeeded",
-            updateError,
-          );
-        }
-      }
-
-      return NextResponse.json({ received: true }, { status: 200 });
-    }
-      */
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (err) {

@@ -4,6 +4,11 @@ import { useState } from "react";
 
 type PlanKey = "creator" | "earner";
 
+interface PremiumClientProps {
+  creatorProActive?: boolean;
+  earnerProActive?: boolean;
+}
+
 const plans: Array<{
   key: PlanKey;
   name: string;
@@ -48,11 +53,19 @@ const plans: Array<{
   },
 ];
 
-export default function PremiumClient() {
+export default function PremiumClient({
+  creatorProActive = false,
+  earnerProActive = false,
+}: PremiumClientProps) {
   const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleStartSubscription = async (plan: PlanKey) => {
+    // If this plan is already active, do nothing.
+    if ((plan === "creator" && creatorProActive) || (plan === "earner" && earnerProActive)) {
+      return;
+    }
+
     setLoadingPlan(plan);
     setError(null);
 
@@ -122,7 +135,9 @@ export default function PremiumClient() {
 
         {/* Cards */}
         <div className="grid md:grid-cols-2 gap-6">
-          {plans.map((plan) => (
+          {plans.map((plan) => {
+            const isActive = plan.key === "creator" ? creatorProActive : earnerProActive;
+            return (
             <div
               key={plan.key}
               className="card flex flex-col gap-6 transition-transform duration-200 hover:-translate-y-1"
@@ -207,14 +222,18 @@ export default function PremiumClient() {
               <button
                 type="button"
                 onClick={() => handleStartSubscription(plan.key)}
-                disabled={loadingPlan === plan.key}
+                disabled={loadingPlan === plan.key || isActive}
                 className="w-full py-2.5 px-5 rounded-lg text-sm font-semibold text-white transition duration-200 hover:brightness-110 disabled:opacity-70"
                 style={{ backgroundColor: plan.accent }}
               >
-                {loadingPlan === plan.key ? "Redirecting..." : plan.cta}
+                {isActive
+                  ? "Already active"
+                  : loadingPlan === plan.key
+                    ? "Redirecting..."
+                    : plan.cta}
               </button>
             </div>
-          ))}
+          );})}
         </div>
 
         {/* Footer note */}
