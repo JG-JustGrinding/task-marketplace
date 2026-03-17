@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { queueNotification } from "@/lib/notifications";
 
 type ActivateTaskBody = {
   taskId?: number;
@@ -91,6 +92,28 @@ export async function POST(request: Request) {
         { error: "Failed to activate task. Please try again." },
         { status: 500 }
       );
+    }
+
+    // Notify the task owner that someone started their task.
+    const { data: taskRow, error: taskError } = await supabase
+      .from("tasks")
+      .select("id, user_id, title")
+      .eq("id", taskId)
+      .maybeSingle();
+
+    if (taskError) {
+      console.error("Error loading task for task_started notification", taskError);
+    } else if (taskRow && (taskRow as any).user_id) {
+      const ownerId = (taskRow as any).user_id as string;
+      const title = (taskRow as any).title as string | undefined;
+
+      // Fire-and-forget; failures are logged inside queueNotification.
+      await queueNotification({
+        userId: ownerId,
+        type: "task_started",
+        data: { taskId, taskTitle: title },
+        channels: { inApp: true, email: true },
+      });
     }
 
     return NextResponse.json(

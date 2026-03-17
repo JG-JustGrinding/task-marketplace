@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { queueNotification } from "@/lib/notifications";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
 
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id, user_id")
+      .select("id, user_id, title")
       .eq("id", activation.task_id)
       .single();
 
@@ -140,6 +141,22 @@ export async function POST(request: Request) {
         { error: "Failed to request check-in. Please try again." },
         { status: 500 },
       );
+    }
+
+    // Notify the worker that a check-in was requested.
+    try {
+      await queueNotification({
+        userId: activation.user_id as string,
+        type: "checkin_requested",
+        data: {
+          taskId: activation.task_id,
+          taskTitle: (task as any)?.title ?? undefined,
+          activationId: activation.id,
+        },
+        channels: { inApp: true, email: true },
+      });
+    } catch (notifyError) {
+      console.error("Error queueing checkin_requested notification", notifyError);
     }
 
     return NextResponse.json({ success: true }, { status: 200 });

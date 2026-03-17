@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { queueNotification } from "@/lib/notifications";
 
 const MAX_FILE_BYTES = 30 * 1024 * 1024; // 30 MB
 const STORAGE_BUCKET = "task-submissions";
@@ -96,6 +97,23 @@ export async function POST(request: Request) {
     }
 
     const activationStatus = (activation as any).status as string | null;
+
+    // Load the task so we can notify the owner when submissions arrive.
+    let taskOwnerId: string | null = null;
+    let taskTitle: string | null = null;
+
+    const { data: taskRow, error: taskError } = await supabase
+      .from("tasks")
+      .select("id, user_id, title")
+      .eq("id", taskId)
+      .maybeSingle();
+
+    if (taskError) {
+      console.error("Error loading task for task_submitted notification", taskError);
+    } else if (taskRow && (taskRow as any).user_id) {
+      taskOwnerId = (taskRow as any).user_id as string;
+      taskTitle = (taskRow as any).title as string | null;
+    }
 
     if (
       activationStatus === "cancelled" ||
@@ -304,6 +322,23 @@ export async function POST(request: Request) {
           { error: "Submission saved but failed to update activation status" },
           { status: 500 },
         );
+      }
+    }
+    // Notify the task owner that a submission (or resubmission) was made.
+    if (taskOwnerId) {
+      try {
+        await queueNotification({
+          userId: taskOwnerId,
+          type: "task_submitted",
+          data: {
+            taskId,
+            taskTitle: taskTitle ?? undefined,
+            submissionId: (submission as any)?.id,
+          },
+          channels: { inApp: true, email: true },
+        });
+      } catch (notifyError) {
+        console.error("Error queueing task_submitted notification", notifyError);
       }
     }
 

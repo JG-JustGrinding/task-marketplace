@@ -142,23 +142,23 @@ function canRequestCheckIn(
         };
     }
 
-    const ageMs = nowMs - createdAt.getTime();
-
-    if (ageMs < THREE_DAYS_MS) {
-        return {
-            canRequest: false,
-            reason:
-                "Activation must be active for at least 3 days before you can request a check-in.",
-        };
-    }
-
-    const status = activation.status ?? "";
     const activeStatuses = [
         "waiting_submission",
         "pending",
         "resubmission",
         "resubmission_requested",
     ];
+    const status = activation.status ?? "";
+
+    const ageMs = nowMs - createdAt.getTime();
+
+    if (ageMs < THREE_DAYS_MS && activeStatuses.includes(status)) {
+        return {
+            canRequest: false,
+            reason:
+                "Activation must be active for at least 3 days before you can request a check-in.",
+        };
+    }
 
     if (!activeStatuses.includes(status)) {
         return {

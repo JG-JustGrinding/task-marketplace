@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faHouse, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { faBell } from "@fortawesome/free-regular-svg-icons";
 import Link from "next/link";
+import NotificationsOverlay from "./NotificationsOverlay";
+import { formatNotificationText, getNotificationDestination, NotificationRecord } from "@/lib/notificationsClient";
 
 interface HeaderProps {
   user: any;
@@ -20,6 +23,13 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
   const searchParams = useSearchParams();
 
   const [localSearch, setLocalSearch] = useState(search);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [lastOpenedAt, setLastOpenedAt] = useState<string | null>(null);
+  const [isNotifLoading, setIsNotifLoading] = useState(false);
+  const [isMobileOverlayOpen, setIsMobileOverlayOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     // Keep header input in sync when navigating between pages
@@ -40,6 +50,85 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
     setLocalSearch(value);
     onSearchChange?.(value);
   };
+
+  const loadNotifications = async () => {
+    try {
+      setIsNotifLoading(true);
+      const res = await fetch("/api/notifications?limit=20");
+      if (!res.ok) return;
+      const data = await res.json();
+      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+      // Store the pre-open lastOpenedAt so items created after it show as unread
+      // for this session, then immediately update the DB so the badge resets.
+      setLastOpenedAt(data.lastOpenedAt ?? null);
+      const count = typeof data.unreadCount === "number" ? data.unreadCount : 0;
+      setUnreadCount(count);
+      void fetch("/api/notifications/mark-opened", { method: "POST" }).then(() => {
+        setUnreadCount(0);
+      });
+    } catch {
+      // Ignore errors in popup; header should still function.
+    } finally {
+      setIsNotifLoading(false);
+    }
+  };
+
+  const handleNotificationClick = (notification: NotificationRecord) => {
+    const destination = getNotificationDestination(notification);
+    if (destination) {
+      router.push(destination);
+      setIsNotifOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setUnreadCount(0);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch("/api/notifications?limit=0");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isMounted) return;
+        const count = typeof data.unreadCount === "number" ? data.unreadCount : 0;
+        setUnreadCount(count);
+      } catch {
+        // Ignore errors in header badge; not critical.
+      }
+    };
+
+    fetchUnread();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoggedIn]);
+
+  // Close notifications popup when clicking outside of it
+  useEffect(() => {
+    if (!isNotifOpen) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!notifRef.current || !target) return;
+      if (!notifRef.current.contains(target)) {
+        setIsNotifOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isNotifOpen]);
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
@@ -103,6 +192,106 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 ml-2">
+          {isLoggedIn && (
+            <>
+              {/* Mobile: open full-screen overlay */}
+              <div className="relative sm:hidden">
+                <button
+                  type="button"
+                  className="relative inline-flex items-center justify-center h-9 w-9 rounded-full border border-[var(--border-color)] bg-[var(--bg-muted)]/70 text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors"
+                  aria-label="Notifications"
+                  onClick={() => setIsMobileOverlayOpen(true)}
+                >
+                  <FontAwesomeIcon icon={faBell} className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] px-1 rounded-full bg-[var(--accent-primary)] text-[10px] font-semibold text-white flex items-center justify-center">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Desktop: dropdown popup */}
+              <div className="relative hidden sm:block" ref={notifRef}>
+              <button
+                type="button"
+                className="relative inline-flex items-center justify-center h-9 w-9 rounded-full border border-[var(--border-color)] bg-[var(--bg-muted)]/70 text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors"
+                aria-label="Notifications"
+                onClick={() => {
+                  const next = !isNotifOpen;
+                  setIsNotifOpen(next);
+                  if (next) {
+                    void loadNotifications();
+                  }
+                }}
+              >
+                <FontAwesomeIcon icon={faBell} className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] px-1 rounded-full bg-[var(--accent-primary)] text-[10px] font-semibold text-white flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {isNotifOpen && (
+                <div className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-80 overflow-y-auto rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-lg z-30">
+                  <div className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[var(--text-primary)]">
+                      Notifications
+                    </span>
+                    {isNotifLoading && (
+                      <span className="text-[10px] text-[var(--text-muted)]">
+                        Loading...
+                      </span>
+                    )}
+                  </div>
+
+                  {notifications.length === 0 && !isNotifLoading && (
+                    <div className="px-3 py-4 text-xs text-[var(--text-muted)]">
+                      You have no notifications yet.
+                    </div>
+                  )}
+
+                  {notifications.map((notification) => {
+                    const createdAt = notification.created_at
+                      ? new Date(notification.created_at as string)
+                      : null;
+                    const isUnread = lastOpenedAt
+                      ? new Date(notification.created_at as string) > new Date(lastOpenedAt)
+                      : true;
+
+                    return (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() => handleNotificationClick(notification)}
+                        className={
+                          "w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 border-b border-[var(--border-color)] last:border-b-0 hover:bg-[var(--bg-muted)]/60 transition-colors " +
+                          (isUnread ? "bg-[var(--bg-muted)]/40" : "")
+                        }
+                      >
+                        <span className="text-[var(--text-primary)]">
+                          {formatNotificationText(notification)}
+                        </span>
+                        {createdAt && !Number.isNaN(createdAt.getTime()) && (
+                          <span className="text-[10px] text-[var(--text-muted)]">
+                            {createdAt.toLocaleString()}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+              <NotificationsOverlay
+                isOpen={isMobileOverlayOpen}
+                onClose={() => setIsMobileOverlayOpen(false)}
+              />
+            </>
+          )}
+
           <a
             href="/create"
             className={

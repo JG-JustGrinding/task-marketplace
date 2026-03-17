@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { queueNotification } from "@/lib/notifications";
 
 type RejectActivationBody = {
     activationId?: number;
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
 
         const { data: task, error: taskError } = await supabase
             .from("tasks")
-            .select("id, user_id")
+            .select("id, user_id, title")
             .eq("id", activation.task_id)
             .single();
 
@@ -128,6 +129,22 @@ export async function POST(request: Request) {
                 { error: "Failed to reject task activation. Please try again." },
                 { status: 500 },
             );
+        }
+
+        // Notify the worker that their activation was cancelled by the creator.
+        try {
+            await queueNotification({
+                userId: activation.user_id as string,
+                type: "task_activation_cancelled",
+                data: {
+                    taskId: activation.task_id,
+                    taskTitle: (task as any)?.title ?? undefined,
+                    activationId: activation.id,
+                },
+                channels: { inApp: true, email: true },
+            });
+        } catch (notifyError) {
+            console.error("Error queueing task_activation_cancelled notification", notifyError);
         }
 
         return NextResponse.json({ success: true }, { status: 200 });

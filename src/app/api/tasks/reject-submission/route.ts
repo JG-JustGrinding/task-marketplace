@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { queueNotification } from "@/lib/notifications";
 
 type RejectSubmissionBody = {
   taskId?: number;
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     // Ensure the current user is the owner of this task.
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id, user_id")
+      .select("id, user_id, title")
       .eq("id", taskId)
       .single();
 
@@ -97,6 +98,22 @@ export async function POST(request: Request) {
         { error: "Failed to update submission status" },
         { status: 500 },
       );
+    }
+
+    // Notify the submitter that their submission was rejected.
+    try {
+      await queueNotification({
+        userId: submitterId,
+        type: "task_submission_rejected",
+        data: {
+          taskId,
+          taskTitle: (task as any)?.title ?? undefined,
+          submissionId,
+        },
+        channels: { inApp: true, email: true },
+      });
+    } catch (notifyError) {
+      console.error("Error queueing task_submission_rejected notification", notifyError);
     }
 
     return NextResponse.json({ success: true }, { status: 200 });

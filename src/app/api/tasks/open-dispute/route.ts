@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { queueNotification } from "@/lib/notifications";
 
 type OpenDisputeBody = {
   taskId?: number;
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     // Ensure the current user is the owner (creator) of this task.
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id, user_id")
+      .select("id, user_id, title")
       .eq("id", taskId)
       .single();
 
@@ -176,6 +177,22 @@ export async function POST(request: Request) {
         { error: "Failed to open dispute." },
         { status: 500 },
       );
+    }
+
+    // Notify the worker that a dispute was opened on their submission.
+    try {
+      await queueNotification({
+        userId: submission.user_id as string,
+        type: "dispute_started",
+        data: {
+          taskId,
+          taskTitle: (task as any)?.title ?? undefined,
+          submissionId,
+        },
+        channels: { inApp: true, email: true },
+      });
+    } catch (notifyError) {
+      console.error("Error queueing dispute_started notification", notifyError);
     }
 
     return NextResponse.json({ success: true }, { status: 200 });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { queueNotification } from "@/lib/notifications";
 
 type RequestChangesBody = {
   taskId?: number;
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     // Ensure the current user is the owner of this task.
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id, user_id")
+      .select("id, user_id, title")
       .eq("id", taskId)
       .single();
 
@@ -102,6 +103,23 @@ export async function POST(request: Request) {
         { error: "Failed to update activation status" },
         { status: 500 },
       );
+    }
+
+    // Notify the submitter that changes were requested on their submission.
+    try {
+      await queueNotification({
+        userId: submitterId,
+        type: "submission_changes_requested",
+        data: {
+          taskId,
+          taskTitle: (task as any)?.title ?? undefined,
+          submissionId,
+          note: body.note ?? null,
+        },
+        channels: { inApp: true, email: true },
+      });
+    } catch (notifyError) {
+      console.error("Error queueing submission_changes_requested notification", notifyError);
     }
 
     return NextResponse.json({ success: true }, { status: 200 });

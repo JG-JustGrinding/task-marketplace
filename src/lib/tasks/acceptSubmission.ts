@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { queueNotification } from "@/lib/notifications";
 
 /**
  * Shared helper to accept a task submission, update related rows, and
@@ -38,7 +39,7 @@ export async function acceptTaskSubmissionWithPayout(
   // Fetch the task to ensure it is still active and to get payout details.
   const { data: task, error: taskError } = await client
     .from("tasks")
-    .select("id, user_id, status, price")
+    .select("id, user_id, status, price, title")
     .eq("id", taskId)
     .single();
 
@@ -180,6 +181,22 @@ export async function acceptTaskSubmissionWithPayout(
         console.error("Error inserting platform_earnings row", platformEarningsError);
       }
     }
+  }
+
+  // Notify the submitter that their submission was accepted.
+  try {
+    await queueNotification({
+      userId: submitterId,
+      type: "task_submission_accepted",
+      data: {
+        taskId,
+        taskTitle: (task as any)?.title ?? undefined,
+        submissionId,
+      },
+      channels: { inApp: true, email: true },
+    });
+  } catch (notifyError) {
+    console.error("Error queueing task_submission_accepted notification", notifyError);
   }
 
   return { ok: true as const };

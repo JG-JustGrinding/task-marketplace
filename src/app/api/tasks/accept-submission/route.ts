@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { acceptTaskSubmissionWithPayout } from "@/lib/tasks/acceptSubmission";
+import { queueNotification } from "@/lib/notifications";
 
 type AcceptSubmissionBody = {
   taskId?: number;
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     // Ensure the current user is the owner of this task.
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id, user_id, status")
+      .select("id, user_id, status, title")
       .eq("id", taskId)
       .single();
 
@@ -67,6 +68,30 @@ export async function POST(request: Request) {
             : 500;
 
       return NextResponse.json({ error: message }, { status });
+    }
+
+    // Notify the submitter that their submission was accepted.
+    try {
+      const { data: submission, error: submissionError } = await supabase
+        .from("task_submissions")
+        .select("id, task_id, user_id")
+        .eq("id", submissionId)
+        .single();
+
+      if (!submissionError && submission && submission.user_id) {
+        await queueNotification({
+          userId: submission.user_id as string,
+          type: "task_submission_accepted",
+          data: {
+            taskId,
+            taskTitle: (task as any)?.title ?? undefined,
+            submissionId,
+          },
+          channels: { inApp: true, email: true },
+        });
+      }
+    } catch (notifyError) {
+      console.error("Error queueing task_submission_accepted notification", notifyError);
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
