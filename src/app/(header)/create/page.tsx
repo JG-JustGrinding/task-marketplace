@@ -12,11 +12,12 @@ export const metadata: Metadata = {
 };
 
 type CreatePageProps = {
-	searchParams?: { payment?: string };
+	searchParams: Promise<{ payment?: string }>;
 };
 
-export default function CreateTaskPage({ searchParams }: CreatePageProps) {
-	const rawPayment = searchParams?.payment;
+export default async function CreateTaskPage({ searchParams }: CreatePageProps) {
+	const { payment } = await searchParams;
+	const rawPayment = payment;
 	const paymentStatus: "success" | "cancel" | null =
 		rawPayment === "success" || rawPayment === "cancel" ? rawPayment : null;
 

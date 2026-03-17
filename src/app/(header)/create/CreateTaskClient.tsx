@@ -485,6 +485,8 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                         boxShadow: active ? '0 1px 2px rgba(99,102,241,0.08)' : undefined,
                         cursor: 'pointer',
                         outline: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
                       }}
                       onMouseOver={e => {
                         if (active) {
@@ -506,7 +508,7 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                       }}
                       aria-pressed={active}
                     >
-                      <span style={{ maxWidth: '9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>{category}</span>
+                      <span style={{ maxWidth: '9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline' }}>{category}</span>
                       {active && (
                         <svg
                           className="ml-1 h-3.5 w-3.5"

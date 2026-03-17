@@ -33,7 +33,42 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: If you remove getClaims() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims()
+  const { data, error } = await supabase.auth.getClaims()
+
+  if (error) {
+    const message = error.message || ''
+    const code = (error as any).code || ''
+
+    // In some race conditions (multiple concurrent refreshes), Supabase can
+    // return a "refresh token already used" error even though the browser
+    // still has a valid session. In that case, avoid forcing a logout-style
+    // redirect here and just let the request continue.
+    if (message.includes('refresh token already used')) {
+      return supabaseResponse
+    }
+
+    // If the refresh token is missing/invalid on the server, the browser still
+    // has stale auth cookies. Clear them and force a fresh login so we don't
+    // keep hammering Supabase with bad tokens.
+    if (
+      code === 'refresh_token_not_found' ||
+      message.toLowerCase().includes('refresh token not found')
+    ) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/login'
+
+      const response = NextResponse.redirect(redirectUrl)
+      // Best-effort: clear Supabase auth cookies so the next request starts clean.
+      const existingCookies = request.cookies.getAll()
+      for (const cookie of existingCookies) {
+        if (cookie.name.toLowerCase().includes('supabase')) {
+          response.cookies.set(cookie.name, '', { maxAge: 0, path: '/' })
+        }
+      }
+
+      return response
+    }
+  }
 
   const user = data?.claims
 

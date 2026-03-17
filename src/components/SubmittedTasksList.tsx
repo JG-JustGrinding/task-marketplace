@@ -317,11 +317,11 @@ export default function SubmittedTasksList({
         return (
           <article
             key={submission.id}
-            className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-3 flex flex-col gap-2"
+            className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-3 flex flex-col gap-2 overflow-hidden"
           >
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold truncate">
+                <h3 className="text-sm font-semibold break-words line-clamp-2">
                   {task?.title ?? `Task #${submission.task_id}`}
                 </h3>
                 {task?.short_description && (

@@ -28,6 +28,8 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
   const [notifications, setNotifications] = useState<any[]>([]);
   const [lastOpenedAt, setLastOpenedAt] = useState<string | null>(null);
   const [isNotifLoading, setIsNotifLoading] = useState(false);
+  const [notifCursor, setNotifCursor] = useState<string | null>(null);
+  const [hasMoreNotifications, setHasMoreNotifications] = useState(true);
   const [isMobileOverlayOpen, setIsMobileOverlayOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
 
@@ -51,21 +53,54 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
     onSearchChange?.(value);
   };
 
-  const loadNotifications = async () => {
+  const loadNotifications = async (options?: { append?: boolean }) => {
+    const append = options?.append ?? false;
+
+    if (append && (!hasMoreNotifications || isNotifLoading)) return;
+
     try {
       setIsNotifLoading(true);
-      const res = await fetch("/api/notifications?limit=20");
+      const params = new URLSearchParams();
+      params.set("limit", "20");
+      if (append && notifCursor) {
+        params.set("cursor", notifCursor);
+      }
+
+      if (!append) {
+        setHasMoreNotifications(true);
+        setNotifCursor(null);
+      }
+
+      const res = await fetch(`/api/notifications?${params.toString()}`);
       if (!res.ok) return;
       const data = await res.json();
-      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
-      // Store the pre-open lastOpenedAt so items created after it show as unread
-      // for this session, then immediately update the DB so the badge resets.
-      setLastOpenedAt(data.lastOpenedAt ?? null);
-      const count = typeof data.unreadCount === "number" ? data.unreadCount : 0;
-      setUnreadCount(count);
-      void fetch("/api/notifications/mark-opened", { method: "POST" }).then(() => {
-        setUnreadCount(0);
-      });
+      const newItems = Array.isArray(data.notifications) ? data.notifications : [];
+
+      if (append) {
+        setNotifications((prev) => [...prev, ...newItems]);
+      } else {
+        setNotifications(newItems);
+        // Store the pre-open lastOpenedAt so items created after it show as unread
+        // for this session, then immediately update the DB so the badge resets.
+        setLastOpenedAt(data.lastOpenedAt ?? null);
+        const count = typeof data.unreadCount === "number" ? data.unreadCount : 0;
+        setUnreadCount(count);
+        void fetch("/api/notifications/mark-opened", { method: "POST" }).then(() => {
+          setUnreadCount(0);
+        });
+      }
+
+      if (newItems.length > 0) {
+        const last = newItems[newItems.length - 1];
+        if (last?.created_at) {
+          setNotifCursor(last.created_at as string);
+        }
+        if (newItems.length < 20) {
+          setHasMoreNotifications(false);
+        }
+      } else if (append) {
+        setHasMoreNotifications(false);
+      }
     } catch {
       // Ignore errors in popup; header should still function.
     } finally {
@@ -129,6 +164,16 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
       document.removeEventListener("touchstart", handleClickOutside);
     };
   }, [isNotifOpen]);
+
+  const handleNotificationsScroll: React.UIEventHandler<HTMLDivElement> = (event) => {
+    const target = event.currentTarget;
+    if (!hasMoreNotifications || isNotifLoading) return;
+
+    const threshold = 40; // px from bottom
+    if (target.scrollTop + target.clientHeight >= target.scrollHeight - threshold) {
+      void loadNotifications({ append: true });
+    }
+  };
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
@@ -234,7 +279,7 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
               </button>
 
               {isNotifOpen && (
-                <div className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-80 overflow-y-auto rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-lg z-30">
+                <div className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-80 overflow-y-auto rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-lg z-30" onScroll={handleNotificationsScroll}>
                   <div className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between">
                     <span className="text-xs font-semibold text-[var(--text-primary)]">
                       Notifications

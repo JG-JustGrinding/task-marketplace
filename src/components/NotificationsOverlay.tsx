@@ -15,36 +15,79 @@ export default function NotificationsOverlay({ isOpen, onClose }: NotificationsO
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastOpenedAt, setLastOpenedAt] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
   const { goToNotification } = useNotificationNavigation();
+
+  const fetchPage = async (append: boolean) => {
+    try {
+      setIsLoading(true);
+      const params = new URLSearchParams();
+      params.set("limit", "50");
+      if (append && cursor) {
+        params.set("cursor", cursor);
+      }
+
+      if (!append) {
+        setHasMore(true);
+        setCursor(null);
+      }
+
+      const res = await fetch(`/api/notifications?${params.toString()}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const newItems = Array.isArray(data.notifications) ? data.notifications : [];
+
+      if (append) {
+        setNotifications((prev) => [...prev, ...newItems]);
+      } else {
+        setNotifications(newItems);
+        setLastOpenedAt(data.lastOpenedAt ?? null);
+        void fetch("/api/notifications/mark-opened", { method: "POST" });
+      }
+
+      if (newItems.length > 0) {
+        const last = newItems[newItems.length - 1];
+        if (last?.created_at) {
+          setCursor(last.created_at as string);
+        }
+        if (newItems.length < 50) {
+          setHasMore(false);
+        }
+      } else if (append) {
+        setHasMore(false);
+      }
+    } catch {
+      // Ignore errors; overlay is best-effort.
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
 
     let isMounted = true;
 
-    const load = async () => {
-      try {
-        setIsLoading(true);
-        const res = await fetch("/api/notifications?limit=50");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!isMounted) return;
-        setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
-        setLastOpenedAt(data.lastOpenedAt ?? null);
-        void fetch("/api/notifications/mark-opened", { method: "POST" });
-      } catch {
-        // Ignore errors; overlay is best-effort.
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    void load();
+    void (async () => {
+      await fetchPage(false);
+      if (!isMounted) return;
+    })();
 
     return () => {
       isMounted = false;
     };
   }, [isOpen]);
+
+  const handleScroll: React.UIEventHandler<HTMLDivElement> = (event) => {
+    const target = event.currentTarget;
+    if (!hasMore || isLoading) return;
+
+    const threshold = 40; // px from bottom
+    if (target.scrollTop + target.clientHeight >= target.scrollHeight - threshold) {
+      void fetchPage(true);
+    }
+  };
 
   const handleItemClick = (notification: NotificationRecord) => {
     goToNotification(notification);
@@ -87,7 +130,7 @@ export default function NotificationsOverlay({ isOpen, onClose }: NotificationsO
           </div>
         )}
 
-        <div className="max-h-[calc(100vh-56px)] overflow-y-auto">
+        <div className="max-h-[calc(100vh-56px)] overflow-y-auto" onScroll={handleScroll}>
           {notifications.map((notification) => {
             const createdAt = notification.created_at
               ? new Date(notification.created_at as string)

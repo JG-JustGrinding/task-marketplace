@@ -16,6 +16,8 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const limitParam = url.searchParams.get("limit");
+    const cursor = url.searchParams.get("cursor");
+
     let limit = Number(limitParam ?? "20");
     if (!Number.isFinite(limit) || limit < 0) limit = 20;
     if (limit > 100) limit = 100;
@@ -30,12 +32,20 @@ export async function GET(req: Request) {
     const lastOpenedAt =
       ((profileData as any)?.notifications_last_opened_at as string | null) ?? null;
 
-    const { data: notifications, error } = await supabase
+    let query = supabase
       .from("notifications")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(limit);
+
+    if (cursor) {
+      // When a cursor is provided, only return notifications older than it
+      // so the client can append results for infinite scroll.
+      query = query.lt("created_at", cursor);
+    }
+
+    const { data: notifications, error } = await query;
 
     if (error) {
       console.error("Error loading notifications", error);
