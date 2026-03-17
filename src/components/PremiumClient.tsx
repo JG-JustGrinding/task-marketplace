@@ -27,7 +27,7 @@ const plans: Array<{
     accent: "var(--accent-primary)",
     accentHover: "var(--accent-hover)",
     features: [
-      "Add custom task banners",
+      "Add custom task banners and logos",
       "Add time limits to tasks",
       "Ability to create task collections",
       "Task review time extended from 3 days to 7 days",
