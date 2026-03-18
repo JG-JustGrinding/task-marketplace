@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { queueNotification } from "@/lib/notifications";
+import { isPremiumActive } from "@/lib/premium";
 
 /**
  * Shared helper to accept a task submission, update related rows, and
@@ -36,6 +37,22 @@ export async function acceptTaskSubmissionWithPayout(
 
   const submitterId = (submission as any).user_id as string;
 
+  // Fetch the submitter's profile once so we can determine
+  // whether Earner Pro is active (for fee calculation) and
+  // also read the current pending balance.
+  const { data: submitterProfile, error: submitterProfileError } = await admin
+    .from("profiles")
+    .select("pending_balance_cents, earner_pro_active, earner_pro_expires_at")
+    .eq("id", submitterId)
+    .maybeSingle();
+
+  if (submitterProfileError) {
+    console.error(
+      "Error fetching submitter profile for payout calculation",
+      submitterProfileError,
+    );
+  }
+
   // Fetch the task to ensure it is still active and to get payout details.
   const { data: task, error: taskError } = await client
     .from("tasks")
@@ -56,9 +73,22 @@ export async function acceptTaskSubmissionWithPayout(
     ? Math.round(taskPrice * 100)
     : 0;
 
-  const PLATFORM_TAKE_RATE = 0.1;
+  // Default platform fee is 10%, reduced to 3% for
+  // workers with an active Earner Pro plan.
+  let platformTakeRate = 0.1;
 
-  const workerCents = Math.round(grossCents * (1 - PLATFORM_TAKE_RATE));
+  if (submitterProfile) {
+    const hasEarnerPro = isPremiumActive(
+      (submitterProfile as any).earner_pro_active,
+      (submitterProfile as any).earner_pro_expires_at,
+    );
+
+    if (hasEarnerPro) {
+      platformTakeRate = 0.03;
+    }
+  }
+
+  const workerCents = Math.round(grossCents * (1 - platformTakeRate));
   const platformCents = Math.max(0, grossCents - workerCents);
 
   // Mark the accepted submission row as accepted.
@@ -140,19 +170,11 @@ export async function acceptTaskSubmissionWithPayout(
         console.error("Error inserting pending task_earnings row", earningsError);
       }
 
-      const { data: profile, error: profileError } = await admin
-        .from("profiles")
-        .select("pending_balance_cents")
-        .eq("id", submitterId)
-        .single();
-
-      if (profileError) {
-        console.error("Error fetching submitter profile for pending balance update", profileError);
-      } else {
+      if (submitterProfile) {
         const currentPending =
-          (profile as any)?.pending_balance_cents &&
-          Number.isFinite((profile as any).pending_balance_cents)
-            ? (profile as any).pending_balance_cents
+          (submitterProfile as any)?.pending_balance_cents &&
+          Number.isFinite((submitterProfile as any).pending_balance_cents)
+            ? (submitterProfile as any).pending_balance_cents
             : 0;
 
         const newPending = currentPending + workerCents;

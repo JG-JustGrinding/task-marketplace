@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { earnerProFeatures, creatorProFeatures } from "@/lib/ProFeatures";
 
 const TABS = ["My Profile", "Settings", "Subscription", "Sign out"] as const;
 
@@ -325,7 +326,7 @@ export default function AccountClient({
                         <button
                           type="button"
                           onClick={() => handleOpenCancelModal("creator")}
-                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--danger)] border border-[var(--danger)] bg-transparent hover:bg-[var(--danger)]/5"
+                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--danger-less-saturated)] border border-[var(--danger-less-saturated)] bg-transparent hover:bg-[var(--danger)]/5"
                         >
                           Cancel subscription
                         </button>
@@ -673,6 +674,23 @@ export default function AccountClient({
             <p className="text-sm text-[var(--text-secondary)]">
               To confirm, type <span className="font-semibold">cancel</span> in the box below. This will cancel your {cancelSubscriptionPlan === "creator" ? "Creator Pro" : "Earner Pro"} subscription.
             </p>
+
+            <div className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-2">
+              <p className="bold text-xs text-[var(--text-secondary)]">
+                By cancelling, you will lose access to these features:
+              </p>
+              <ul className="list-disc list-inside text-xs text-[var(--text-secondary)] mt-1">
+                {cancelSubscriptionPlan === "creator" ? (
+                  creatorProFeatures().map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))
+                ) : (
+                  earnerProFeatures().map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))
+                )}
+              </ul>
+            </div>
 
             {(cancelError || (cancelSuccess && false)) && (
               <p className={`text-xs ${cancelError ? "text-[var(--danger)]" : "text-[var(--success)]"}`}>

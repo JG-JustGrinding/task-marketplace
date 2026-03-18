@@ -109,11 +109,11 @@ const buildEmailContent = (
       const subject = `New submission on your task${refSuffix}`;
       const text = `A worker submitted work for your task "${
         title ?? "a task"
-      }". You can review it on the task's submissions page.`;
+      }". You can review it on the task's submissions page. Please review the submission promptly before the 3-day (7-day if Creator Pro is active) auto-accept window expires.`;
       const previewText = "You have a new task submission to review.";
       const taskId = data?.taskId as number | undefined;
       const buttonLink = baseUrl && typeof taskId === "number"
-        ? `${baseUrl}/listing/${taskId}/submissions`
+        ? `${baseUrl}/listing/${taskId}`
         : null;
       const buttonText = "Review submission";
       return { subject, text, previewText, buttonLink, buttonText };

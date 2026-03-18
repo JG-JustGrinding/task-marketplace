@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type SubmissionKind = "file" | "link";
@@ -11,6 +12,7 @@ type SubmitClientProps = {
   taskTitle: string | null;
   activationStatus: string | null;
   resubmissionMessage: string | null;
+  isEarnerProActive?: boolean;
 };
 
 export default function SubmitClient({
@@ -19,6 +21,7 @@ export default function SubmitClient({
   taskTitle,
   activationStatus,
   resubmissionMessage,
+  isEarnerProActive = false,
 }: SubmitClientProps) {
   const router = useRouter();
 
@@ -36,6 +39,14 @@ export default function SubmitClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showUpgradeHint, setShowUpgradeHint] = useState(false);
+
+  const BASE_MAX_FILE_BYTES = 15 * 1024 * 1024; // 15 MB
+  const EARNER_PRO_MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB
+  const maxFileBytes = isEarnerProActive
+    ? EARNER_PRO_MAX_FILE_BYTES
+    : BASE_MAX_FILE_BYTES;
+  const maxFileLabelMb = isEarnerProActive ? 50 : 15;
 
   const isDemoImage = useMemo(() => {
     if (!demoFile) return false;
@@ -43,10 +54,22 @@ export default function SubmitClient({
   }, [demoFile]);
 
   const handleDemoFileChange = (file: File | null) => {
+    setError(null);
+    setShowUpgradeHint(false);
     setDemoFile(null);
     setDemoPreviewUrl(null);
 
     if (!file) {
+      return;
+    }
+
+    if (file.size > maxFileBytes) {
+      setError(
+        `Demo file must be ${maxFileLabelMb}MB or smaller.`,
+      );
+      if (!isEarnerProActive) {
+        setShowUpgradeHint(true);
+      }
       return;
     }
 
@@ -135,9 +158,30 @@ export default function SubmitClient({
     reader.readAsDataURL(file);
   };
 
+  const handleFinalFileChange = (file: File | null) => {
+    setError(null);
+    setShowUpgradeHint(false);
+    setFinalFile(null);
+
+    if (!file) return;
+
+    if (file.size > maxFileBytes) {
+      setError(
+        `Final file must be ${maxFileLabelMb}MB or smaller.`,
+      );
+      if (!isEarnerProActive) {
+        setShowUpgradeHint(true);
+      }
+      return;
+    }
+
+    setFinalFile(file);
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setShowUpgradeHint(false);
     setSuccess(false);
 
     if (!Number.isFinite(listingId)) {
@@ -156,13 +200,22 @@ export default function SubmitClient({
     }
 
     // Client-side file size checks (30MB per file)
-    const MAX_FILE_BYTES = 30 * 1024 * 1024;
-    if (demoFile && demoFile.size > MAX_FILE_BYTES) {
-      setError("Demo file must be 30MB or smaller.");
+    if (demoFile && demoFile.size > maxFileBytes) {
+      setError(
+        `Demo file must be ${maxFileLabelMb}MB or smaller for your current plan.`,
+      );
+      if (!isEarnerProActive) {
+        setShowUpgradeHint(true);
+      }
       return;
     }
-    if (finalFile && finalFile.size > MAX_FILE_BYTES) {
-      setError("Final file must be 30MB or smaller.");
+    if (finalFile && finalFile.size > maxFileBytes) {
+      setError(
+        `Final file must be ${maxFileLabelMb}MB or smaller for your current plan.`,
+      );
+      if (!isEarnerProActive) {
+        setShowUpgradeHint(true);
+      }
       return;
     }
 
@@ -379,7 +432,9 @@ export default function SubmitClient({
                   </label>
                   <input
                     type="file"
-                    onChange={(e) => setFinalFile(e.target.files?.[0] ?? null)}
+                    onChange={(e) =>
+                      handleFinalFileChange(e.target.files?.[0] ?? null)
+                    }
                     className="block w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)]/60 px-3 py-2 text-xs text-[var(--text-primary)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--accent-secondary)] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-[var(--accent-secondary-hover)]"
                   />
                   {finalFile && (
@@ -421,7 +476,22 @@ export default function SubmitClient({
               />
             </div>
 
-            {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
+            {error && (
+              <div className="space-y-1">
+                <p className="text-xs text-[var(--danger)]">{error}</p>
+                {!isEarnerProActive && showUpgradeHint && (
+                  <p className="text-[0.75rem] text-[var(--text-secondary)]">
+                    <Link
+                      href="/premium"
+                      className="text-[var(--accent-primary)] font-semibold hover:underline"
+                    >
+                      Upgraded earners
+                    </Link>{" "}
+                    can upload significantly larger files.
+                  </p>
+                )}
+              </div>
+            )}
             {success && !error && (
               <p className="text-xs text-[var(--success)]">
                 Submission successful! Redirecting...

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProfileClient from "@/components/ProfileClient";
+import { isPremiumActive } from "@/lib/premium";
 
 type ProfileRow = {
   id: string;
@@ -80,7 +81,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       supabase.auth.getUser(),
       supabase
         .from("profiles")
-        .select("id, username, created_at")
+        .select("id, username, creator_pro_active, creator_pro_expires_at, earner_pro_active, earner_pro_expires_at, created_at")
         .eq("id", id)
         .single(),
     ]);
@@ -101,6 +102,17 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   const currentUserId = authData?.user?.id ?? null;
   const isCurrentUser = !!currentUserId && currentUserId === profile.id;
+
+  const creatorProActive = isPremiumActive(
+    (profile as any).creator_pro_active,
+    (profile as any).creator_pro_expires_at,
+  );
+
+  const earnerProActive = isPremiumActive(
+    (profile as any).earner_pro_active,
+    (profile as any).earner_pro_expires_at,
+  );
+
   const [{ data: createdTasksData }, { count: totalCreatedTasksCount }] =
     await Promise.all([
       supabase.rpc("profile_tasks", {
@@ -142,6 +154,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       totalCreatedCount={totalCreatedTasksCount ?? createdTasks.length}
       initialHasMore={hasMore}
       initialNextCursor={nextCursor}
+      creatorProActive={creatorProActive}
+      earnerProActive={earnerProActive}
     />
   );
 }

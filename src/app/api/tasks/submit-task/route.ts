@@ -1,18 +1,23 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { queueNotification } from "@/lib/notifications";
+import { isPremiumActive } from "@/lib/premium";
 
-const MAX_FILE_BYTES = 30 * 1024 * 1024; // 30 MB
+const BASE_MAX_FILE_BYTES = 15 * 1024 * 1024; // 15 MB for standard users
+const EARNER_PRO_MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB for Earner Pro
 const STORAGE_BUCKET = "task-submissions";
 
 async function uploadToStorage(
   supabase: Awaited<ReturnType<typeof createClient>>,
   file: File,
   pathPrefix: string,
+  maxBytes: number,
 ) {
-  if (file.size > MAX_FILE_BYTES) {
+  if (file.size > maxBytes) {
+    const limitMb = maxBytes / (1024 * 1024);
+    const sizeMb = file.size / (1024 * 1024);
     return {
-      error: `File size must be <= 30MB (got ${(file.size / (1024 * 1024)).toFixed(1)}MB)`,
+      error: `File size must be <= ${limitMb.toFixed(0)}MB (got ${sizeMb.toFixed(1)}MB)`,
       path: null as string | null,
     };
   }
@@ -72,6 +77,26 @@ export async function POST(request: Request) {
 
     if (userError || !user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    // Determine this user's upload size limit based on Earner Pro status.
+    let maxFileBytes = BASE_MAX_FILE_BYTES;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("earner_pro_active, earner_pro_expires_at")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile) {
+      const hasEarnerPro = isPremiumActive(
+        (profile as any).earner_pro_active,
+        (profile as any).earner_pro_expires_at,
+      );
+
+      if (hasEarnerPro) {
+        maxFileBytes = EARNER_PRO_MAX_FILE_BYTES;
+      }
     }
 
     // Determine whether this submission is a resubmission based on the
@@ -168,6 +193,7 @@ export async function POST(request: Request) {
         supabase,
         demoFile,
         `${basePrefix}/demo`,
+        maxFileBytes,
       );
       if (error || !path) {
         return NextResponse.json({ error }, { status: 400 });
@@ -182,6 +208,7 @@ export async function POST(request: Request) {
         supabase,
         finalFile,
         `${basePrefix}/final`,
+        maxFileBytes,
       );
       if (error || !path) {
         return NextResponse.json({ error }, { status: 400 });

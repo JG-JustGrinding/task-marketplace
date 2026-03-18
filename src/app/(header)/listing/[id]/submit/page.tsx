@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SubmitClient from "@/components/SubmitClient";
+import { isPremiumActive } from "@/lib/premium";
 
 type TaskRow = {
 	id: number;
@@ -46,8 +47,22 @@ export default async function SubmitPage({
 
 	let activationStatus: string | null = null;
 	let resubmissionMessage: string | null = null;
+	let isEarnerProActive = false;
 
 	if (user) {
+		const { data: profile } = await supabase
+			.from("profiles")
+			.select("earner_pro_active, earner_pro_expires_at")
+			.eq("id", user.id)
+			.maybeSingle();
+
+		if (profile) {
+			isEarnerProActive = isPremiumActive(
+				(profile as any).earner_pro_active,
+				(profile as any).earner_pro_expires_at,
+			);
+		}
+
 		const { data: activation } = await supabase
 			.from("task_activations")
 			.select("status, resubmission_message")
@@ -80,6 +95,7 @@ export default async function SubmitPage({
 			taskTitle={task.title}
 			activationStatus={activationStatus}
 			resubmissionMessage={resubmissionMessage}
+			isEarnerProActive={isEarnerProActive}
 		/>
 	);
 }

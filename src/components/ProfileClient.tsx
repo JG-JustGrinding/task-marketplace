@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import ListingCard from "@/components/ListingCard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCaretDown } from "@fortawesome/free-solid-svg-icons";
@@ -25,6 +26,8 @@ interface ProfileClientProps {
   totalCreatedCount?: number;
   initialHasMore?: boolean;
   initialNextCursor?: string | null;
+  creatorProActive?: boolean;
+  earnerProActive?: boolean;
 }
 
 export default function ProfileClient({
@@ -36,6 +39,8 @@ export default function ProfileClient({
   totalCreatedCount,
   initialHasMore = false,
   initialNextCursor = null,
+  creatorProActive = false,
+  earnerProActive = false,
 }: ProfileClientProps) {
   const [createdExpanded, setCreatedExpanded] = useState(true);
   const [tasks, setTasks] = useState<Task[]>(createdTasks);
@@ -145,12 +150,51 @@ export default function ProfileClient({
       <main className="mx-auto max-w-5xl px-4 py-8 space-y-8">
         {/* Profile Header */}
         <section className="card p-6">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-center gap-6">
             <div className="h-24 w-24 rounded-full bg-[var(--accent-primary)] flex items-center justify-center text-3xl font-semibold text-white">
               {userInitial}
             </div>
 
             <div className="flex-1 text-center sm:text-left space-y-3">
+
+              {(creatorProActive || earnerProActive) && (
+                <div className="flex flex-wrap items-center gap-3 pt-1 justify-center sm:justify-start">
+                  {creatorProActive && (
+                    <div className="group inline-flex items-center gap-2 rounded-full border border-[var(--accent-primary)]/50 bg-gradient-to-r from-[var(--accent-primary)]/10 via-[var(--bg-secondary)] to-[var(--bg-secondary)] px-3 py-1 shadow-sm shadow-[var(--accent-primary)]/20 backdrop-blur-sm">
+                      <div className="relative h-6 w-6 flex-shrink-0">
+                        <Image
+                          src="/creator_pro_badge.svg"
+                          alt="Creator Pro badge"
+                          fill
+                          sizes="24px"
+                          className="drop-shadow-sm group-hover:scale-105 transition-transform duration-150"
+                        />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wide text-[var(--accent-primary)] uppercase">
+                        Pro Creator
+                      </span>
+                    </div>
+                  )}
+
+                  {earnerProActive && (
+                    <div className="group inline-flex items-center gap-2 rounded-full border border-[var(--accent-secondary)]/50 bg-gradient-to-r from-[var(--accent-secondary)]/10 via-[var(--bg-secondary)] to-[var(--bg-secondary)] px-3 py-1 shadow-sm shadow-[var(--accent-secondary)]/20 backdrop-blur-sm">
+                      <div className="relative h-6 w-6 flex-shrink-0">
+                        <Image
+                          src="/earner_pro_badge.svg"
+                          alt="Earner Pro badge"
+                          fill
+                          sizes="24px"
+                          className="drop-shadow-sm group-hover:scale-105 transition-transform duration-150"
+                        />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wide text-[var(--accent-secondary)] uppercase">
+                        Pro Earner
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-1">
                 <h1 className="text-2xl font-semibold">{userName}</h1>
                 {memberSince && (

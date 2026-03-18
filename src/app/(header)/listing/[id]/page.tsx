@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { type Listing } from "@/data/listings";
 import ListingClient from "@/components/ListingClient";
+import { isPremiumActive } from "@/lib/premium";
 
 type ReferenceType = "link" | "image";
 
@@ -118,7 +119,9 @@ export default async function ListingPage({
 
     const { data: creatorData, error: creatorError } = await supabase
         .from("profiles")
-        .select("id, username")
+        .select(
+            "id, username, creator_pro_active, creator_pro_expires_at, earner_pro_active, earner_pro_expires_at",
+        )
         .eq("id", data?.user_id)
         .single();
 
@@ -151,6 +154,20 @@ export default async function ListingPage({
 
     const isPoster = !!user && !!data && user.id === data.user_id;
 
+    const creatorCreatorProActive = creatorData
+        ? isPremiumActive(
+              (creatorData as any).creator_pro_active,
+              (creatorData as any).creator_pro_expires_at,
+          )
+        : false;
+
+    const creatorEarnerProActive = creatorData
+        ? isPremiumActive(
+              (creatorData as any).earner_pro_active,
+              (creatorData as any).earner_pro_expires_at,
+          )
+        : false;
+
     // Determine whether this task currently has any (non-rejected) submissions
     let hasSubmissions = false;
     if (data) {
@@ -174,6 +191,7 @@ export default async function ListingPage({
     let hasReachedTaskLimit = false;
     let hasActiveActivations = false;
     let hasReportedTask = false;
+    let viewerEarnerProActive = false;
     const taskAccepted = !!data && data.status === "task_accepted";
     const taskUnavailable = !!data && data.status === "pending_payment";
 
@@ -201,6 +219,24 @@ export default async function ListingPage({
 
                 
         // Count how many active tasks this user currently has.
+        let maxActiveTasks = 3;
+
+        const { data: viewerProfile } = await supabase
+            .from("profiles")
+            .select("earner_pro_active, earner_pro_expires_at")
+            .eq("id", user.id)
+            .maybeSingle();
+
+        if (viewerProfile) {
+            viewerEarnerProActive = isPremiumActive(
+                (viewerProfile as any).earner_pro_active,
+                (viewerProfile as any).earner_pro_expires_at,
+            );
+
+            if (viewerEarnerProActive) {
+                maxActiveTasks = 10;
+            }
+        }
         const { count: activeCount } = await supabase
             .from("task_activations")
             .select("id", { count: "exact", head: true })
@@ -212,7 +248,7 @@ export default async function ListingPage({
                 "resubmission_requested",
             ]);
 
-        hasReachedTaskLimit = (activeCount ?? 0) >= 3;
+        hasReachedTaskLimit = (activeCount ?? 0) >= maxActiveTasks;
 
         const { data: activation } = await supabase
             .from("task_activations")
@@ -283,7 +319,16 @@ export default async function ListingPage({
     return (
         <ListingClient
             listing={listing}
-            creator={creatorData}
+            creator={
+                creatorData
+                    ? {
+                          id: creatorData.id,
+                          username: creatorData.username,
+                          creatorProActive: creatorCreatorProActive,
+                          earnerProActive: creatorEarnerProActive,
+                      }
+                    : null
+            }
             isPoster={isPoster}
             hasUserStarted={hasUserStarted}
             submissionPending={submissionPending}
@@ -298,6 +343,7 @@ export default async function ListingPage({
             isLoggedIn={!!user}
             hasReportedTask={hasReportedTask}
             hasReachedTaskLimit={hasReachedTaskLimit}
+            viewerEarnerProActive={viewerEarnerProActive}
             hasActiveActivations={hasActiveActivations}
             canDeleteTask={canDeleteTask}
             needsCheckIn={needsCheckIn}

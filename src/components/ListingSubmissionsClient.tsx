@@ -39,7 +39,8 @@ function formatDate(dateString: string) {
   });
 }
 
-const AUTO_ACCEPT_MS = 3 * 24 * 60 * 60 * 1000; // 3 days; keep in sync with auto-accept backend
+const BASE_AUTO_ACCEPT_MS = 3 * 24 * 60 * 60 * 1000; // default 3-day window
+const CREATOR_PRO_AUTO_ACCEPT_MS = 7 * 24 * 60 * 60 * 1000; // extended 7-day window for Creator Pro
 
 function formatCountdown(msRemaining: number) {
   if (!Number.isFinite(msRemaining) || msRemaining <= 0) {
@@ -74,6 +75,7 @@ type ListingSubmissionsClientProps = {
   listingTitle: string | null;
   isTaskAccepted?: boolean;
   initialSubmissions?: ListingSubmission[];
+  isCreatorProActive?: boolean;
 };
 
 export default function ListingSubmissionsClient({
@@ -81,6 +83,7 @@ export default function ListingSubmissionsClient({
   listingTitle,
   isTaskAccepted = false,
   initialSubmissions,
+  isCreatorProActive = false,
 }: ListingSubmissionsClientProps) {
   const [submissions, setSubmissions] = useState<ListingSubmission[]>(
     initialSubmissions ?? [],
@@ -106,6 +109,10 @@ export default function ListingSubmissionsClient({
   const [isSubmittingDispute, setIsSubmittingDispute] = useState<boolean>(false);
   const [disputeError, setDisputeError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  const autoAcceptMs = isCreatorProActive
+    ? CREATOR_PRO_AUTO_ACCEPT_MS
+    : BASE_AUTO_ACCEPT_MS;
 
   useEffect(() => {
     if (typeof initialSubmissions !== "undefined") {
@@ -425,7 +432,7 @@ export default function ListingSubmissionsClient({
           if (isOnlySubmission && isAwaitingReview && !isTaskAccepted) {
             const submittedTime = new Date(submission.submittedAt).getTime();
             if (Number.isFinite(submittedTime)) {
-              const autoAcceptTime = submittedTime + AUTO_ACCEPT_MS;
+              const autoAcceptTime = submittedTime + autoAcceptMs;
               const remainingMs = autoAcceptTime - nowMs;
 
               if (remainingMs > 0) {

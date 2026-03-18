@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ListingSubmissionsClient from "@/components/ListingSubmissionsClient";
 import TaskActivationsClient from "@/components/TaskActivationsClient";
+import { isPremiumActive } from "@/lib/premium";
 
 type TaskRow = {
     id: number;
@@ -153,6 +154,22 @@ export default async function ListingSubmissionsPage({ params }: PageParams) {
         status: a.status,
         hasSubmission: hasSubmissionByUser.get(a.user_id) ?? false,
     }));
+
+    // Determine if the poster currently has an active Creator Pro plan
+    // so we can reflect the extended auto-accept window in the UI.
+    let isCreatorProActive = false;
+    const { data: posterProfile } = await supabase
+        .from("profiles")
+        .select("creator_pro_active, creator_pro_expires_at")
+        .eq("id", user.id)
+        .maybeSingle();
+
+    if (posterProfile) {
+        isCreatorProActive = isPremiumActive(
+            (posterProfile as any).creator_pro_active,
+            (posterProfile as any).creator_pro_expires_at,
+        );
+    }
     
     let initialSubmissions: unknown[] = [];
     try {
@@ -188,6 +205,7 @@ export default async function ListingSubmissionsPage({ params }: PageParams) {
                 listingTitle={task.title}
                 isTaskAccepted={task.status === "task_accepted"}
 				initialSubmissions={initialSubmissions as any}
+				isCreatorProActive={isCreatorProActive}
             />
             <TaskActivationsClient
                 taskId={task.id}

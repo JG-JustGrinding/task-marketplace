@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { queueNotification } from "@/lib/notifications";
+import { isPremiumActive } from "@/lib/premium";
 
 type ActivateTaskBody = {
   taskId?: number;
@@ -27,6 +28,27 @@ export async function POST(request: Request) {
     if (userError || !user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
+
+    // Determine this user's maximum number of active tasks based on
+    // whether they have an active Earner Pro plan.
+    let maxActiveTasks = 3;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("earner_pro_active, earner_pro_expires_at")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile) {
+      const hasEarnerPro = isPremiumActive(
+        (profile as any).earner_pro_active,
+        (profile as any).earner_pro_expires_at,
+      );
+
+      if (hasEarnerPro) {
+        maxActiveTasks = 10;
+      }
+    }
     // Check for existing activations for this user/task.
     const { data: existing } = await supabase
       .from("task_activations")
@@ -51,7 +73,8 @@ export async function POST(request: Request) {
     }
 
     // User does not yet have an activation for this task.
-    // Enforce a maximum of 3 active tasks across all activations.
+    // Enforce a maximum number of active tasks across all activations,
+    // extended for Earner Pro users.
     const { count: activeCount, error: countError } = await supabase
       .from("task_activations")
       .select("id", { count: "exact", head: true })
@@ -71,9 +94,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if ((activeCount ?? 0) >= 3) {
+    if ((activeCount ?? 0) >= maxActiveTasks) {
       return NextResponse.json(
-        { error: "You already have 3 active tasks. Complete or cancel one before starting another." },
+        {
+          error:
+            maxActiveTasks === 10
+              ? "You already have 10 active tasks. Complete or cancel one before starting another."
+              : "You already have 3 active tasks. Complete or cancel one before starting another.",
+        },
         { status: 400 },
       );
     }

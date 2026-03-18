@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { earnerProFeatures, creatorProFeatures } from "@/lib/ProFeatures";
 
 type PlanKey = "creator" | "earner";
 
@@ -26,13 +27,7 @@ const plans: Array<{
     tagline: "For task creators and businesses",
     accent: "var(--accent-primary)",
     accentHover: "var(--accent-hover)",
-    features: [
-      "Add custom task banners and logos",
-      "Add time limits to tasks",
-      "Ability to create task collections",
-      "Task review time extended from 3 days to 7 days",
-      "Verified creator badge",
-    ],
+    features: creatorProFeatures(),
     cta: "Get Creator Pro",
   },
   {
@@ -42,13 +37,7 @@ const plans: Array<{
     tagline: "For task completers and freelancers",
     accent: "var(--accent-secondary)",
     accentHover: "var(--accent-secondary-hover)",
-    features: [
-      "Increase in max active task limit from 3 to 10",
-      "Decrease in earning fee from 10% to 3%",
-      "Increased submission file upload limit",
-      "Priority support for dispute resolution",
-      "Verified earner badge",
-    ],
+    features: earnerProFeatures(),
     cta: "Get Earner Pro",
   },
 ];

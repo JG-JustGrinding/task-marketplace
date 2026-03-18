@@ -11,6 +11,8 @@ type ListingClientProps = {
         id: string;
         username: string | null;
         avatar_url?: string | null;
+        creatorProActive?: boolean;
+        earnerProActive?: boolean;
     } | null;
     isPoster?: boolean;
     hasUserStarted?: boolean;
@@ -26,6 +28,7 @@ type ListingClientProps = {
     isLoggedIn?: boolean;
     hasReportedTask?: boolean;
     hasReachedTaskLimit?: boolean;
+    viewerEarnerProActive?: boolean;
     hasActiveActivations?: boolean;
     canDeleteTask?: boolean;
     needsCheckIn?: boolean;
@@ -49,6 +52,7 @@ export default function ListingClient({
     isLoggedIn = false,
     hasReportedTask = false,
     hasReachedTaskLimit = false,
+    viewerEarnerProActive = false,
     hasActiveActivations = false,
     canDeleteTask = false,
     needsCheckIn = false,
@@ -157,7 +161,19 @@ export default function ListingClient({
                                         {posterInitial}
                                     </div>
                                     <div className="flex flex-col leading-tight">
-                                        <span>{posterName}</span>
+                                        <span className="flex items-center gap-1.5">
+                                            {posterName}
+                                            {creator?.creatorProActive && (
+                                                <span className="inline-flex items-center justify-center rounded-full border border-[var(--accent-primary)]/60 bg-[var(--bg-secondary)] px-1 text-[0.7rem] leading-none text-[var(--accent-primary)]">
+                                                    ★
+                                                </span>
+                                            )}
+                                            {creator?.earnerProActive && (
+                                                <span className="inline-flex items-center justify-center rounded-full border border-[var(--accent-secondary)]/60 bg-[var(--bg-secondary)] px-1 text-[0.7rem] leading-none text-[var(--accent-secondary)]">
+                                                    ★
+                                                </span>
+                                            )}
+                                        </span>
                                     </div>
                                 </Link>
                             ) : (
@@ -166,7 +182,19 @@ export default function ListingClient({
                                         {posterInitial}
                                     </div>
                                     <div className="flex flex-col leading-tight">
-                                        <span>{posterName}</span>
+                                        <span className="flex items-center gap-1.5">
+                                            {posterName}
+                                            {creator?.creatorProActive && (
+                                                <span className="inline-flex items-center justify-center rounded-full border border-[var(--accent-primary)]/60 bg-[var(--bg-secondary)] px-1 text-[0.6rem] leading-none text-[var(--accent-primary)]">
+                                                    ★
+                                                </span>
+                                            )}
+                                            {creator?.earnerProActive && (
+                                                <span className="inline-flex items-center justify-center rounded-full border border-[var(--accent-secondary)]/60 bg-[var(--bg-secondary)] px-1 text-[0.6rem] leading-none text-[var(--accent-secondary)]">
+                                                    ★
+                                                </span>
+                                            )}
+                                        </span>
                                     </div>
                                 </div>
                             )}
@@ -433,7 +461,7 @@ export default function ListingClient({
                                                 Task limit reached
                                             </div>
                                             <p className="text-xs text-[var(--text-secondary)] text-center">
-                                                You already have 3 active tasks. Complete or cancel one before starting another.
+                                                You&apos;ve reached your current active task limit. Complete or cancel one before starting another. {!viewerEarnerProActive && <><Link href="/premium" className="text-[var(--accent-primary)] font-bold hover:underline">Upgraded earners</Link> get a significantly increased task limit.</>}
                                             </p>
                                         </div>
                                     ) : (
