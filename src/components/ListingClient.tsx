@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { shortenNumber } from "@/lib/shortenNumber";
 import type { Listing } from "@/data/listings";
+import TaskCollectionsPanel from "./TaskCollectionsPanel";
 
 type ListingClientProps = {
     listing: Listing;
@@ -33,6 +34,10 @@ type ListingClientProps = {
     canDeleteTask?: boolean;
     needsCheckIn?: boolean;
     checkInActivationId?: number | null;
+    taskId: number;
+    creatorHasCollectionsFeature?: boolean;
+    collection?: { id: number; name: string } | null;
+    alsoInCollection?: Listing[];
 };
 
 export default function ListingClient({
@@ -57,6 +62,10 @@ export default function ListingClient({
     canDeleteTask = false,
     needsCheckIn = false,
     checkInActivationId = null,
+    taskId,
+    creatorHasCollectionsFeature = false,
+    collection: initialCollection = null,
+    alsoInCollection = [],
 }: ListingClientProps) {
     const [activeImage, setActiveImage] = useState<string | null>(null);
     const [showStartConfirm, setShowStartConfirm] = useState(false);
@@ -78,6 +87,10 @@ export default function ListingClient({
     const [isCheckingIn, setIsCheckingIn] = useState(false);
     const [checkInError, setCheckInError] = useState<string | null>(null);
     const [hasCheckedIn, setHasCheckedIn] = useState(false);
+    const [showCollectionsPanel, setShowCollectionsPanel] = useState(false);
+    const [currentCollection, setCurrentCollection] = useState<
+        { id: number; name: string } | null
+    >(initialCollection);
 
     const {
         title,
@@ -302,6 +315,20 @@ export default function ListingClient({
                                 }}
                             >
                                 Delete task
+                            </button>
+                        </div>
+                    )}
+
+                    {isPoster && creatorHasCollectionsFeature && (
+                        <div className="pt-2">
+                            <button
+                                type="button"
+                                className="text-xs font-medium text-[var(--accent-primary)] hover:underline"
+                                onClick={() => setShowCollectionsPanel(true)}
+                            >
+                                {currentCollection
+                                    ? `Edit collection: ${currentCollection.name}`
+                                    : "Add to collection"}
                             </button>
                         </div>
                     )}
@@ -900,6 +927,87 @@ export default function ListingClient({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {currentCollection && alsoInCollection.length > 0 && (
+                <div className="mx-auto mt-6 max-w-5xl px-4 pb-8">
+                    <div className="border-t border-[var(--border-color)] pt-4">
+                        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
+                            Tasks also in this collection <span className="font-semibold">'{currentCollection.name}'</span>
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            {alsoInCollection.map((task) => (
+                                <Link
+                                    key={task.id}
+                                    href={`/listing/${task.id}`}
+                                    className="flex h-full flex-col rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] p-3 hover:border-[var(--accent-primary)] hover:shadow-sm transition"
+                                >
+                                    {(task.bannerUrl || task.logoUrl) && (
+                                        <div className="mb-3">
+                                            {task.bannerUrl ? (
+                                                <div className="relative overflow-hidden rounded-md border border-[var(--border-color)] bg-[var(--bg-muted)]">
+                                                    <img
+                                                        src={task.bannerUrl}
+                                                        alt={`${task.title} banner`}
+                                                        className="h-20 w-full object-cover"
+                                                    />
+                                                    {task.logoUrl && (
+                                                        <div className="absolute bottom-2 left-2 h-8 w-8 overflow-hidden rounded-md border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-sm">
+                                                            <img
+                                                                src={task.logoUrl}
+                                                                alt={`${task.title} logo`}
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : task.logoUrl ? (
+                                                <div className="h-10 w-10 overflow-hidden rounded-md border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-sm">
+                                                    <img
+                                                        src={task.logoUrl}
+                                                        alt={`${task.title} logo`}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    )}
+                                    <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
+                                        {task.title}
+                                    </div>
+                                    {task.description && (
+                                        <p className="mt-1 text-[0.7rem] text-[var(--text-secondary)] line-clamp-3">
+                                            {task.description}
+                                        </p>
+                                    )}
+                                    <div className="mt-auto pt-2 flex items-center justify-between text-[0.7rem] text-[var(--text-secondary)]">
+                                        <span>
+                                            {task.currency === "USD" ? "$" : ""}
+                                            {task.price.toLocaleString()}
+                                        </span>
+                                        {task.categories.length > 0 && (
+                                            <span className="truncate max-w-[8rem]">
+                                                {task.categories.join(", ")}
+                                            </span>
+                                        )}
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isPoster && creatorHasCollectionsFeature && (
+                <TaskCollectionsPanel
+                    taskId={taskId}
+                    isOpen={showCollectionsPanel}
+                    initialCollection={currentCollection}
+                    onClose={() => setShowCollectionsPanel(false)}
+                    onCollectionChange={(updated) => {
+                        setCurrentCollection(updated);
+                    }}
+                />
             )}
         </div>
     );

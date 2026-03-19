@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { type Listing } from "@/data/listings";
 import ListingClient from "@/components/ListingClient";
 import { isPremiumActive } from "@/lib/premium";
+
+const LOGO_BUCKET = "task-logos";
+const BANNER_BUCKET = "task-banners";
 
 type ReferenceType = "link" | "image";
 
@@ -23,6 +27,7 @@ type TaskRow = {
     references: ReferenceItem[] | null;
     price: number;
     status: string | null;
+    collection_id: number | null;
 };
 
 export async function generateMetadata({
@@ -103,6 +108,7 @@ export default async function ListingPage({
     }
 
     const supabase = await createClient();
+    const admin = createAdminClient();
     const {
         data: { user },
     } = await supabase.auth.getUser();
@@ -110,7 +116,7 @@ export default async function ListingPage({
     const { data, error } = await supabase
         .from("tasks")
         .select(
-            "id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status",
+            "id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status, collection_id",
         )
         .eq("id", numericId)
         .single<TaskRow>();
@@ -150,6 +156,72 @@ export default async function ListingPage({
 
     if (!listing) {
         return notFound();
+    }
+
+    let collection: { id: number; name: string } | null = null;
+    let alsoInCollection: Listing[] = [];
+
+    if (data && data.collection_id) {
+        const { data: collectionRow } = await supabase
+            .from("task_collections")
+            .select("id, name")
+            .eq("id", data.collection_id)
+            .maybeSingle();
+
+        if (collectionRow) {
+            collection = {
+                id: (collectionRow as any).id as number,
+                name: (collectionRow as any).name as string,
+            };
+
+            const { data: siblingTasks } = await supabase
+                .from("tasks")
+                .select(
+                    "id, title, categories, short_description, price, logo_path, banner_path",
+                )
+                .eq("collection_id", data.collection_id)
+                .neq("id", data.id)
+                .limit(5);
+
+            if (siblingTasks && siblingTasks.length > 0) {
+                const mapped = await Promise.all(
+                    siblingTasks.map(async (task: any) => {
+                        const logoPath = (task.logo_path as string | null) ?? null;
+                        const bannerPath = (task.banner_path as string | null) ?? null;
+
+                        let logoUrl: string | undefined;
+                        let bannerUrl: string | undefined;
+
+                        if (logoPath) {
+                            const { data: signedLogo } = await admin.storage
+                                .from(LOGO_BUCKET)
+                                .createSignedUrl(logoPath, 60 * 60);
+                            logoUrl = signedLogo?.signedUrl;
+                        }
+
+                        if (bannerPath) {
+                            const { data: signedBanner } = await admin.storage
+                                .from(BANNER_BUCKET)
+                                .createSignedUrl(bannerPath, 60 * 60);
+                            bannerUrl = signedBanner?.signedUrl;
+                        }
+
+                        return {
+                            id: task.id as number,
+                            title: (task.title as string) ?? "",
+                            categories: (task.categories as string[] | null) ?? [],
+                            description: (task.short_description as string | null) ?? undefined,
+                            price: (task.price as number) ?? 0,
+                            currency: "USD",
+                            logoUrl,
+                            bannerUrl,
+                        } satisfies Listing;
+                    }),
+                );
+
+                alsoInCollection = mapped;
+            }
+        }
     }
 
     const isPoster = !!user && !!data && user.id === data.user_id;
@@ -319,6 +391,7 @@ export default async function ListingPage({
     return (
         <ListingClient
             listing={listing}
+            taskId={listing.id}
             creator={
                 creatorData
                     ? {
@@ -330,6 +403,7 @@ export default async function ListingPage({
                     : null
             }
             isPoster={isPoster}
+            creatorHasCollectionsFeature={creatorCreatorProActive}
             hasUserStarted={hasUserStarted}
             submissionPending={submissionPending}
             wasCancelled={wasCancelled}
@@ -348,6 +422,8 @@ export default async function ListingPage({
             canDeleteTask={canDeleteTask}
             needsCheckIn={needsCheckIn}
             checkInActivationId={checkInActivationId}
+            collection={collection}
+            alsoInCollection={alsoInCollection}
         />
     );
 }

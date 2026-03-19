@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import type { Listing } from "@/data/listings";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import HomeFeedClient from "@/components/HomeFeedClient";
 
 export const metadata: Metadata = {
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 const PAGE_SIZE = 12;
+const LOGO_BUCKET = "task-logos";
+const BANNER_BUCKET = "task-banners";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -50,6 +53,46 @@ export default async function Home() {
       ? `${pageRows[pageRows.length - 1]!.rnd}:${pageRows[pageRows.length - 1]!.id}`
       : null;
 
+  const admin = createAdminClient();
+  const taskIds = pageRows.map((task) => task.id);
+  const brandingMap = new Map<number, { logoUrl?: string; bannerUrl?: string }>();
+
+  if (taskIds.length > 0) {
+    const { data: brandingRows } = await admin
+      .from("tasks")
+      .select("id, logo_path, banner_path")
+      .in("id", taskIds);
+
+    await Promise.all(
+      (brandingRows ?? []).map(async (row: any) => {
+        const id = row.id as number;
+        const logoPath = row.logo_path as string | null;
+        const bannerPath = row.banner_path as string | null;
+
+        let logoUrl: string | undefined;
+        let bannerUrl: string | undefined;
+
+        if (logoPath) {
+          const { data: signedLogo } = await admin.storage
+            .from(LOGO_BUCKET)
+            .createSignedUrl(logoPath, 60 * 60);
+          logoUrl = signedLogo?.signedUrl;
+        }
+
+        if (bannerPath) {
+          const { data: signedBanner } = await admin.storage
+            .from(BANNER_BUCKET)
+            .createSignedUrl(bannerPath, 60 * 60);
+          bannerUrl = signedBanner?.signedUrl;
+        }
+
+        if (logoUrl || bannerUrl) {
+          brandingMap.set(id, { logoUrl, bannerUrl });
+        }
+      }),
+    );
+  }
+
   const listings: Listing[] = pageRows.map((task) => ({
     id: task.id,
     title: task.title,
@@ -57,6 +100,8 @@ export default async function Home() {
     description: task.short_description ?? undefined,
     price: task.price,
     currency: "USD",
+    logoUrl: brandingMap.get(task.id)?.logoUrl,
+    bannerUrl: brandingMap.get(task.id)?.bannerUrl,
   }));
 
   return (

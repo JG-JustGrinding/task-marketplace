@@ -48,6 +48,7 @@ export default function PremiumClient({
 }: PremiumClientProps) {
   const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCollectionsInfo, setShowCollectionsInfo] = useState(false);
 
   const handleStartSubscription = async (plan: PlanKey) => {
     // If this plan is already active, do nothing.
@@ -172,39 +173,67 @@ export default function PremiumClient({
 
               {/* Features */}
               <ul className="flex flex-col gap-3 flex-1">
-                {plan.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-center gap-3 text-sm"
-                  >
-                    <span
-                      className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{
-                        backgroundColor: `color-mix(in srgb, ${plan.accent} 15%, transparent)`,
-                      }}
+                {plan.features.map((feature) => {
+                  const isCollectionsFeature =
+                    plan.key === "creator" &&
+                    feature.includes("Ability to create task collections");
+
+                  return (
+                    <li
+                      key={feature}
+                      className="flex flex-col gap-1 text-sm"
                     >
-                      <svg
-                        width="11"
-                        height="11"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                      >
-                        <path
-                          d="M2 6l3 3 5-5"
-                          stroke={plan.accent}
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    <span
-                      style={{ color: "var(--text-secondary)", fontWeight: "bold" }}
-                    >
-                      {feature}
-                    </span>
-                  </li>
-                ))}
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center"
+                          style={{
+                            backgroundColor: `color-mix(in srgb, ${plan.accent} 15%, transparent)`,
+                          }}
+                        >
+                          <svg
+                            width="11"
+                            height="11"
+                            viewBox="0 0 12 12"
+                            fill="none"
+                          >
+                            <path
+                              d="M2 6l3 3 5-5"
+                              stroke={plan.accent}
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                        <span
+                          style={{
+                            color: "var(--text-secondary)",
+                            fontWeight: "bold",
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          {feature}
+                          {isCollectionsFeature && (
+                            <button
+                              type="button"
+                              aria-label="What are task collections?"
+                              className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[var(--border-color)] text-[0.6rem] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+                              onClick={() => setShowCollectionsInfo((prev) => !prev)}
+                            >
+                              i
+                            </button>
+                          )}
+                        </span>
+                      </div>
+                      {isCollectionsFeature && showCollectionsInfo && (
+                        <p className="ml-8 text-[0.7rem] text-[var(--text-muted)] font-semibold leading-snug">
+                          Group your tasks into named collections, which show a
+                          "Tasks also in this collection" section on each task&apos;s page so earners can discover related work.
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
 
               {/* CTA */}

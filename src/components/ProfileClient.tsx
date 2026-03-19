@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import ListingCard from "@/components/ListingCard";
+import CustomTaskCard from "@/components/CustomTaskCard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCaretDown } from "@fortawesome/free-solid-svg-icons";
 
@@ -12,6 +13,8 @@ type Task = {
   short_description: string | null;
   price: number;
   categories: string[] | null;
+  logoUrl?: string;
+  bannerUrl?: string;
   status?: string | null;
   is_taken?: boolean;
   has_started_for_viewer?: boolean;
@@ -75,6 +78,8 @@ export default function ProfileClient({
       categories: task.categories ?? [],
       description: task.short_description ?? undefined,
       price: task.price,
+      logoUrl: task.logoUrl,
+      bannerUrl: task.bannerUrl,
       status: task.status,
       stateLabel,
     };
@@ -274,6 +279,17 @@ export default function ProfileClient({
                     {createdListings.map((listing) => {
                       const shouldShowStatus =
                         isCurrentUser || listing.status === "task_accepted";
+
+                      if (listing.logoUrl || listing.bannerUrl) {
+                        return (
+                          <CustomTaskCard
+                            key={listing.id}
+                            listing={listing}
+                            logoUrl={listing.logoUrl}
+                            bannerUrl={listing.bannerUrl}
+                          />
+                        );
+                      }
 
                       return (
                         <ListingCard

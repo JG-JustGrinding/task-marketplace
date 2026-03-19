@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import ProfileClient from "@/components/ProfileClient";
 import { isPremiumActive } from "@/lib/premium";
 
@@ -9,6 +10,9 @@ type ProfileRow = {
   username: string | null;
   created_at?: string | null;
 };
+
+const LOGO_BUCKET = "task-logos";
+const BANNER_BUCKET = "task-banners";
 
 type Task = {
   id: number;
@@ -134,6 +138,59 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     : rows;
   const nextCursor = hasMore ? "1" : null;
 
+  const admin = createAdminClient();
+  const taskIds = createdTasks
+    .map((task) => Number(task.id))
+    .filter((taskId) => Number.isFinite(taskId));
+
+  const brandingMap = new Map<number, { logoUrl?: string; bannerUrl?: string }>();
+  if (taskIds.length > 0) {
+    const { data: brandingRows } = await admin
+      .from("tasks")
+      .select("id, logo_path, banner_path")
+      .in("id", taskIds);
+
+    await Promise.all(
+      (brandingRows ?? []).map(async (row: any) => {
+        const id = row.id as number;
+        const logoPath = row.logo_path as string | null;
+        const bannerPath = row.banner_path as string | null;
+
+        let logoUrl: string | undefined;
+        let bannerUrl: string | undefined;
+
+        if (logoPath) {
+          const { data: signedLogo } = await admin.storage
+            .from(LOGO_BUCKET)
+            .createSignedUrl(logoPath, 60 * 60);
+          logoUrl = signedLogo?.signedUrl;
+        }
+
+        if (bannerPath) {
+          const { data: signedBanner } = await admin.storage
+            .from(BANNER_BUCKET)
+            .createSignedUrl(bannerPath, 60 * 60);
+          bannerUrl = signedBanner?.signedUrl;
+        }
+
+        if (logoUrl || bannerUrl) {
+          brandingMap.set(id, { logoUrl, bannerUrl });
+        }
+      }),
+    );
+  }
+
+  const enrichedCreatedTasks = createdTasks.map((task) => {
+    const branding = brandingMap.get(task.id);
+    if (!branding) return task;
+
+    return {
+      ...task,
+      logoUrl: branding.logoUrl,
+      bannerUrl: branding.bannerUrl,
+    };
+  });
+
   let memberSince: string | null = null;
   if (profile.created_at) {
     memberSince = new Date(profile.created_at).toLocaleDateString(undefined, {
@@ -150,7 +207,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       userName={userName}
       memberSince={memberSince}
       isCurrentUser={isCurrentUser}
-      createdTasks={createdTasks}
+      createdTasks={enrichedCreatedTasks}
       totalCreatedCount={totalCreatedTasksCount ?? createdTasks.length}
       initialHasMore={hasMore}
       initialNextCursor={nextCursor}

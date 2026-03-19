@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import CategoryFilters from "@/components/CategoryFilters";
 import ListingCard from "@/components/ListingCard";
+import CustomTaskCard from "@/components/CustomTaskCard";
 import type { Listing } from "@/data/listings";
 
 type HomeFeedClientProps = {
@@ -290,7 +291,16 @@ export default function HomeFeedClient({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
               {filteredListings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
+                listing.logoUrl || listing.bannerUrl ? (
+                  <CustomTaskCard
+                    key={listing.id}
+                    listing={listing}
+                    logoUrl={listing.logoUrl}
+                    bannerUrl={listing.bannerUrl}
+                  />
+                ) : (
+                  <ListingCard key={listing.id} listing={listing} />
+                )
               ))}
               {Array.from({ length: skeletonCount }).map((_, index) => (
                 <div

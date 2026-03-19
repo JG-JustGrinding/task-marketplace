@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CATEGORY_OPTIONS } from "@/lib/categories";
 import { createClient } from "@/lib/supabase/client";
 
 const MAX_REFERENCES = 5;
+const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_BANNER_SIZE_BYTES = 10 * 1024 * 1024;
 
 type ReferenceType = "link" | "image";
 
@@ -22,6 +25,9 @@ interface TaskFormState {
   technicalRequirements: string;
   references: ReferenceItem[];
   price: string;
+  premiumLogoPreview: string;
+  premiumBannerPreview: string;
+  timeLimitDays: string;
 }
 
 const INITIAL_STATE: TaskFormState = {
@@ -32,6 +38,9 @@ const INITIAL_STATE: TaskFormState = {
   technicalRequirements: "",
   references: [],
   price: "",
+  premiumLogoPreview: "",
+  premiumBannerPreview: "",
+  timeLimitDays: "",
 };
 
 const DRAFT_STORAGE_KEY = "create_task_draft_v1";
@@ -41,9 +50,13 @@ type PaymentStatus = "success" | "cancel" | null;
 
 interface CreateTaskClientProps {
   paymentStatus: PaymentStatus;
+  creatorProActive?: boolean;
 }
 
-export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProps) {
+export default function CreateTaskClient({
+  paymentStatus,
+  creatorProActive = false,
+}: CreateTaskClientProps) {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [form, setForm] = useState<TaskFormState>(INITIAL_STATE);
@@ -61,12 +74,20 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
+  const [showCreatorProPanel, setShowCreatorProPanel] = useState(false);
+  const [premiumUploadError, setPremiumUploadError] = useState<string | null>(null);
+  const [premiumLogoFile, setPremiumLogoFile] = useState<File | null>(null);
+  const [premiumBannerFile, setPremiumBannerFile] = useState<File | null>(null);
 
-  type StepKey = "details" | "requirements" | "price" | "review";
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const bannerInputRef = useRef<HTMLInputElement | null>(null);
+
+  type StepKey = "details" | "requirements" | "premium" | "price" | "review";
 
   const STEPS: { key: StepKey; label: string }[] = [
     { key: "details", label: "Details" },
     { key: "requirements", label: "Requirements" },
+    { key: "premium", label: "" },
     { key: "price", label: "Price" },
     { key: "review", label: "Review" },
   ];
@@ -137,10 +158,12 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
   }, [form.price, priceValue]);
 
   const canGoNextFromStep = (index: number) => {
-    if (index === 0) {
+    const step = STEPS[index];
+    if (!step) return true;
+    if (step.key === "details") {
       return Object.keys(basicErrors).length === 0;
     }
-    if (index === 2) {
+    if (step.key === "price") {
       if (!form.price.trim()) return false;
       if (priceValue < 5) return false;
       return true;
@@ -218,8 +241,33 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
     }));
   };
 
+  const handleTimeLimitChange = (value: string) => {
+    if (!creatorProActive) {
+      setShowCreatorProPanel(true);
+      return;
+    }
+    const trimmedValue = value.trim();
+    if (!trimmedValue) {
+      setForm((prev) => ({ ...prev, timeLimitDays: "" }));
+      return;
+    }
+
+    const numericValue = Number(trimmedValue);
+    if (!Number.isFinite(numericValue)) {
+      return;
+    }
+
+    const boundedValue = Math.min(30, Math.max(1, Math.floor(numericValue)));
+    setForm((prev) => ({ ...prev, timeLimitDays: String(boundedValue) }));
+  };
+
   const handleSubmit = async () => {
-    if (!canGoNextFromStep(0) || !canGoNextFromStep(2)) {
+    const detailsIndex = STEPS.findIndex((step) => step.key === "details");
+    const priceIndex = STEPS.findIndex((step) => step.key === "price");
+    if (
+      (detailsIndex !== -1 && !canGoNextFromStep(detailsIndex)) ||
+      (priceIndex !== -1 && !canGoNextFromStep(priceIndex))
+    ) {
       setStepIndex(0);
       setTouched({ step: true });
       return;
@@ -254,6 +302,7 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
           technicalRequirements: form.technicalRequirements,
           references: form.references,
           price: priceValue,
+          timeLimitDays: form.timeLimitDays,
         }),
       });
 
@@ -288,6 +337,39 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
         );
         setIsSubmitting(false);
         return;
+      }
+
+      if (creatorProActive && (premiumLogoFile || premiumBannerFile)) {
+        const brandingFormData = new FormData();
+        if (premiumLogoFile) {
+          brandingFormData.append("logo", premiumLogoFile);
+        }
+        if (premiumBannerFile) {
+          brandingFormData.append("banner", premiumBannerFile);
+        }
+
+        const brandingResponse = await fetch(`/api/tasks/${taskId}/branding`, {
+          method: "POST",
+          body: brandingFormData,
+        });
+
+        if (!brandingResponse.ok) {
+          let brandingErrorMessage = "Failed to upload task branding.";
+          try {
+            const brandingJson = await brandingResponse.json();
+            if (brandingJson?.error) {
+              brandingErrorMessage = String(brandingJson.error);
+            }
+          } catch {
+            // ignore parse errors and use fallback message
+          }
+
+          setSubmitError(
+            `Your task was created, but branding upload failed: ${brandingErrorMessage}`,
+          );
+          router.push(`/listing/${taskId}`);
+          return;
+        }
       }
 
       try {
@@ -697,6 +779,346 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
             </div>
           </div>
         );
+      case "premium":
+        return (
+          <div className="space-y-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--accent-primary)]/50 bg-[var(--bg-secondary)]">
+                <Image
+                  src="/creator_pro_badge.svg"
+                  alt="Creator Pro badge"
+                  width={20}
+                  height={20}
+                  className="drop-shadow-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-50">
+                  Creator Pro extras
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Add a logo, banner, and time limit to your task.
+                </p>
+                {!creatorProActive && (
+                  <p className="text-[11px] font-bold text-[var(--accent-primary)]">
+                    These options are included with Creator Pro. You can continue
+                    without them, or upgrade to unlock them.
+                  </p>
+                )}
+                {creatorProActive && false && (
+                  <p className="text-[11px] font-bold text-[var(--accent-secondary)] ">
+                    Creator Pro is active on your account. Premium branding and
+                    timing are unlocked for this task.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="space-y-3 rounded-xl border border-gray-200 bg-white/70 p-4 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-50">
+                      Task logo
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                      Small square mark shown next to your task title.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!creatorProActive) {
+                      setShowCreatorProPanel(true);
+                      return;
+                    }
+                    logoInputRef.current?.click();
+                  }}
+                  className={`mt-2 flex h-24 w-full items-center justify-center rounded-xl border border-dashed text-[11px] transition ${
+                    creatorProActive
+                      ? "border-[var(--accent-primary)]/60 bg-[var(--bg-secondary)] hover:bg-[var(--bg-muted)] cursor-pointer"
+                      : "border-[var(--border-color)] bg-[var(--bg-secondary)]/70 text-[var(--text-muted)] cursor-pointer hover:border-[var(--accent-primary)]/60"
+                  }`}
+                >
+                  {form.premiumLogoPreview ? (
+                    <div className="flex items-center gap-2">
+                      <div className="relative h-10 w-10 overflow-hidden rounded-md border border-[var(--border-color)] bg-[var(--bg-muted)]">
+                        <Image
+                          src={form.premiumLogoPreview}
+                          alt="Task logo preview"
+                          fill
+                          sizes="40px"
+                          className="object-cover"
+                        />
+                      </div>
+                      <span className="text-[11px]">Change logo</span>
+                    </div>
+                  ) : (
+                    <span>
+                      {creatorProActive ? "Upload logo" : "Creator Pro required to add a logo"}
+                    </span>
+                  )}
+                </button>
+                {form.premiumLogoPreview && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!creatorProActive) {
+                        setShowCreatorProPanel(true);
+                        return;
+                      }
+                      if (form.premiumLogoPreview && typeof URL !== "undefined") {
+                        try {
+                          URL.revokeObjectURL(form.premiumLogoPreview);
+                        } catch {
+                          // ignore revoke errors
+                        }
+                      }
+                      setForm((prev) => ({
+                        ...prev,
+                        premiumLogoPreview: "",
+                      }));
+                      setPremiumLogoFile(null);
+                    }}
+                    className="mt-2 inline-flex items-center text-[11px] font-medium text-red-500 hover:text-red-600"
+                  >
+                    Remove logo
+                  </button>
+                )}
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (!creatorProActive) {
+                      setShowCreatorProPanel(true);
+                      e.target.value = "";
+                      return;
+                    }
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > MAX_LOGO_SIZE_BYTES) {
+                      setPremiumUploadError("Logo files must be 5MB or smaller.");
+                      e.target.value = "";
+                      return;
+                    }
+                    setPremiumUploadError(null);
+                    if (form.premiumLogoPreview && typeof URL !== "undefined") {
+                      try {
+                        URL.revokeObjectURL(form.premiumLogoPreview);
+                      } catch {
+                        // ignore revoke errors
+                      }
+                    }
+                    const objectUrl = URL.createObjectURL(file);
+                    setForm((prev) => ({
+                      ...prev,
+                      premiumLogoPreview: objectUrl,
+                    }));
+                    setPremiumLogoFile(file);
+                  }}
+                />
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-gray-200 bg-white/70 p-4 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-50">
+                      Task banner
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                      Wide image displayed at the top of your task.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!creatorProActive) {
+                      setShowCreatorProPanel(true);
+                      return;
+                    }
+                    bannerInputRef.current?.click();
+                  }}
+                  className={`mt-2 flex h-24 w-full items-center justify-center rounded-xl border border-dashed text-[11px] transition ${
+                    creatorProActive
+                      ? "border-[var(--accent-primary)]/60 bg-[var(--bg-secondary)] hover:bg-[var(--bg-muted)] cursor-pointer"
+                      : "border-[var(--border-color)] bg-[var(--bg-secondary)]/70 text-[var(--text-muted)] cursor-pointer hover:border-[var(--accent-primary)]/60"
+                  }`}
+                >
+                  {form.premiumBannerPreview ? (
+                    <span>Change banner</span>
+                  ) : (
+                    <span>
+                      {creatorProActive ? "Upload banner" : "Creator Pro required to add a banner"}
+                    </span>
+                  )}
+                </button>
+                {form.premiumBannerPreview && (
+                  <div className="mt-2 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)]">
+                    <div className="relative h-24 w-full">
+                      <Image
+                        src={form.premiumBannerPreview}
+                        alt="Task banner preview"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+                {form.premiumBannerPreview && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!creatorProActive) {
+                        setShowCreatorProPanel(true);
+                        return;
+                      }
+                      if (form.premiumBannerPreview && typeof URL !== "undefined") {
+                        try {
+                          URL.revokeObjectURL(form.premiumBannerPreview);
+                        } catch {
+                          // ignore revoke errors
+                        }
+                      }
+                      setForm((prev) => ({
+                        ...prev,
+                        premiumBannerPreview: "",
+                      }));
+                      setPremiumBannerFile(null);
+                    }}
+                    className="mt-2 inline-flex items-center text-[11px] font-medium text-red-500 hover:text-red-600"
+                  >
+                    Remove banner
+                  </button>
+                )}
+                <input
+                  ref={bannerInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (!creatorProActive) {
+                      setShowCreatorProPanel(true);
+                      e.target.value = "";
+                      return;
+                    }
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > MAX_BANNER_SIZE_BYTES) {
+                      setPremiumUploadError("Banner files must be 10MB or smaller.");
+                      e.target.value = "";
+                      return;
+                    }
+                    setPremiumUploadError(null);
+                    if (form.premiumBannerPreview && typeof URL !== "undefined") {
+                      try {
+                        URL.revokeObjectURL(form.premiumBannerPreview);
+                      } catch {
+                        // ignore revoke errors
+                      }
+                    }
+                    const objectUrl = URL.createObjectURL(file);
+                    setForm((prev) => ({
+                      ...prev,
+                      premiumBannerPreview: objectUrl,
+                    }));
+                    setPremiumBannerFile(file);
+                  }}
+                />
+              </div>
+            </div>
+
+            {premiumUploadError && (
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-800 shadow-sm dark:border-red-900/50 dark:bg-red-900/40 dark:text-red-100">
+                {premiumUploadError}
+              </div>
+            )}
+
+            <div className="space-y-2 rounded-xl border border-gray-200 bg-white/70 p-4 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+              <p className="text-xs font-semibold text-gray-900 dark:text-gray-50">
+                Time limit after work starts
+              </p>
+              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                Set how long collaborators have to submit work after they check in
+                on your task.
+              </p>
+              <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => handleTimeLimitChange("")}
+                  className={`inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-[11px] font-medium transition ${
+                    form.timeLimitDays
+                      ? "border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
+                      : "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+                  } ${creatorProActive ? "cursor-pointer hover:bg-[var(--bg-muted)]" : "cursor-pointer"}`}
+                >
+                  No time limit
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                    or limit to
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    value={form.timeLimitDays}
+                    onChange={(e) => handleTimeLimitChange(e.target.value)}
+                    className="h-8 w-16 rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-800 outline-none ring-0 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400"
+                  />
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                    days
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {!creatorProActive && showCreatorProPanel && (
+              <div className="rounded-xl border border-[var(--accent-primary)]/40 bg-[var(--bg-secondary)]/80 p-4 text-xs shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="relative h-8 w-8 flex-shrink-0">
+                      <Image
+                        src="/creator_pro_badge.svg"
+                        alt="Creator Pro badge"
+                        fill
+                        sizes="32px"
+                        className="drop-shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                        Unlock Creator Pro features
+                      </p>
+                      <p className="text-[11px] text-[var(--text-secondary)]">
+                        Upgrade to add custom task logos and banners, set
+                        time limits, and access other premium creator tools.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 sm:mt-0 sm:justify-end">
+                    <a
+                      href="/premium"
+                      className="inline-flex items-center rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[var(--accent-hover)]"
+                    >
+                      Get Creator Pro
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreatorProPanel(false)}
+                      className="inline-flex items-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+                    >
+                      Maybe later
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
       case "price":
         return (
           <div className="space-y-6">
@@ -882,6 +1304,7 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
               const isActive = index === stepIndex;
               const isComplete = index < stepIndex;
               const isClickable = index <= stepIndex;
+              const isPremiumStep = step.key === "premium";
               return (
                 <li
                   key={step.key}
@@ -920,6 +1343,10 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                             strokeLinejoin="round"
                           />
                         </svg>
+                      ) : isPremiumStep ? (
+                        <span className="text-[9px] font-semibold uppercase tracking-wide">
+                          Pro
+                        </span>
                       ) : (
                         index + 1
                       )}
@@ -989,14 +1416,13 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                 </button>
 
                 {stepIndex < STEPS.length - 1 ? (
+                  (() => {
+                    const nextDisabled = isSubmitting || !canGoNextFromStep(stepIndex);
+                    return (
                   <button
                     type="button"
                     onClick={handleNext}
-                    disabled={
-                      isSubmitting ||
-                      (stepIndex === 0 && Object.keys(basicErrors).length > 0) ||
-                      (stepIndex === 2 && (!form.price.trim() || priceValue < 5))
-                    }
+                    disabled={nextDisabled}
                     style={{
                       backgroundColor: 'var(--accent-primary)',
                       color: 'white',
@@ -1005,8 +1431,8 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                       fontWeight: 600,
                       fontSize: '0.75rem',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                      opacity: isSubmitting || (stepIndex === 0 && Object.keys(basicErrors).length > 0) || (stepIndex === 2 && (!form.price.trim() || priceValue < 5)) ? 0.6 : 1,
-                      cursor: isSubmitting || (stepIndex === 0 && Object.keys(basicErrors).length > 0) || (stepIndex === 2 && (!form.price.trim() || priceValue < 5)) ? 'not-allowed' : 'pointer',
+                      opacity: nextDisabled ? 0.6 : 1,
+                      cursor: nextDisabled ? 'not-allowed' : 'pointer',
                       transition: 'background 0.2s',
                     }}
                     onMouseOver={e => (e.currentTarget.style.backgroundColor = 'var(--accent-hover)')}
@@ -1014,6 +1440,8 @@ export default function CreateTaskClient({ paymentStatus }: CreateTaskClientProp
                   >
                     Next
                   </button>
+                    );
+                  })()
                 ) : (
                   <button
                     type="button"

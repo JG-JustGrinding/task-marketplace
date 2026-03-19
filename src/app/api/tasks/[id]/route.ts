@@ -6,6 +6,35 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // When a funded task is deleted before completion, we issue a partial
 // refund and keep a small cancellation fee as platform earnings.
 const PLATFORM_CANCELLATION_FEE_RATE = 0.15; // 15%
+const LOGO_BUCKET = "task-logos";
+const BANNER_BUCKET = "task-banners";
+
+async function deleteTaskBrandingAssets(
+  logoPath: string | null | undefined,
+  bannerPath: string | null | undefined,
+) {
+  const admin = createAdminClient();
+
+  if (logoPath) {
+    const { error: logoDeleteError } = await admin.storage
+      .from(LOGO_BUCKET)
+      .remove([logoPath]);
+
+    if (logoDeleteError) {
+      throw new Error(`Failed to remove task logo: ${logoDeleteError.message}`);
+    }
+  }
+
+  if (bannerPath) {
+    const { error: bannerDeleteError } = await admin.storage
+      .from(BANNER_BUCKET)
+      .remove([bannerPath]);
+
+    if (bannerDeleteError) {
+      throw new Error(`Failed to remove task banner: ${bannerDeleteError.message}`);
+    }
+  }
+}
 
 export async function GET(
   request: Request,
@@ -74,7 +103,7 @@ export async function DELETE(
     // Fetch the task and verify ownership + status/payment details
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id, user_id, status, price, stripe_payment_intent_id")
+      .select("id, user_id, status, price, stripe_payment_intent_id, logo_path, banner_path")
       .eq("id", numericId)
       .single();
 
@@ -131,6 +160,19 @@ export async function DELETE(
 
     // Branch 1: unfunded tasks still awaiting payment can be hard deleted
     if (status === "pending_payment") {
+      try {
+        await deleteTaskBrandingAssets(
+          (task as any).logo_path as string | null | undefined,
+          (task as any).banner_path as string | null | undefined,
+        );
+      } catch (assetError) {
+        console.error("Error deleting task branding assets", assetError);
+        return NextResponse.json(
+          { error: "Failed to remove task branding files. Please try again." },
+          { status: 500 },
+        );
+      }
+
       const { error: deleteError } = await supabase
         .from("tasks")
         .delete()
@@ -235,6 +277,19 @@ export async function DELETE(
           );
           return NextResponse.json(
             { error: "Refund issued but failed to update task status." },
+            { status: 500 },
+          );
+        }
+
+        try {
+          await deleteTaskBrandingAssets(
+            (task as any).logo_path as string | null | undefined,
+            (task as any).banner_path as string | null | undefined,
+          );
+        } catch (assetError) {
+          console.error("Error deleting task branding assets after refund", assetError);
+          return NextResponse.json(
+            { error: "Refund issued but failed to remove branding files." },
             { status: 500 },
           );
         }

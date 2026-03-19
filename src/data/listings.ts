@@ -5,6 +5,8 @@ export interface Listing {
   description?: string;
   price: number;
   currency?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
   longDescription?: string;
   requirements?: string;
   images?: string[];

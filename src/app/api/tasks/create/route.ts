@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isPremiumActive } from "@/lib/premium";
 
 type ReferenceType = "link" | "image";
 
@@ -16,6 +17,7 @@ type CreateTaskBody = {
 	technicalRequirements?: string;
 	references?: ReferenceItem[];
 	price?: string | number;
+	timeLimitDays?: string | number | null;
 };
 
 export async function POST(request: Request) {
@@ -40,6 +42,7 @@ export async function POST(request: Request) {
 			technicalRequirements,
 			references = [],
 			price,
+			timeLimitDays,
 		} = body;
 
 		if (!title || !shortDescription) {
@@ -64,6 +67,50 @@ export async function POST(request: Request) {
 			);
 		}
 
+		let parsedTimeLimitDays: number | null = null;
+		if (
+			typeof timeLimitDays !== "undefined" &&
+			timeLimitDays !== null &&
+			String(timeLimitDays).trim() !== ""
+		) {
+			const numericTimeLimit = Number(timeLimitDays);
+			if (!Number.isFinite(numericTimeLimit) || !Number.isInteger(numericTimeLimit)) {
+				return NextResponse.json(
+					{ error: "timeLimitDays must be an integer between 1 and 30." },
+					{ status: 400 },
+				);
+			}
+
+			if (numericTimeLimit < 1 || numericTimeLimit > 30) {
+				return NextResponse.json(
+					{ error: "timeLimitDays must be between 1 and 30." },
+					{ status: 400 },
+				);
+			}
+
+			const { data: profile } = await supabase
+				.from("profiles")
+				.select("creator_pro_active, creator_pro_expires_at")
+				.eq("id", user.id)
+				.maybeSingle();
+
+			const creatorProActive = profile
+				? isPremiumActive(
+						(profile as any).creator_pro_active,
+						(profile as any).creator_pro_expires_at,
+				  )
+				: false;
+
+			if (!creatorProActive) {
+				return NextResponse.json(
+					{ error: "Creator Pro is required to set a time limit." },
+					{ status: 403 },
+				);
+			}
+
+			parsedTimeLimitDays = numericTimeLimit;
+		}
+
 		const { data, error } = await supabase
 			.from("tasks")
 			.insert({
@@ -75,6 +122,7 @@ export async function POST(request: Request) {
 				technical_requirements: technicalRequirements,
 				references: references,
 				price: numericPrice,
+				time_limit_days: parsedTimeLimitDays,
 			})
 			.select()
 			.single();

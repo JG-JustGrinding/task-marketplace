@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import type { Listing } from "@/data/listings";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const PAGE_SIZE = 12;
+const LOGO_BUCKET = "task-logos";
+const BANNER_BUCKET = "task-banners";
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +22,7 @@ export async function GET(request: Request) {
     // Base query: active tasks only
     let queryBuilder = supabase
       .from("tasks")
-      .select("id, user_id, title, categories, short_description, price", { count: "exact" })
+      .select("id, user_id, title, categories, short_description, price, logo_path, banner_path", { count: "exact" })
       .eq("status", "active");
 
     if (searchQuery) {
@@ -49,12 +52,42 @@ export async function GET(request: Request) {
       categories: string[] | null;
       short_description: string | null;
       price: number;
+      logo_path: string | null;
+      banner_path: string | null;
     }>;
 
     const hasMore = rows.length > PAGE_SIZE;
     const pageRows = rows.slice(0, PAGE_SIZE);
 
     const nextCursor = hasMore ? String(safeOffset + PAGE_SIZE) : null;
+
+    const admin = createAdminClient();
+    const brandingMap = new Map<number, { logoUrl?: string; bannerUrl?: string }>();
+
+    await Promise.all(
+      pageRows.map(async (task) => {
+        let logoUrl: string | undefined;
+        let bannerUrl: string | undefined;
+
+        if (task.logo_path) {
+          const { data: signedLogo } = await admin.storage
+            .from(LOGO_BUCKET)
+            .createSignedUrl(task.logo_path, 60 * 60);
+          logoUrl = signedLogo?.signedUrl;
+        }
+
+        if (task.banner_path) {
+          const { data: signedBanner } = await admin.storage
+            .from(BANNER_BUCKET)
+            .createSignedUrl(task.banner_path, 60 * 60);
+          bannerUrl = signedBanner?.signedUrl;
+        }
+
+        if (logoUrl || bannerUrl) {
+          brandingMap.set(task.id, { logoUrl, bannerUrl });
+        }
+      }),
+    );
 
     const listings: Listing[] = pageRows.map((task) => ({
       id: task.id,
@@ -63,6 +96,8 @@ export async function GET(request: Request) {
       description: task.short_description ?? undefined,
       price: task.price,
       currency: "USD",
+      logoUrl: brandingMap.get(task.id)?.logoUrl,
+      bannerUrl: brandingMap.get(task.id)?.bannerUrl,
     }));
 
     return NextResponse.json({ listings, hasMore, nextCursor });
