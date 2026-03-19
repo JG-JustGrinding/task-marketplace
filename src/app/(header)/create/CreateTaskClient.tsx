@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CATEGORY_OPTIONS } from "@/lib/categories";
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 
 const MAX_REFERENCES = 5;
 const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
@@ -793,17 +794,19 @@ export default function CreateTaskClient({
                 />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-50">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
                   Creator Pro extras
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-[var(--text-secondary)]">
                   Add a logo, banner, and time limit to your task.
                 </p>
                 {!creatorProActive && (
-                  <p className="text-[11px] font-bold text-[var(--accent-primary)]">
-                    These options are included with Creator Pro. You can continue
-                    without them, or upgrade to unlock them.
-                  </p>
+                    <p className="text-[11px] font-bold text-[var(--accent-primary)] hover:underline">
+                      <Link href="/upgrade">
+                          These options are included with Creator Pro. You can continue
+                          without them, or upgrade to unlock them.
+                      </Link>
+                    </p>
                 )}
                 {creatorProActive && false && (
                   <p className="text-[11px] font-bold text-[var(--accent-secondary)] ">
@@ -815,14 +818,11 @@ export default function CreateTaskClient({
             </div>
 
             <div className="grid gap-5 md:grid-cols-2">
-              <div className="space-y-3 rounded-xl border border-gray-200 bg-white/70 p-4 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+              <div className="space-y-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/70 p-4 text-xs shadow-[var(--shadow-soft)]">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-50">
+                    <p className="text-xs font-semibold text-[var(--text-primary)]">
                       Task logo
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-                      Small square mark shown next to your task title.
                     </p>
                   </div>
                 </div>
@@ -881,7 +881,7 @@ export default function CreateTaskClient({
                       }));
                       setPremiumLogoFile(null);
                     }}
-                    className="mt-2 inline-flex items-center text-[11px] font-medium text-red-500 hover:text-red-600"
+                    className="mt-2 inline-flex items-center text-[11px] font-medium text-[var(--danger)] hover:opacity-85"
                   >
                     Remove logo
                   </button>
@@ -922,14 +922,11 @@ export default function CreateTaskClient({
                 />
               </div>
 
-              <div className="space-y-3 rounded-xl border border-gray-200 bg-white/70 p-4 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
+              <div className="space-y-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/70 p-4 text-xs shadow-[var(--shadow-soft)]">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-50">
+                    <p className="text-xs font-semibold text-[var(--text-primary)]">
                       Task banner
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-                      Wide image displayed at the top of your task.
                     </p>
                   </div>
                 </div>
@@ -989,7 +986,7 @@ export default function CreateTaskClient({
                       }));
                       setPremiumBannerFile(null);
                     }}
-                    className="mt-2 inline-flex items-center text-[11px] font-medium text-red-500 hover:text-red-600"
+                    className="mt-2 inline-flex items-center text-[11px] font-medium text-[var(--danger)] hover:opacity-85"
                   >
                     Remove banner
                   </button>
@@ -1032,16 +1029,16 @@ export default function CreateTaskClient({
             </div>
 
             {premiumUploadError && (
-              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-800 shadow-sm dark:border-red-900/50 dark:bg-red-900/40 dark:text-red-100">
+              <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-xs text-[var(--danger)] shadow-[var(--shadow-soft)]">
                 {premiumUploadError}
               </div>
             )}
 
-            <div className="space-y-2 rounded-xl border border-gray-200 bg-white/70 p-4 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
-              <p className="text-xs font-semibold text-gray-900 dark:text-gray-50">
+            <div className="space-y-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/70 p-4 text-xs shadow-[var(--shadow-soft)]">
+              <p className="text-xs font-semibold text-[var(--text-primary)]">
                 Time limit after work starts
               </p>
-              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+              <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
                 Set how long collaborators have to submit work after they check in
                 on your task.
               </p>
@@ -1058,7 +1055,7 @@ export default function CreateTaskClient({
                   No time limit
                 </button>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  <span className="text-[11px] text-[var(--text-secondary)]">
                     or limit to
                   </span>
                   <input
@@ -1067,9 +1064,9 @@ export default function CreateTaskClient({
                     max={30}
                     value={form.timeLimitDays}
                     onChange={(e) => handleTimeLimitChange(e.target.value)}
-                    className="h-8 w-16 rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-800 outline-none ring-0 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400"
+                    className="h-8 w-16 rounded-md border border-[var(--border-color)] bg-[var(--bg-secondary)] px-2 text-xs text-[var(--text-primary)] outline-none ring-0 focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/20"
                   />
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  <span className="text-[11px] text-[var(--text-secondary)]">
                     days
                   </span>
                 </div>
