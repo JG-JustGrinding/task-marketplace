@@ -76,9 +76,13 @@ export async function GET(req: NextRequest) {
 		const submittedTaskIds = pageActivations.map((s) => s.task_id);
 
 		// Load basic task info for the tasks the user has started.
+		// Include time_limit_days so the frontend can display time limits
+		// for tasks created by Creator Pro users.
 		const { data: tasksData, error: tasksError } = await supabase
 			.from("tasks")
-			.select("id, title, short_description, price, categories, created_at")
+			.select(
+				"id, title, short_description, price, categories, created_at, time_limit_days",
+			)
 			.in("id", submittedTaskIds);
 
 		if (tasksError) {
@@ -118,6 +122,7 @@ export async function GET(req: NextRequest) {
 			price: number;
 			categories: string[] | null;
 			created_at: string;
+			time_limit_days: number | null;
 		}>;
 
 		return NextResponse.json({ submissions, tasks, hasMore });

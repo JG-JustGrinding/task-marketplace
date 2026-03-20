@@ -10,7 +10,8 @@ export type NotificationType =
   | "submission_changes_requested"
   | "dispute_started"
   | "checkin_requested"
-  | "task_activation_cancelled";
+  | "task_activation_cancelled"
+  | "time_limit_warning";
 
 export type NotificationChannels = {
   inApp?: boolean;

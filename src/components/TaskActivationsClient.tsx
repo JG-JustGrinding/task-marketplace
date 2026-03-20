@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type ActivationStatus =
@@ -31,6 +31,8 @@ type TaskActivationsClientProps = {
     currentUserId: string;
     isPoster: boolean;
     activations: Activation[];
+    // Optional premium time limit for this task (days from activation start)
+    timeLimitDays?: number | null;
     variant?: "page" | "embedded";
 };
 
@@ -47,6 +49,24 @@ function formatDate(dateString: string) {
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function formatCountdown(msRemaining: number) {
+    if (!Number.isFinite(msRemaining) || msRemaining <= 0) {
+        return "0m";
+    }
+
+    const totalSeconds = Math.floor(msRemaining / 1000);
+    const days = Math.floor(totalSeconds / (24 * 60 * 60));
+    const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+    const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0 || days > 0) parts.push(`${hours}h`);
+    parts.push(`${minutes}m`);
+
+    return parts.join(" ");
+}
 
 function statusBadge(status: ActivationStatus) {
     const base =
@@ -203,6 +223,7 @@ export default function TaskActivationsClient({
     currentUserId,
     isPoster,
     activations,
+    timeLimitDays,
     variant = "page",
 }: TaskActivationsClientProps) {
     const [pendingIds, setPendingIds] = useState<number[]>([]);
@@ -214,7 +235,17 @@ export default function TaskActivationsClient({
         { type: "cancel" | "request_check_in"; activation: Activation } | null
     >(null);
 
-    const nowMs = useMemo(() => Date.now(), []);
+    const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+    useEffect(() => {
+        const id = window.setInterval(() => {
+            setNowMs(Date.now());
+        }, 30_000);
+
+        return () => {
+            window.clearInterval(id);
+        };
+    }, []);
 
     const hasAny = localActivations.length > 0;
 
@@ -398,6 +429,25 @@ export default function TaskActivationsClient({
                             !!checkInRequestedAtDate &&
                             nowMs - checkInRequestedAtDate.getTime() < ONE_DAY_MS;
 
+                        const timeLimitDaysForTask =
+                            typeof timeLimitDays === "number" && timeLimitDays > 0
+                                ? timeLimitDays
+                                : null;
+
+                        let hasTimeLimitExpired = false;
+                        let remainingMs: number | null = null;
+
+                        if (timeLimitDaysForTask) {
+                            const startedAt = new Date(activation.createdAt);
+                            if (!Number.isNaN(startedAt.getTime())) {
+                                const deadline =
+                                    startedAt.getTime() +
+                                    timeLimitDaysForTask * ONE_DAY_MS;
+                                remainingMs = deadline - nowMs;
+                                hasTimeLimitExpired = remainingMs <= 0;
+                            }
+                        }
+
                         return (
                             <article
                                 key={activation.id}
@@ -420,6 +470,26 @@ export default function TaskActivationsClient({
                                             <p className="mt-0.5 text-[0.65rem] text-[var(--text-secondary)]">
                                                 Check-in requested · the worker has 24 hours to check in
                                             </p>
+                                        )}
+                                        {timeLimitDaysForTask && (
+                                            <>
+                                                {hasTimeLimitExpired ? (
+                                                    <p className="mt-0.5 text-[0.65rem] text-[var(--text-secondary)]">
+                                                        Time limit passed — this worker can no longer submit work for this
+                                                        task.
+                                                    </p>
+                                                ) : (
+                                                    remainingMs != null &&
+                                                    remainingMs > 0 && (
+                                                        <p className="mt-0.5 text-[0.65rem] text-[var(--text-secondary)]">
+                                                            Time remaining for this worker: {" "}
+                                                            <span className="font-semibold text-[var(--text-primary)]">
+                                                                {formatCountdown(remainingMs)}
+                                                            </span>
+                                                        </p>
+                                                    )
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                     <div className="flex flex-col items-end gap-1">

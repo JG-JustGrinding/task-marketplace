@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import HubDashboard from "@/components/HubDashboard";
 import stripe from "@/lib/stripe";
 import { maturePendingEarningsForUser } from "@/lib/earnings";
+import { isPremiumActive } from "@/lib/premium";
 
 export const metadata: Metadata = {
 	title: "Your Hub",
@@ -80,7 +81,7 @@ export default async function HubPage() {
 		supabase
 			.from("profiles")
 			.select(
-				"available_balance_cents, pending_balance_cents, stripe_account_id",
+				"available_balance_cents, pending_balance_cents, stripe_account_id, creator_pro_active, creator_pro_expires_at, earner_pro_active, earner_pro_expires_at",
 			)
 			.eq("id", user.id)
 			.single(),
@@ -113,6 +114,16 @@ export default async function HubPage() {
 		(typeof profileData?.pending_balance_cents === "number"
 			? profileData.pending_balance_cents
 			: 0) || 0;
+
+	const creatorProActive = isPremiumActive(
+		(profileData as any)?.creator_pro_active,
+		(profileData as any)?.creator_pro_expires_at,
+	);
+
+	const earnerProActive = isPremiumActive(
+		(profileData as any)?.earner_pro_active,
+		(profileData as any)?.earner_pro_expires_at,
+	);
 
 	const stripeAccountId = profileData?.stripe_account_id as string | undefined;
 	const hasStripeAccount = Boolean(stripeAccountId);
@@ -166,7 +177,7 @@ export default async function HubPage() {
 				const { data } = await supabase
 					.from("tasks")
 					.select(
-						"id, title, short_description, price, categories, created_at",
+						"id, title, short_description, price, categories, created_at, time_limit_days",
 					)
 					.in("id", submittedTaskIds);
 				return data ?? null;
@@ -262,6 +273,8 @@ export default async function HubPage() {
 					pendingEarnings={pendingEarnings}
 					hasStripeAccount={hasStripeAccount}
 					hasCompletedStripeOnboarding={hasCompletedStripeOnboarding}
+					creatorProActive={creatorProActive}
+					earnerProActive={earnerProActive}
 				/>
 			</div>
 		</main>

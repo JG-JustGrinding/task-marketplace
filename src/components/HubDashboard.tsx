@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faStar } from "@fortawesome/free-solid-svg-icons";
 import SubmittedTasksList from "./SubmittedTasksList";
 
 type Task = {
@@ -13,6 +15,8 @@ type Task = {
   status?: string | null;
   created_at: string;
   has_dispute?: boolean | null;
+  // Optional premium time limit for this task (days from activation start)
+  time_limit_days?: number | null;
 };
 
 type SubmissionStatus =
@@ -58,6 +62,8 @@ type HubDashboardProps = {
   }[];
   hasStripeAccount: boolean;
   hasCompletedStripeOnboarding: boolean;
+  creatorProActive: boolean;
+  earnerProActive: boolean;
 };
 
 function formatDate(dateString: string) {
@@ -95,6 +101,8 @@ export default function HubDashboard({
   pendingEarnings,
   hasStripeAccount,
   hasCompletedStripeOnboarding,
+  creatorProActive,
+  earnerProActive,
 }: HubDashboardProps) {
   const [createdTasksState, setCreatedTasksState] = useState<Task[]>(createdTasks);
   const [createdSubmissionsState, setCreatedSubmissionsState] = useState<TaskSubmission[]>(createdSubmissions);
@@ -119,6 +127,20 @@ export default function HubDashboard({
 
   const available = (availableBalanceCents ?? 0) / 100;
 	const pending = (pendingBalanceCents ?? 0) / 100;
+
+  const hasCreatorOnly = creatorProActive && !earnerProActive;
+  const hasEarnerOnly = earnerProActive && !creatorProActive;
+  const hasBothPro = creatorProActive && earnerProActive;
+  const hasNoPro = !creatorProActive && !earnerProActive;
+
+  // Accent color should match the plan being promoted:
+  // - If user only has Creator Pro, we are promoting Earner Pro -> accent-secondary.
+  // - If user only has Earner Pro, we are promoting Creator Pro -> accent-primary.
+  const upgradeAccentColor = hasCreatorOnly
+	    ? "var(--accent-secondary)"
+	    : hasEarnerOnly
+	      ? "var(--accent-primary)"
+	      : "var(--accent-secondary)";
 
   const someoneHasCreatedTasks = createdTasksState.length > 0;
 
@@ -193,6 +215,31 @@ export default function HubDashboard({
           Track your tasks and earnings in one place.
         </p>
       </header>
+
+      {!hasBothPro && (
+        <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 px-3 py-1 text-[0.7rem] text-[var(--text-secondary)] w-fit">
+          <span
+            className="inline-flex h-5 w-5 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: "color-mix(in srgb, " + upgradeAccentColor + " 12%, transparent)",
+              color: upgradeAccentColor,
+            }}
+          >
+            <FontAwesomeIcon icon={faStar} className="h-3 w-3" />
+          </span>
+          <a
+            href="/premium"
+            className="font-semibold hover:opacity-90 transition-colors"
+            style={{ color: upgradeAccentColor }}
+          >
+            {hasNoPro
+              ? "Upgrade to unlock Creator & Earner Pro"
+              : hasCreatorOnly
+                ? "Add Earner Pro to boost your earning limits and reduce earning fees"
+                : "Add Creator Pro to unlock premium creator features"}
+          </a>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-wrap">
         <div className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 p-0.5 text-[0.7rem] w-full sm:w-auto justify-between sm:justify-start">

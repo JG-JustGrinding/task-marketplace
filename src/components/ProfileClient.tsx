@@ -5,7 +5,7 @@ import Image from "next/image";
 import ListingCard from "@/components/ListingCard";
 import CustomTaskCard from "@/components/CustomTaskCard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCaretDown } from "@fortawesome/free-solid-svg-icons";
+import { faCaretDown, faStar } from "@fortawesome/free-solid-svg-icons";
 
 type Task = {
   id: number;
@@ -56,6 +56,9 @@ export default function ProfileClient({
   const userInitial = userName.charAt(0).toUpperCase();
 
   const totalCreated = totalCreatedCount ?? createdTasks.length;
+
+  const needsCreatorPro = !creatorProActive;
+  const needsEarnerPro = !earnerProActive;
 
   const createdListings = (tasks ?? []).map((task) => {
     const status = task.status ?? "";
@@ -239,6 +242,47 @@ export default function ProfileClient({
                   >
                     Your account
                   </button>
+                  {(needsCreatorPro || needsEarnerPro) && (
+                    <a
+                      href="/premium"
+                      className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-2 text-xs sm:text-sm font-semibold hover:bg-[var(--bg-muted)] transition-colors"
+                      style={{
+                        color:
+                          needsCreatorPro && !needsEarnerPro
+                            ? "var(--accent-primary)"
+                            : needsEarnerPro && !needsCreatorPro
+                              ? "var(--accent-secondary)"
+                              : "var(--accent-secondary)",
+                        borderColor:
+                          needsCreatorPro && !needsEarnerPro
+                            ? "var(--accent-primary)"
+                            : needsEarnerPro && !needsCreatorPro
+                              ? "var(--accent-secondary)"
+                              : "var(--border-color)",
+                      }}
+                    >
+                      <span
+                        className="flex h-5 w-5 items-center justify-center rounded-full"
+                        style={{
+                          backgroundColor:
+                            needsCreatorPro && !needsEarnerPro
+                              ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)"
+                              : needsEarnerPro && !needsCreatorPro
+                                ? "color-mix(in srgb, var(--accent-secondary) 12%, transparent)"
+                                : "color-mix(in srgb, var(--accent-secondary) 12%, transparent)",
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faStar} className="h-3 w-3" />
+                      </span>
+                      <span>
+                        {needsCreatorPro && needsEarnerPro
+                          ? "Upgrade to Pro"
+                          : needsCreatorPro && !needsEarnerPro
+                            ? "Add Creator Pro"
+                            : "Add Earner Pro"}
+                      </span>
+                    </a>
+                  )}
                 </div>
               )}
             </div>

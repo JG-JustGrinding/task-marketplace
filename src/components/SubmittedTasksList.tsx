@@ -21,6 +21,8 @@ type Task = {
   price: number;
   categories: string[] | null;
   created_at: string;
+  // Optional premium time limit for this task (days from activation start)
+  time_limit_days?: number | null;
 };
 
 type TaskSubmission = {
@@ -32,6 +34,24 @@ type TaskSubmission = {
 };
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function formatCountdown(msRemaining: number) {
+  if (!Number.isFinite(msRemaining) || msRemaining <= 0) {
+    return "0m";
+  }
+
+  const totalSeconds = Math.floor(msRemaining / 1000);
+  const days = Math.floor(totalSeconds / (24 * 60 * 60));
+  const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+  const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0 || days > 0) parts.push(`${hours}h`);
+  parts.push(`${minutes}m`);
+
+  return parts.join(" ");
+}
 
 function formatDate(dateString: string) {
   const date = new Date(dateString);
@@ -120,11 +140,22 @@ export default function SubmittedTasksList({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [paginationError, setPaginationError] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   useEffect(() => {
     setAllSubmissions(submissions);
     setAllTasks(tasks);
   }, [submissions, tasks]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 30_000);
+
+    return () => {
+      window.clearInterval(id);
+    };
+  }, []);
 
   const tasksById = new Map<number, Task>();
   for (const t of allTasks) {
@@ -293,12 +324,26 @@ export default function SubmittedTasksList({
           (submission as any).is_overturned === true ||
           (submission as any).isOverturned === true;
 
+    const timeLimitDays =
+      typeof (task as any)?.time_limit_days === "number"
+        ? ((task as any).time_limit_days as number)
+        : null;
+    let hasTimeLimitExpired = false;
+    let remainingMs: number | null = null;
+    if (timeLimitDays && timeLimitDays > 0) {
+      const startedAt = new Date(submission.created_at);
+      if (!Number.isNaN(startedAt.getTime())) {
+        const deadline = startedAt.getTime() + timeLimitDays * ONE_DAY_MS;
+        remainingMs = deadline - nowMs;
+        hasTimeLimitExpired = remainingMs <= 0;
+      }
+    }
+
         const checkInRequestedAtRaw =
           (submission as any).check_in_requested_at as string | null;
         const checkInRequestedAtDate = checkInRequestedAtRaw
           ? new Date(checkInRequestedAtRaw)
           : null;
-        const nowMs = Date.now();
         const hasActiveCheckInRequest =
           !!checkInRequestedAtDate &&
           !Number.isNaN(checkInRequestedAtDate.getTime()) &&
@@ -368,6 +413,31 @@ export default function SubmittedTasksList({
             <div className="mt-1 flex items-center justify-between gap-2 text-[0.65rem] text-[var(--text-secondary)]">
               <div className="flex flex-col">
                 <span>Started {formatDate(submission.created_at)}</span>
+                {timeLimitDays && timeLimitDays > 0 && (
+                  <>
+                    {hasTimeLimitExpired ? (
+                      <span className="mt-0.5 text-[0.6rem] text-[var(--text-secondary)]">
+                        Time limit passed — you can no longer submit for this task.
+                      </span>
+                    ) : (
+                      <>
+                        {false && <span className="mt-0.5 text-[0.6rem] text-[var(--text-secondary)]">
+                          You have up to {timeLimitDays} day
+                          {timeLimitDays === 1 ? "" : "s"} from when you started to
+                          submit your work.
+                        </span>}
+                        {remainingMs != null && remainingMs > 0 && (
+                          <span className="mt-0.5 text-xs font-bold text-[var(--text-secondary)]">
+                            Time remaining:{" "}
+                            <span className="text-[var(--text-primary)]">
+                              {formatCountdown(remainingMs)}
+                            </span>
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
                 {hasDispute && (
                   <span className="mt-1 max-w-xs text-[0.6rem] text-[var(--text-secondary)]">
                     There is an open dispute on this task. Your payout may be removed if the dispute is resolved in favor of the task poster.
@@ -400,7 +470,8 @@ export default function SubmittedTasksList({
                   !isAccepted &&
                   !isRejected &&
                   !isCancelled &&
-                  !isResubmissionRequested && (
+                  !isResubmissionRequested &&
+                  !hasTimeLimitExpired && (
                   <>
                     {!isPending && !isResubmission && (
                       needsCheckIn ? (

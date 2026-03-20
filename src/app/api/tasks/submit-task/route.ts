@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     // current activation status for this user & task.
     const { data: activation, error: activationFetchError } = await supabase
       .from("task_activations")
-      .select("id, status")
+      .select("id, status, created_at")
       .eq("user_id", user.id)
       .eq("task_id", taskId)
       .order("id", { ascending: false })
@@ -123,13 +123,15 @@ export async function POST(request: Request) {
 
     const activationStatus = (activation as any).status as string | null;
 
-    // Load the task so we can notify the owner when submissions arrive.
+    // Load the task so we can notify the owner when submissions arrive
+    // and enforce any Creator Pro time limit that was set.
     let taskOwnerId: string | null = null;
     let taskTitle: string | null = null;
+    let timeLimitDays: number | null = null;
 
     const { data: taskRow, error: taskError } = await supabase
       .from("tasks")
-      .select("id, user_id, title")
+      .select("id, user_id, title, time_limit_days")
       .eq("id", taskId)
       .maybeSingle();
 
@@ -138,6 +140,10 @@ export async function POST(request: Request) {
     } else if (taskRow && (taskRow as any).user_id) {
       taskOwnerId = (taskRow as any).user_id as string;
       taskTitle = (taskRow as any).title as string | null;
+      const rawLimit = (taskRow as any).time_limit_days as number | null | undefined;
+      if (typeof rawLimit === "number" && Number.isFinite(rawLimit) && rawLimit > 0) {
+        timeLimitDays = rawLimit;
+      }
     }
 
     if (
@@ -159,6 +165,25 @@ export async function POST(request: Request) {
     }
 
     const isResubmission = activationStatus === "resubmission_requested";
+
+  // If the task has a premium time limit, enforce that the worker
+  // cannot submit once the window has passed from activation start.
+  if (timeLimitDays && timeLimitDays > 0) {
+    const startedAtRaw = (activation as any).created_at as string | null | undefined;
+    if (startedAtRaw) {
+      const startedAt = new Date(startedAtRaw);
+      if (!Number.isNaN(startedAt.getTime())) {
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        const deadlineMs = startedAt.getTime() + timeLimitDays * ONE_DAY_MS;
+        if (Date.now() > deadlineMs) {
+          return NextResponse.json(
+            { error: "The time limit for submitting work on this task has passed." },
+            { status: 400 },
+          );
+        }
+      }
+    }
+  }
 
     const demoFile = demoFileRaw instanceof File ? demoFileRaw : null;
     const finalFile = finalFileRaw instanceof File ? finalFileRaw : null;

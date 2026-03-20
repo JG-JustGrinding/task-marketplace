@@ -116,7 +116,7 @@ export default async function ListingPage({
     const { data, error } = await supabase
         .from("tasks")
         .select(
-            "id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status, collection_id",
+			"id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status, collection_id, time_limit_days",
         )
         .eq("id", numericId)
         .single<TaskRow>();
@@ -151,6 +151,8 @@ export default async function ListingPage({
             links: linkUrls.length ? linkUrls : undefined,
             price: data.price,
             currency: "USD",
+			// Optional premium time limit in days
+			timeLimitDays: (data as any).time_limit_days ?? undefined,
         };
     }
 
@@ -264,6 +266,8 @@ export default async function ListingPage({
     let hasActiveActivations = false;
     let hasReportedTask = false;
     let viewerEarnerProActive = false;
+    let userActivationCreatedAt: string | null = null;
+    let hasTimeLimitExpired = false;
     const taskAccepted = !!data && data.status === "task_accepted";
     const taskUnavailable = !!data && data.status === "pending_payment";
 
@@ -324,7 +328,7 @@ export default async function ListingPage({
 
         const { data: activation } = await supabase
             .from("task_activations")
-            .select("id, status, check_in_requested_at")
+            .select("id, status, check_in_requested_at, created_at")
             .eq("user_id", user.id)
             .eq("task_id", data.id)
             .maybeSingle();
@@ -336,6 +340,8 @@ export default async function ListingPage({
             wasCancelled = status === "cancelled";
             submissionRejected = status === "rejected";
             isResubmission = status === "resubmission";
+
+            userActivationCreatedAt = (activation as any).created_at as string | null;
 
             const checkInRequestedAt = (activation as any)
                 .check_in_requested_at as string | null;
@@ -388,6 +394,20 @@ export default async function ListingPage({
         !taskTaken &&
         (taskUnavailable || (isActiveFundedTask && !taskAccepted && !hasActiveActivations));
 
+    // Compute whether the current viewer (if they have started the task)
+    // has passed the premium time limit window.
+    if (data && (data as any).time_limit_days != null && userActivationCreatedAt) {
+        const limitDays = Number((data as any).time_limit_days);
+        if (Number.isFinite(limitDays) && limitDays > 0) {
+            const startedAt = new Date(userActivationCreatedAt);
+            if (!Number.isNaN(startedAt.getTime())) {
+                const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+                const deadlineMs = startedAt.getTime() + limitDays * ONE_DAY_MS;
+                hasTimeLimitExpired = Date.now() > deadlineMs;
+            }
+        }
+    }
+
     return (
         <ListingClient
             listing={listing}
@@ -422,6 +442,8 @@ export default async function ListingPage({
             canDeleteTask={canDeleteTask}
             needsCheckIn={needsCheckIn}
             checkInActivationId={checkInActivationId}
+			userActivationCreatedAt={userActivationCreatedAt}
+			hasTimeLimitExpired={hasTimeLimitExpired}
             collection={collection}
             alsoInCollection={alsoInCollection}
         />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { shortenNumber } from "@/lib/shortenNumber";
 import type { Listing } from "@/data/listings";
@@ -38,7 +38,30 @@ type ListingClientProps = {
     creatorHasCollectionsFeature?: boolean;
     collection?: { id: number; name: string } | null;
     alsoInCollection?: Listing[];
+    // Premium time limit context
+    userActivationCreatedAt?: string | null;
+    hasTimeLimitExpired?: boolean;
 };
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function formatCountdown(msRemaining: number) {
+    if (!Number.isFinite(msRemaining) || msRemaining <= 0) {
+        return "0m";
+    }
+
+    const totalSeconds = Math.floor(msRemaining / 1000);
+    const days = Math.floor(totalSeconds / (24 * 60 * 60));
+    const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+    const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0 || days > 0) parts.push(`${hours}h`);
+    parts.push(`${minutes}m`);
+
+    return parts.join(" ");
+}
 
 export default function ListingClient({
     listing,
@@ -66,6 +89,8 @@ export default function ListingClient({
     creatorHasCollectionsFeature = false,
     collection: initialCollection = null,
     alsoInCollection = [],
+    userActivationCreatedAt = null,
+    hasTimeLimitExpired = false,
 }: ListingClientProps) {
     const [activeImage, setActiveImage] = useState<string | null>(null);
     const [showStartConfirm, setShowStartConfirm] = useState(false);
@@ -91,6 +116,7 @@ export default function ListingClient({
     const [currentCollection, setCurrentCollection] = useState<
         { id: number; name: string } | null
     >(initialCollection);
+    const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
     const {
         title,
@@ -105,7 +131,37 @@ export default function ListingClient({
         projectTitle,
         projectSummary,
         startedCount = 0,
+        timeLimitDays,
     } = listing;
+
+    useEffect(() => {
+        const id = window.setInterval(() => {
+            setNowMs(Date.now());
+        }, 30_000);
+
+        return () => {
+            window.clearInterval(id);
+        };
+    }, []);
+
+    let timeLimitDeadlineMs: number | null = null;
+    let remainingMs: number | null = null;
+    let isTimeLimitExpired = hasTimeLimitExpired;
+
+    if (
+        typeof timeLimitDays === "number" &&
+        timeLimitDays > 0 &&
+        userActivationCreatedAt
+    ) {
+        const startedAt = new Date(userActivationCreatedAt);
+        if (!Number.isNaN(startedAt.getTime())) {
+            timeLimitDeadlineMs = startedAt.getTime() + timeLimitDays * ONE_DAY_MS;
+            remainingMs = timeLimitDeadlineMs - nowMs;
+            if (remainingMs <= 0) {
+                isTimeLimitExpired = true;
+            }
+        }
+    }
 
     const posterName = creator?.username ?? "Unknown User";
     const posterInitial = posterName.charAt(0).toUpperCase();
@@ -365,7 +421,7 @@ export default function ListingClient({
                             >
                                 {paymentStatus === "success"
                                     ? "Payment completed. Your task will update shortly once the payment is confirmed."
-                                    : "Payment was cancelled. You can try funding the task again when you're ready."}
+                                    : "Payment was cancelled. You can try funding the task again when you're ready. Until then, your task will remain hidden from the public."}
                             </div>
                         )}
 
@@ -384,6 +440,37 @@ export default function ListingClient({
                                 ? "This is the reward you have set for an accepted submission."
                                 : `This is the reward the poster is offering for the accepted task. You will only receive this reward if your submission is accepted by the poster after submitting.`}
                         </p>
+
+                        {typeof timeLimitDays === "number" && timeLimitDays > 0 && (
+                            <div className="mt-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)]/70 px-3 py-2 text-[0.7rem] text-[var(--text-secondary)]">
+                                <p className="font-semibold text-[var(--text-primary)]">Time limit</p>
+                                {!hasUserStarted && (
+                                    <p>
+                                        Workers will have <span className="font-semibold">{timeLimitDays} day{timeLimitDays === 1 ? "" : "s"}</span> to submit after they start this task.
+                                    </p>
+                                )}
+                                {hasUserStarted && userActivationCreatedAt && (
+                                    <div className="space-y-0.5">
+                                        {isTimeLimitExpired ? (
+                                            <p>
+                                                The time limit for your activation has passed. You can no longer submit work for this task.
+                                            </p>
+                                        ) : (
+                                            <>
+                                                <p>
+                                                    You have up to {timeLimitDays} day{timeLimitDays === 1 ? "" : "s"} from when you started to submit your work.
+                                                </p>
+                                                {remainingMs != null && remainingMs > 0 && (
+                                                    <p className="text-[0.7rem] text-[var(--text-muted)]">
+                                                        Time remaining: <span className="font-semibold text-[var(--text-primary)]">{formatCountdown(remainingMs)}</span>
+                                                    </p>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {isPoster && !taskUnavailable && (
                             (hasSubmissions || hasActiveActivations) ? (
@@ -469,13 +556,13 @@ export default function ListingClient({
                             </div>
                         )}
 
-                        {taskAccepted && (
+						{taskAccepted && (
                             <div className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[var(--bg-muted)] text-[var(--text-secondary)] text-center border border-[var(--border-color)]">
                                 Task finished
                             </div>
                         )}
 
-                        {!isPoster && !removeActions && !taskAccepted && !taskUnavailable && (
+						{!isPoster && !removeActions && !taskAccepted && !taskUnavailable && (
                             <>
                                 {!hasUserStarted ? (
                                     taskTaken ? (
@@ -509,9 +596,11 @@ export default function ListingClient({
                                     )
                                 ) : (
                                     <div className="flex gap-2">
-                                        {submissionPending || wasCancelled || submissionRejected || taskTaken || isResubmission ? (
+                                        {submissionPending || wasCancelled || submissionRejected || taskTaken || isResubmission || (typeof timeLimitDays === "number" && timeLimitDays > 0 && isTimeLimitExpired) ? (
                                             <div className="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-[var(--bg-muted)] text-[var(--text-secondary)] text-center border border-[var(--border-color)]">
-                                                {taskTaken
+                                                            {typeof timeLimitDays === "number" && timeLimitDays > 0 && isTimeLimitExpired
+													? "Time limit passed"
+													: taskTaken
                                                     ? "Task taken"
                                                     : submissionPending
                                                     ? "Submission pending"
@@ -519,7 +608,7 @@ export default function ListingClient({
                                                     ? "Pending (resubmission)"
                                                     : wasCancelled
                                                     ? "Task cancelled"
-                                                    : submissionRejected
+    												: submissionRejected
                                                     ? "Submission rejected"
                                                     : ""}
                                             </div>

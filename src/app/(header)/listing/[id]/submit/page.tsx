@@ -7,6 +7,7 @@ import { isPremiumActive } from "@/lib/premium";
 type TaskRow = {
 	id: number;
 	title: string | null;
+	time_limit_days?: number | null;
 };
 
 export const metadata: Metadata = {
@@ -37,7 +38,7 @@ export default async function SubmitPage({
 
 	const { data: task, error: taskError } = await supabase
 		.from("tasks")
-		.select("id, title")
+		.select("id, title, time_limit_days")
 		.eq("id", listingId)
 		.single<TaskRow>();
 
@@ -48,6 +49,7 @@ export default async function SubmitPage({
 	let activationStatus: string | null = null;
 	let resubmissionMessage: string | null = null;
 	let isEarnerProActive = false;
+	let activationCreatedAt: string | null = null;
 
 	if (user) {
 		const { data: profile } = await supabase
@@ -65,7 +67,7 @@ export default async function SubmitPage({
 
 		const { data: activation } = await supabase
 			.from("task_activations")
-			.select("status, resubmission_message")
+			.select("status, resubmission_message, created_at")
 			.eq("user_id", user.id)
 			.eq("task_id", task.id)
 			.maybeSingle();
@@ -73,6 +75,7 @@ export default async function SubmitPage({
 		if (activation) {
 			activationStatus = (activation as any).status ?? null;
 			resubmissionMessage = (activation as any).resubmission_message ?? null;
+			activationCreatedAt = (activation as any).created_at ?? null;
 		}
 	}
 
@@ -88,6 +91,11 @@ export default async function SubmitPage({
 		return redirect(`/listing/${id}`);
 	}
 
+	const timeLimitDays =
+		typeof (task as any).time_limit_days === "number"
+			? ((task as any).time_limit_days as number)
+			: null;
+
 	return (
 		<SubmitClient
 			id={id}
@@ -96,6 +104,8 @@ export default async function SubmitPage({
 			activationStatus={activationStatus}
 			resubmissionMessage={resubmissionMessage}
 			isEarnerProActive={isEarnerProActive}
+			timeLimitDays={timeLimitDays}
+			activationCreatedAt={activationCreatedAt}
 		/>
 	);
 }

@@ -68,9 +68,6 @@ export default async function AdminPage({
 				<div className="mx-auto flex w-full max-w-sm flex-col gap-4">
 					<header className="flex flex-col gap-1">
 						<h1 className="text-xl md:text-2xl font-semibold">Platform earnings login</h1>
-						<p className="text-xs md:text-sm text-[var(--text-secondary)]">
-							Enter the admin password to view platform earnings.
-						</p>
 					</header>
 
 					<form action={verifyAdminPassword} className="space-y-3 card p-4">
@@ -90,9 +87,6 @@ export default async function AdminPage({
 						>
 							Go to admin page
 						</button>
-						<p className="text-[0.7rem] text-[var(--text-secondary)]">
-							URL secret is valid, but password is required.
-						</p>
 					</form>
 				</div>
 			</main>

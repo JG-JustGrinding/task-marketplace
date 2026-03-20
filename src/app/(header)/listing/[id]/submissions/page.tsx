@@ -13,6 +13,7 @@ type TaskRow = {
     user_id: string;
     title: string | null;
     status: string | null;
+    time_limit_days?: number | null;
 };
 
 type ActivationRow = {
@@ -62,7 +63,7 @@ export default async function ListingSubmissionsPage({ params }: PageParams) {
         supabase.auth.getUser(),
         supabase
             .from("tasks")
-            .select("id, user_id, title, status")
+            .select("id, user_id, title, status, time_limit_days")
             .eq("id", numericId)
             .single<TaskRow>(),
         supabase
@@ -83,6 +84,11 @@ export default async function ListingSubmissionsPage({ params }: PageParams) {
     if (!isPoster) {
         return notFound();
     }
+
+    const timeLimitDays =
+        typeof (task as any).time_limit_days === "number"
+            ? ((task as any).time_limit_days as number)
+            : null;
 
     const rawActivations = (activationsData ?? []) as ActivationRow[];
 
@@ -213,6 +219,7 @@ export default async function ListingSubmissionsPage({ params }: PageParams) {
                 currentUserId={user.id}
                 isPoster={isPoster}
                 activations={serializedActivations}
+                timeLimitDays={timeLimitDays}
                 variant="embedded"
             />
         </>

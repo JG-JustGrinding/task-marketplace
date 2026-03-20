@@ -14,6 +14,8 @@ export interface Listing {
   projectTitle?: string;
   projectSummary?: string;
   startedCount?: number;
+  // Optional premium time limit (in days) set by Creator Pro
+  timeLimitDays?: number;
 }
 
 export const LISTINGS: Listing[] = [

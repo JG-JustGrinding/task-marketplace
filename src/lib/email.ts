@@ -49,7 +49,8 @@ export type NotificationEmailType =
   | "submission_changes_requested"
   | "dispute_started"
   | "checkin_requested"
-  | "task_activation_cancelled";
+  | "task_activation_cancelled"
+  | "time_limit_warning";
 
 export type NotificationEmailPayload = {
   userId: string;
@@ -190,6 +191,24 @@ const buildEmailContent = (
       const previewText = "Your task activation was cancelled by the creator.";
       const buttonLink = baseUrl ? `${baseUrl}/hub` : null;
       const buttonText = "Open Hub";
+      return { subject, text, previewText, buttonLink, buttonText };
+    }
+
+    case "time_limit_warning": {
+      const title = data?.taskTitle as string | undefined;
+      const taskId = data?.taskId as number | undefined;
+      const subject = `You're running out of time to submit${refSuffix}`;
+      const text = `You're running out of time to submit your work for the task "${
+        title ?? "a task"
+      }". Please finish your work and submit before the time limit expires.`;
+      const previewText = "You're running out of time to submit your work.";
+      const buttonLink =
+        baseUrl && typeof taskId === "number"
+          ? `${baseUrl}/listing/${taskId}`
+          : baseUrl
+          ? `${baseUrl}/hub`
+          : null;
+      const buttonText = "Submit your work";
       return { subject, text, previewText, buttonLink, buttonText };
     }
 

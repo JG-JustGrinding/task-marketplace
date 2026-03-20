@@ -50,6 +50,10 @@ export const formatNotificationText = (notification: NotificationRecord): string
       const title = (data.taskTitle as string | undefined) ?? "a task";
       return `Your activation for "${title}" was cancelled by the creator`;
     }
+    case "time_limit_warning": {
+      const title = (data.taskTitle as string | undefined) ?? "a task";
+      return `You're running out of time to submit for "${title}"`;
+    }
     default:
       return "You have a new notification";
   }
@@ -77,7 +81,8 @@ export const getNotificationDestination = (
     type === "submission_changes_requested" ||
     type === "dispute_started" ||
     type === "checkin_requested" ||
-    type === "task_activation_cancelled"
+    type === "task_activation_cancelled" ||
+    type === "time_limit_warning"
   ) {
     return "/hub";
   }

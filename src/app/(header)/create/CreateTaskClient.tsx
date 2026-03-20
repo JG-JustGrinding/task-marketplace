@@ -135,8 +135,23 @@ export default function CreateTaskClient({
   const saveDraft = () => {
     if (typeof window === "undefined") return;
     try {
+      // File objects (logo/banner uploads and image-file references) cannot be
+      // reliably persisted to localStorage. Strip out preview URLs and any
+      // file-backed state so the restored draft reflects only text fields and
+      // non-file references.
+      const safeForm: TaskFormState = {
+        ...form,
+        premiumLogoPreview: "",
+        premiumBannerPreview: "",
+        references: form.references.map((ref) =>
+          ref.type === "image-file"
+            ? { ...ref, url: "" }
+            : ref,
+        ),
+      };
+
       const payload = JSON.stringify({
-        form,
+        form: safeForm,
         stepIndex,
       });
       window.localStorage.setItem(DRAFT_STORAGE_KEY, payload);
@@ -198,8 +213,40 @@ export default function CreateTaskClient({
     }
   };
 
+  const sanitizePriceInput = (raw: string) => {
+    // Keep only digits and a single decimal point, clamp to 2 decimals, and 6 digits before decimal
+    let value = raw.replace(/[^0-9.]/g, "");
+    const parts = value.split(".");
+    if (parts.length > 2) {
+      value = parts[0] + "." + parts.slice(1).join("");
+    }
+    let [intPart, decPart] = value.split(".");
+    if (intPart && intPart.length > 6) {
+      intPart = intPart.slice(0, 6);
+    }
+    if (typeof decPart === "string") {
+      return intPart + "." + decPart.slice(0, 2);
+    }
+    return intPart;
+  };
+
   const handleChange = (field: keyof TaskFormState, value: string) => {
+    if (field === "price") {
+      const sanitized = sanitizePriceInput(value);
+      setForm((prev) => ({ ...prev, price: sanitized }));
+      return;
+    }
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePriceBlur = () => {
+    setTouched((prev) => ({ ...prev, price: true }));
+    const trimmed = form.price.trim();
+    if (!trimmed) return;
+    const n = priceValue;
+    if (!Number.isNaN(n) && n > 0) {
+      setForm((prev) => ({ ...prev, price: n.toFixed(2) }));
+    }
   };
 
   const toggleCategory = (category: string) => {
@@ -1047,7 +1094,13 @@ export default function CreateTaskClient({
                 </p>
                 {!creatorProActive && (
                     <p className="text-[11px] font-bold text-[var(--accent-primary)] hover:underline">
-                      <Link href="/upgrade">
+                      <Link
+                        href="/upgrade"
+                        onClick={() => {
+                          // Preserve the current task draft when redirecting to upgrade
+                          saveDraft();
+                        }}
+                      >
                           These options are included with Creator Pro. You can continue
                           without them, or upgrade to unlock them.
                       </Link>
@@ -1344,6 +1397,10 @@ export default function CreateTaskClient({
                   <div className="mt-3 flex flex-wrap gap-2 sm:mt-0 sm:justify-end">
                     <a
                       href="/premium"
+                      onClick={() => {
+                        // Preserve the current task draft when redirecting to the premium page
+                        saveDraft();
+                      }}
                       className="inline-flex items-center rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[var(--accent-hover)]"
                     >
                       Get Creator Pro
@@ -1380,10 +1437,10 @@ export default function CreateTaskClient({
                   name="price"
                   type="number"
                   min={5}
-                  step={1}
+                  step={0.01}
                   value={form.price}
                   onChange={(e) => handleChange("price", e.target.value)}
-                  onBlur={() => setTouched((prev) => ({ ...prev, price: true }))}
+                  onBlur={handlePriceBlur}
                   className="none w-full border-none rounded-sm bg-transparent text-sm outline-none ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   aria-describedby="price-help price-error"
                   required
