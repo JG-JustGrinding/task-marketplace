@@ -8,6 +8,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const PLATFORM_CANCELLATION_FEE_RATE = 0.15; // 15%
 const LOGO_BUCKET = "task-logos";
 const BANNER_BUCKET = "task-banners";
+const IMAGE_REFERENCE_BUCKET = "task-image-references";
+
+type ReferenceType = "link" | "image" | "image-file";
+
+type ReferenceItem = {
+  type: ReferenceType;
+  url: string;
+};
 
 async function deleteTaskBrandingAssets(
   logoPath: string | null | undefined,
@@ -33,6 +41,37 @@ async function deleteTaskBrandingAssets(
     if (bannerDeleteError) {
       throw new Error(`Failed to remove task banner: ${bannerDeleteError.message}`);
     }
+  }
+}
+
+async function deleteTaskImageReferenceAssets(
+  references: ReferenceItem[] | null | undefined,
+) {
+  const admin = createAdminClient();
+  const refs = (references ?? []) as ReferenceItem[];
+  const pathsToRemove: string[] = [];
+
+  for (const ref of refs) {
+    if (!ref || ref.type !== "image-file" || !ref.url) continue;
+
+    const marker = `${IMAGE_REFERENCE_BUCKET}/`;
+    const idx = ref.url.indexOf(marker);
+    if (idx === -1) continue;
+
+    const path = ref.url.slice(idx + marker.length);
+    if (path) {
+      pathsToRemove.push(path);
+    }
+  }
+
+  if (pathsToRemove.length === 0) return;
+
+  const { error } = await admin.storage
+    .from(IMAGE_REFERENCE_BUCKET)
+    .remove(pathsToRemove);
+
+  if (error) {
+    throw new Error(`Failed to remove task image references: ${error.message}`);
   }
 }
 
@@ -103,7 +142,9 @@ export async function DELETE(
     // Fetch the task and verify ownership + status/payment details
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id, user_id, status, price, stripe_payment_intent_id, logo_path, banner_path")
+      .select(
+			"id, user_id, status, price, stripe_payment_intent_id, logo_path, banner_path, references",
+		)
       .eq("id", numericId)
       .single();
 
@@ -165,10 +206,16 @@ export async function DELETE(
           (task as any).logo_path as string | null | undefined,
           (task as any).banner_path as string | null | undefined,
         );
+        await deleteTaskImageReferenceAssets(
+          (task as any).references as ReferenceItem[] | null | undefined,
+        );
       } catch (assetError) {
         console.error("Error deleting task branding assets", assetError);
         return NextResponse.json(
-          { error: "Failed to remove task branding files. Please try again." },
+          {
+            error:
+              "Failed to remove task branding and reference files. Please try again.",
+          },
           { status: 500 },
         );
       }
@@ -286,10 +333,19 @@ export async function DELETE(
             (task as any).logo_path as string | null | undefined,
             (task as any).banner_path as string | null | undefined,
           );
+          await deleteTaskImageReferenceAssets(
+            (task as any).references as ReferenceItem[] | null | undefined,
+          );
         } catch (assetError) {
-          console.error("Error deleting task branding assets after refund", assetError);
+          console.error(
+            "Error deleting task branding or reference assets after refund",
+            assetError,
+          );
           return NextResponse.json(
-            { error: "Refund issued but failed to remove branding files." },
+            {
+              error:
+                "Refund issued but failed to remove branding or reference files.",
+            },
             { status: 500 },
           );
         }

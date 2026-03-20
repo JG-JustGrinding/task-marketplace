@@ -10,8 +10,9 @@ import Link from "next/link";
 const MAX_REFERENCES = 5;
 const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_BANNER_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_REFERENCE_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
-type ReferenceType = "link" | "image";
+type ReferenceType = "link" | "image" | "image-file";
 
 interface ReferenceItem {
   type: ReferenceType;
@@ -79,6 +80,13 @@ export default function CreateTaskClient({
   const [premiumUploadError, setPremiumUploadError] = useState<string | null>(null);
   const [premiumLogoFile, setPremiumLogoFile] = useState<File | null>(null);
   const [premiumBannerFile, setPremiumBannerFile] = useState<File | null>(null);
+  const [referencePreviewStatus, setReferencePreviewStatus] = useState<
+    Record<number, "loading" | "ok" | "error">
+  >({});
+  const [referenceFiles, setReferenceFiles] = useState<Record<number, File | null>>({});
+  const [referenceFilePreviews, setReferenceFilePreviews] = useState<
+    Record<number, string>
+  >({});
 
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const bannerInputRef = useRef<HTMLInputElement | null>(null);
@@ -222,6 +230,48 @@ export default function CreateTaskClient({
     });
   };
 
+  const handleReferenceTypeChange = (index: number, newType: ReferenceType) => {
+    setForm((prev) => ({
+      ...prev,
+      references: prev.references.map((ref, i) =>
+        i === index
+          ? {
+              ...ref,
+              type: newType,
+              // image-file URLs are populated by the API after upload
+              url: newType === "image-file" ? "" : ref.url,
+            }
+          : ref,
+      ),
+    }));
+
+    setReferencePreviewStatus((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+
+    if (newType !== "image-file") {
+      setReferenceFiles((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+      setReferenceFilePreviews((prev) => {
+        const next = { ...prev };
+        if (typeof URL !== "undefined" && next[index]) {
+          try {
+            URL.revokeObjectURL(next[index]);
+          } catch {
+            // ignore revoke errors
+          }
+        }
+        delete next[index];
+        return next;
+      });
+    }
+  };
+
   const updateReference = (
     index: number,
     field: keyof ReferenceItem,
@@ -233,6 +283,12 @@ export default function CreateTaskClient({
         i === index ? { ...ref, [field]: value } : ref,
       ),
     }));
+    // Clear any previous preview status when the type or URL changes
+    setReferencePreviewStatus((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
   };
 
   const removeReference = (index: number) => {
@@ -240,6 +296,59 @@ export default function CreateTaskClient({
       ...prev,
       references: prev.references.filter((_, i) => i !== index),
     }));
+    // Reindex preview status for remaining references
+    setReferencePreviewStatus((prev) => {
+      const next: Record<number, "loading" | "ok" | "error"> = {};
+      for (const [key, value] of Object.entries(prev)) {
+        const k = Number(key);
+        if (Number.isNaN(k) || k === index) continue;
+        const newIndex = k > index ? k - 1 : k;
+        next[newIndex] = value;
+      }
+      return next;
+    });
+
+    // Reindex files for remaining references
+    setReferenceFiles((prev) => {
+      const next: Record<number, File | null> = {};
+      for (const [key, file] of Object.entries(prev)) {
+        const k = Number(key);
+        if (Number.isNaN(k) || k === index) continue;
+        const newIndex = k > index ? k - 1 : k;
+        next[newIndex] = file;
+      }
+      return next;
+    });
+
+    // Reindex file previews and revoke the removed one
+    setReferenceFilePreviews((prev) => {
+      const next: Record<number, string> = {};
+      if (typeof URL === "undefined") {
+        for (const [key, url] of Object.entries(prev)) {
+          const k = Number(key);
+          if (Number.isNaN(k) || k === index) continue;
+          const newIndex = k > index ? k - 1 : k;
+          next[newIndex] = url;
+        }
+        return next;
+      }
+
+      for (const [key, url] of Object.entries(prev)) {
+        const k = Number(key);
+        if (Number.isNaN(k)) continue;
+        if (k === index) {
+          try {
+            URL.revokeObjectURL(url);
+          } catch {
+            // ignore revoke errors
+          }
+          continue;
+        }
+        const newIndex = k > index ? k - 1 : k;
+        next[newIndex] = url;
+      }
+      return next;
+    });
   };
 
   const handleTimeLimitChange = (value: string) => {
@@ -273,6 +382,17 @@ export default function CreateTaskClient({
       setTouched({ step: true });
       return;
     }
+    // Ensure any image-file references have files selected before submitting
+    const missingImageFileIndex = form.references.findIndex(
+      (ref, index) => ref.type === "image-file" && !referenceFiles[index],
+    );
+    if (missingImageFileIndex !== -1) {
+      setSubmitError(
+        "Please upload image files for all 'Image file' references before posting.",
+      );
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setSubmitSuccess(false);
@@ -290,21 +410,30 @@ export default function CreateTaskClient({
         return;
       }
 
+      const formData = new FormData();
+      formData.append("title", form.title);
+      formData.append("categories", JSON.stringify(form.categories));
+      formData.append("shortDescription", form.shortDescription);
+      formData.append("needDetails", form.needDetails);
+      formData.append("technicalRequirements", form.technicalRequirements);
+      formData.append("references", JSON.stringify(form.references));
+      formData.append("price", String(priceValue));
+      if (form.timeLimitDays) {
+        formData.append("timeLimitDays", form.timeLimitDays);
+      }
+
+      form.references.forEach((ref, index) => {
+        if (ref.type === "image-file" && referenceFiles[index]) {
+          formData.append(
+            `reference_image_file_${index}`,
+            referenceFiles[index] as File,
+          );
+        }
+      });
+
       const response = await fetch("/api/tasks/create", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: form.title,
-          categories: form.categories,
-          shortDescription: form.shortDescription,
-          needDetails: form.needDetails,
-          technicalRequirements: form.technicalRequirements,
-          references: form.references,
-          price: priceValue,
-          timeLimitDays: form.timeLimitDays,
-        }),
+        body: formData,
       });
 
       let json: any = null;
@@ -705,13 +834,13 @@ export default function CreateTaskClient({
             <div>
               <label
                 htmlFor="references"
-                className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1"
+                className="mb-1 block text-sm font-medium text-[var(--text-primary)]"
               >
                 References (optional)
               </label>
               <div className="mt-2 space-y-3" aria-describedby="references-help">
                 {form.references.length === 0 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-[var(--text-secondary)]">
                     Add links to docs, examples, or reference images for this task.
                   </p>
                 )}
@@ -719,38 +848,153 @@ export default function CreateTaskClient({
                 {form.references.map((reference, index) => (
                   <div
                     key={index}
-                    className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white/60 p-3 text-xs shadow-sm dark:border-gray-700 dark:bg-gray-900/70"
+                    className="flex flex-col gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 p-3 text-xs shadow-[var(--shadow-soft)]"
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <select
                         value={reference.type}
                         onChange={(e) =>
-                          updateReference(index, "type", e.target.value as ReferenceType)
+                          handleReferenceTypeChange(index, e.target.value as ReferenceType)
                         }
-                        className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-indigo-400"
+                        className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-primary)] shadow-sm outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                       >
                         <option value="image">Image (URL to image)</option>
+                        <option value="image-file">Image file (upload)</option>
                         <option value="link">Link</option>
                       </select>
-                      <input
-                        id={`reference-url-${index}`}
-                        name={`reference-url-${index}`}
-                        type="url"
-                        inputMode="url"
-                        value={reference.url}
-                        onChange={(e) => updateReference(index, "url", e.target.value)}
-                        placeholder={
-                          reference.type === "image"
-                            ? "https://... (link to image)"
-                            : "https://... (link to docs, drive, etc.)"
-                        }
-                        className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-800 shadow-sm outline-none ring-0 transition placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-indigo-400"
-                      />
+                      {reference.type === "image-file" ? (
+                        <div className="mt-1 w-full sm:mt-0">
+                          <input
+                            id={`reference-file-${index}`}
+                            name={`reference-file-${index}`}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] ?? null;
+                              if (!file) {
+                                setReferenceFiles((prev) => ({ ...prev, [index]: null }));
+                                setReferenceFilePreviews((prev) => {
+                                  const next = { ...prev };
+                                  if (typeof URL !== "undefined" && next[index]) {
+                                    try {
+                                      URL.revokeObjectURL(next[index]);
+                                    } catch {
+                                      // ignore revoke errors
+                                    }
+                                  }
+                                  delete next[index];
+                                  return next;
+                                });
+                                return;
+                              }
+                              if (file.size > MAX_REFERENCE_IMAGE_SIZE_BYTES) {
+                                alert("Image file references must be 10MB or smaller.");
+                                e.target.value = "";
+                                return;
+                              }
+                              setReferenceFiles((prev) => ({ ...prev, [index]: file }));
+                              setReferenceFilePreviews((prev) => {
+                                const next = { ...prev };
+                                if (typeof URL !== "undefined" && next[index]) {
+                                  try {
+                                    URL.revokeObjectURL(next[index]);
+                                  } catch {
+                                    // ignore revoke errors
+                                  }
+                                }
+                                if (typeof URL !== "undefined") {
+                                  const objectUrl = URL.createObjectURL(file);
+                                  next[index] = objectUrl;
+                                }
+                                return next;
+                              });
+                            }}
+                            className="block w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-2.5 py-1.5 text-[11px] text-[var(--text-secondary)] shadow-sm outline-none file:mr-2 file:rounded-md file:border-0 file:bg-[var(--accent-primary)] file:px-2.5 file:py-1.5 file:text-[11px] file:font-semibold file:text-white hover:file:bg-[var(--accent-hover)] focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
+                          />
+                        </div>
+                      ) : (
+                        <input
+                          id={`reference-url-${index}`}
+                          name={`reference-url-${index}`}
+                          type="url"
+                          inputMode="url"
+                          value={reference.url}
+                          onChange={(e) => updateReference(index, "url", e.target.value)}
+                          placeholder={
+                            reference.type === "image"
+                              ? "https://... (link to image)"
+                              : "https://... (link to docs, drive, etc.)"
+                          }
+                          className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] shadow-sm outline-none ring-0 transition placeholder:text-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:bg-[var(--bg-secondary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15 sm:mt-0"
+                        />
+                      )}
                     </div>
+                    {reference.type === "image" && reference.url && (
+                      <div className="mt-1 flex items-center gap-3">
+                        <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+                          <img
+                            src={reference.url}
+                            alt={`Image reference ${index + 1}`}
+                            className="h-full w-full object-cover"
+                            referrerPolicy="no-referrer"
+                            onLoad={() =>
+                              setReferencePreviewStatus((prev) => ({
+                                ...prev,
+                                [index]: "ok",
+                              }))
+                            }
+                            onError={() =>
+                              setReferencePreviewStatus((prev) => ({
+                                ...prev,
+                                [index]: "error",
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="text-[11px] leading-snug text-[var(--text-secondary)]">
+                          {referencePreviewStatus[index] === "error" ? (
+                            <span>
+                              Image could not be loaded. Make sure the link is public
+                              and points directly to an image file.
+                            </span>
+                          ) : (
+                            <span>
+                              Image preview
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {reference.type === "image-file" && (
+                      <div className="mt-1 space-y-1">
+                        <p className="text-[11px] text-[var(--text-secondary)]">
+                          Upload an image file (max 10MB).
+                        </p>
+                        {referenceFiles[index] && (
+                          <p className="text-[11px] text-[var(--text-secondary)]">
+                            Selected: <span className="font-medium">{referenceFiles[index]?.name}</span>
+                          </p>
+                        )}
+                        {referenceFilePreviews[index] && (
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)]">
+                              <img
+                                src={referenceFilePreviews[index]}
+                                alt={`Image file reference ${index + 1}`}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <p className="text-[11px] leading-snug text-[var(--text-secondary)]">
+                              Image preview
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => removeReference(index)}
-                      className="self-start text-[11px] font-medium text-red-500 hover:text-red-600"
+                      className="self-start text-[11px] font-medium text-[var(--danger)] hover:opacity-85"
                     >
                       Remove
                     </button>
@@ -761,7 +1005,7 @@ export default function CreateTaskClient({
                   type="button"
                   onClick={addReference}
                   disabled={form.references.length >= MAX_REFERENCES}
-                  className="inline-flex items-center rounded-lg border border-dashed border-gray-300 px-2.5 py-1.5 text-[11px] font-medium text-gray-700 transition hover:border-indigo-300 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:border-indigo-400 dark:hover:text-indigo-300"
+                  className="inline-flex items-center rounded-lg border border-dashed border-[var(--border-color)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] transition hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <span className="mr-1 text-base leading-none">+</span>
                   {form.references.length >= MAX_REFERENCES
@@ -769,14 +1013,15 @@ export default function CreateTaskClient({
                     : "Add reference"}
                 </button>
               </div>
-              <p
-                id="references-help"
-                className="mt-1 text-xs text-gray-500 dark:text-gray-400"
-              >
-                For image references, upload your image to a service like Google
-                Drive, make it shareable, and paste the image link here. Image
+              {false && (
+                <p
+                  id="references-help"
+                  className="mt-1 text-xs text-[var(--text-secondary)]"
+                >
+                  For image references, upload your image to a service like Google
+                    Drive, make it shareable, and paste the image link here. Image
                 references are stored as links, not file uploads.
-              </p>
+              </p>)}
             </div>
           </div>
         );
@@ -1239,17 +1484,31 @@ export default function CreateTaskClient({
                         References
                       </p>
                       <ul className="space-y-1 text-[11px] leading-relaxed">
-                        {form.references.map((reference, index) => (
-                          <li
-                            key={index}
-                            className="break-words text-indigo-600 dark:text-indigo-300"
-                          >
-                            <span className="mr-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                              {reference.type === "image" ? "Image" : "Link"}
-                            </span>
-                            {reference.url}
-                          </li>
-                        ))}
+                        {form.references.map((reference, index) => {
+                          const label =
+                            reference.type === "image"
+                              ? "Image"
+                              : reference.type === "image-file"
+                              ? "Image file"
+                              : "Link";
+
+                          const displayValue =
+                            reference.type === "image-file"
+                              ? referenceFiles[index]?.name || reference.url || "(no file selected)"
+                              : reference.url;
+
+                          return (
+                            <li
+                              key={index}
+                              className="break-words text-indigo-600 dark:text-indigo-300"
+                            >
+                              <span className="mr-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                {label}
+                              </span>
+                              {displayValue}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   )}

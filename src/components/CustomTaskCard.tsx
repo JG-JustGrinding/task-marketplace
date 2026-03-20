@@ -1,14 +1,52 @@
 import Image from "next/image";
-import type { Listing } from "@/data/listings";
+
+interface Listing {
+  id: number;
+  title: string;
+  categories: string[];
+  description?: string;
+  price: number;
+  currency?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  status?: string | null;
+  stateLabel?: "open" | "unavailable" | null;
+  hasDispute?: boolean | null;
+}
 
 type CustomTaskCardProps = {
   listing: Listing;
   bannerUrl?: string;
   logoUrl?: string;
+  showStatus?: boolean;
+  stateLabel?: "open" | "unavailable" | null;
+  hasDispute?: boolean | null;
 };
 
-export default function CustomTaskCard({ listing, bannerUrl, logoUrl }: CustomTaskCardProps) {
-  const { id, title, categories, description, price, currency = "USD" } = listing;
+export default function CustomTaskCard({
+  listing,
+  bannerUrl,
+  logoUrl,
+  showStatus = false,
+  stateLabel: overrideStateLabel,
+  hasDispute: overrideHasDispute,
+}: CustomTaskCardProps) {
+  const {
+    id,
+    title,
+    categories,
+    description,
+    price,
+    currency = "USD",
+    status,
+    stateLabel: listingStateLabel,
+    hasDispute: listingHasDispute,
+  } = listing;
+
+  const effectiveStateLabel = overrideStateLabel ?? listingStateLabel ?? null;
+  const isPendingPayment = showStatus && status === "pending_payment";
+  const isFinished = showStatus && status === "task_accepted";
+  const hasOpenDispute = (overrideHasDispute ?? listingHasDispute) === true;
   const hasBanner = Boolean(bannerUrl);
   const hasLogo = Boolean(logoUrl);
 
@@ -53,28 +91,52 @@ export default function CustomTaskCard({ listing, bannerUrl, logoUrl }: CustomTa
       <div className={`${hasBanner && hasLogo ? "pt-8" : "pt-4"} px-4 pb-4 flex flex-col gap-3 flex-1`}>
         <div className="flex flex-col gap-2 flex-1">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] line-clamp-2">
-              {title}
-            </h3>
+            <div className="flex-1 min-w-0">
+              <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                {effectiveStateLabel === "open" && (
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.7rem] font-semibold tracking-wide uppercase ${
+                      "border-[2px] border-[var(--success)] bg-[var(--bg-muted)] text-[var(--text-primary)]"
+                    }`}
+                  >
+                    Open
+                  </span>
+                )}
+                {showStatus && (isFinished || isPendingPayment) && (
+                  <span
+                    className={`${
+                      isFinished ? "badge-success" : "badge-warning"
+                    } inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.7rem] font-semibold tracking-wide uppercase`}
+                  >
+                    {isFinished ? "Finished" : "Pending payment"}
+                  </span>
+                )}
+                {hasOpenDispute && false && (
+                  <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.7rem] font-semibold tracking-wide uppercase bg-[var(--warning)]/10 text-[var(--warning)] border border-[var(--warning)]">
+                    Dispute open
+                  </span>
+                )}
+                {categories.length > 0 && (
+                  categories.slice(0, 3).map((cat) => (
+                    <span
+                      key={cat}
+                      className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--bg-muted)]/70 px-2.5 py-0.5 text-[0.7rem] font-medium text-[var(--text-secondary)]"
+                    >
+                      {cat}
+                    </span>
+                  ))
+                )}
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] line-clamp-2">
+                {title}
+              </h3>
+            </div>
           </div>
 
           {description && (
             <p className="text-xs text-[var(--text-muted)] line-clamp-3">
               {description}
             </p>
-          )}
-
-          {categories.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {categories.slice(0, 3).map((cat) => (
-                <span
-                  key={cat}
-                  className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--bg-muted)]/70 px-2.5 py-0.5 text-[0.7rem] font-medium text-[var(--text-secondary)]"
-                >
-                  {cat}
-                </span>
-              ))}
-            </div>
           )}
         </div>
 

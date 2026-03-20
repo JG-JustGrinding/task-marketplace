@@ -616,6 +616,7 @@ export default function ListingClient({
                                                 (data as any).error ||
                                                     "Failed to delete task. Please try again.",
                                             );
+                                            setIsDeleting(false);
                                             return;
                                         }
                                         window.location.href = "/";

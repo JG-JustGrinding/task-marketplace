@@ -82,6 +82,7 @@ export default function ProfileClient({
       bannerUrl: task.bannerUrl,
       status: task.status,
       stateLabel,
+      hasDispute: Boolean((task as any).has_dispute),
     };
   });
 
@@ -287,6 +288,9 @@ export default function ProfileClient({
                             listing={listing}
                             logoUrl={listing.logoUrl}
                             bannerUrl={listing.bannerUrl}
+                            showStatus={shouldShowStatus}
+                            stateLabel={listing.stateLabel}
+                            hasDispute={listing.hasDispute}
                           />
                         );
                       }

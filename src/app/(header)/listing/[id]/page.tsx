@@ -9,7 +9,7 @@ import { isPremiumActive } from "@/lib/premium";
 const LOGO_BUCKET = "task-logos";
 const BANNER_BUCKET = "task-banners";
 
-type ReferenceType = "link" | "image";
+type ReferenceType = "link" | "image" | "image-file";
 
 type ReferenceItem = {
     type: ReferenceType;
@@ -67,7 +67,7 @@ export async function generateMetadata({
 
     const refs = (data.references ?? []) as ReferenceItem[];
     const imageUrls = refs
-        .filter((ref) => ref.type === "image" && ref.url)
+        .filter((ref) => (ref.type === "image" || ref.type === "image-file") && ref.url)
         .map((ref) => ref.url);
 
     const title = data.title || `Task #${numericId}`;
@@ -134,7 +134,7 @@ export default async function ListingPage({
     if (!error && data) {
         const refs = (data.references ?? []) as ReferenceItem[];
         const imageUrls = refs
-            .filter((ref) => ref.type === "image" && ref.url)
+            .filter((ref) => (ref.type === "image" || ref.type === "image-file") && ref.url)
             .map((ref) => ref.url);
         const linkUrls = refs
             .filter((ref) => ref.type === "link" && ref.url)

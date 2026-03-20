@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isPremiumActive } from "@/lib/premium";
 
-type ReferenceType = "link" | "image";
+type ReferenceType = "link" | "image" | "image-file";
 
 type ReferenceItem = {
 	type: ReferenceType;
@@ -20,9 +20,70 @@ type CreateTaskBody = {
 	timeLimitDays?: string | number | null;
 };
 
+const IMAGE_REFERENCE_BUCKET = "task-image-references";
+const MAX_REFERENCE_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+
+function getFileExtension(fileName: string): string {
+	const lastDot = fileName.lastIndexOf(".");
+	if (lastDot === -1) return "bin";
+	return fileName.slice(lastDot + 1).toLowerCase();
+}
+
 export async function POST(request: Request) {
 	try {
-		const body = (await request.json()) as CreateTaskBody;
+		const contentType = request.headers.get("content-type") || "";
+
+		let body: CreateTaskBody;
+		let referenceImageFiles: Record<number, File> = {};
+
+		if (contentType.includes("multipart/form-data")) {
+			const formData = await request.formData();
+
+			const referencesRaw = (formData.get("references") as string | null) ?? null;
+			let parsedReferences: ReferenceItem[] = [];
+			if (referencesRaw) {
+				try {
+					parsedReferences = JSON.parse(referencesRaw) as ReferenceItem[];
+				} catch {
+					parsedReferences = [];
+				}
+			}
+
+			parsedReferences.forEach((ref, index) => {
+				if (ref.type === "image-file") {
+					const file = formData.get(`reference_image_file_${index}`);
+					if (file instanceof File) {
+						referenceImageFiles[index] = file;
+					}
+				}
+			});
+
+			let parsedCategories: string[] = [];
+			const categoriesRaw = (formData.get("categories") as string | null) ?? null;
+			if (categoriesRaw) {
+				try {
+					parsedCategories = JSON.parse(categoriesRaw) as string[];
+				} catch {
+					parsedCategories = [];
+				}
+			}
+
+			body = {
+				title: (formData.get("title") as string | null) ?? undefined,
+				categories: parsedCategories,
+				shortDescription:
+					(formData.get("shortDescription") as string | null) ?? undefined,
+				needDetails: (formData.get("needDetails") as string | null) ?? undefined,
+				technicalRequirements:
+					(formData.get("technicalRequirements") as string | null) ?? undefined,
+				references: parsedReferences,
+				price: (formData.get("price") as string | null) ?? undefined,
+				timeLimitDays:
+					(formData.get("timeLimitDays") as string | null) ?? undefined,
+			};
+		} else {
+			body = (await request.json()) as CreateTaskBody;
+		}
 
 		const supabase = await createClient();
 		const {
@@ -65,6 +126,41 @@ export async function POST(request: Request) {
 				{ error: "You can add up to 5 references" },
 				{ status: 400 },
 			);
+		}
+
+		// Validate image-file references and enforce 10MB limit
+		const imageFileIndexes = references
+			.map((ref, index) => (ref.type === "image-file" ? index : -1))
+			.filter((index) => index !== -1);
+
+		for (const index of imageFileIndexes) {
+			const file = referenceImageFiles[index];
+			if (!file) {
+				return NextResponse.json(
+					{
+						error:
+							"Missing image file for one of the 'image file' references.",
+					},
+					{ status: 400 },
+				);
+			}
+
+			if (!file.type.startsWith("image/")) {
+				return NextResponse.json(
+					{
+						error:
+							"Image file references must be image files (PNG, JPG, etc.).",
+					},
+					{ status: 400 },
+				);
+			}
+
+			if (file.size > MAX_REFERENCE_IMAGE_SIZE_BYTES) {
+				return NextResponse.json(
+					{ error: "Image file references must be 10MB or smaller." },
+					{ status: 400 },
+				);
+			}
 		}
 
 		let parsedTimeLimitDays: number | null = null;
@@ -132,6 +228,74 @@ export async function POST(request: Request) {
 				{ error: error.message },
 				{ status: 500 },
 			);
+		}
+
+		// If there are image-file references, upload them to storage and
+		// update the task's references with their public URLs.
+		if (imageFileIndexes.length > 0 && data) {
+			const taskId = (data as any).id as number;
+			const updatedReferences: ReferenceItem[] = [];
+
+			for (let i = 0; i < references.length; i++) {
+				const ref = references[i];
+				if (ref.type === "image-file") {
+					const file = referenceImageFiles[i];
+					if (!file) {
+						updatedReferences.push(ref);
+						continue;
+					}
+
+					const ext = getFileExtension(file.name);
+					const storagePath = `${user.id}/${taskId}/${Date.now()}-reference-${i}.${ext}`;
+					const { error: uploadError } = await supabase.storage
+						.from(IMAGE_REFERENCE_BUCKET)
+						.upload(storagePath, file, {
+							contentType: file.type,
+							upsert: false,
+						});
+
+					if (uploadError) {
+						// Best-effort cleanup of the task if uploads fail
+						await supabase.from("tasks").delete().eq("id", taskId);
+						return NextResponse.json(
+							{
+								error: `Failed to upload image reference: ${uploadError.message}`,
+							},
+							{ status: 500 },
+						);
+					}
+
+					const { data: publicData } = await supabase.storage
+						.from(IMAGE_REFERENCE_BUCKET)
+						.getPublicUrl(storagePath);
+					const publicUrl = publicData?.publicUrl ?? "";
+
+					updatedReferences.push({
+						...ref,
+						url: publicUrl || ref.url,
+					});
+				} else {
+					updatedReferences.push(ref);
+				}
+			}
+
+			const { error: updateError } = await supabase
+				.from("tasks")
+				.update({ references: updatedReferences })
+				.eq("id", taskId);
+
+			if (updateError) {
+				return NextResponse.json(
+					{
+						error:
+							`Task was created but failed to attach image references: ${updateError.message}`,
+					},
+					{ status: 500 },
+				);
+			}
+
+			// Reflect updated references in the response payload
+			(data as any).references = updatedReferences;
 		}
 
 		return NextResponse.json({ task: data }, { status: 201 });
