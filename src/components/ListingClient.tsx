@@ -421,7 +421,7 @@ export default function ListingClient({
                             >
                                 {paymentStatus === "success"
                                     ? "Payment completed. Your task will update shortly once the payment is confirmed."
-                                    : "Payment was cancelled. You can try funding the task again when you're ready. Until then, your task will remain hidden from the public."}
+                                    : "Payment was cancelled. You can try funding the task again when you're ready. Until then, your task will remain inaccessible to the public."}
                             </div>
                         )}
 
