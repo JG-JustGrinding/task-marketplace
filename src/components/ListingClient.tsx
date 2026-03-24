@@ -567,7 +567,7 @@ export default function ListingClient({
                                 {!hasUserStarted ? (
                                     taskTaken ? (
                                         <div className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[var(--bg-muted)] text-[var(--text-secondary)] text-center border border-[var(--border-color)]">
-                                            Task taken
+                                            Task slots filled
                                         </div>
                                     ) : hasReachedTaskLimit ? (
                                         <div className="space-y-2">

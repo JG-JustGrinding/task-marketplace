@@ -29,6 +29,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    // Look up the task to determine its per-task activation capacity.
+    const { data: taskCapacityRow, error: taskCapacityError } = await supabase
+      .from("tasks")
+      .select("id, max_activations")
+      .eq("id", taskId)
+      .maybeSingle();
+
+    if (taskCapacityError || !taskCapacityRow) {
+      return NextResponse.json(
+        { error: "Task not found." },
+        { status: 404 },
+      );
+    }
+
+    const rawMaxActivations = (taskCapacityRow as any).max_activations as
+      | number
+      | null
+      | undefined;
+    const maxActivationsForTask =
+      rawMaxActivations && Number.isFinite(rawMaxActivations) && rawMaxActivations > 0
+        ? rawMaxActivations
+        : 1;
+
     // Determine this user's maximum number of active tasks based on
     // whether they have an active Earner Pro plan.
     let maxActiveTasks = 3;
@@ -69,6 +92,37 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { activation: { user_id: user.id, task_id: taskId } },
         { status: 200 },
+      );
+    }
+
+    // Enforce a maximum number of active workers for this specific task
+    // based on the task's max_activations setting.
+    const { count: activeForTaskCount, error: activeForTaskError } = await supabase
+      .from("task_activations")
+      .select("id", { count: "exact", head: true })
+      .eq("task_id", taskId)
+      .in("status", [
+        "waiting_submission",
+        "pending",
+        "resubmission",
+        "resubmission_requested",
+      ]);
+
+    if (activeForTaskError) {
+      console.error("Error counting active task activations for task", activeForTaskError);
+      return NextResponse.json(
+        { error: "Failed to check task capacity. Please try again." },
+        { status: 500 },
+      );
+    }
+
+    if ((activeForTaskCount ?? 0) >= maxActivationsForTask) {
+      return NextResponse.json(
+        {
+          error:
+            "This task already has the maximum number of active workers. Please try another task.",
+        },
+        { status: 400 },
       );
     }
 

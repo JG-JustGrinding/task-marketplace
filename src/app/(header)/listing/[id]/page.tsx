@@ -116,7 +116,11 @@ export default async function ListingPage({
     const { data, error } = await supabase
         .from("tasks")
         .select(
+<<<<<<< HEAD
 			"id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status, collection_id, time_limit_days",
+=======
+            "id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status, collection_id, max_activations",
+>>>>>>> 39ebf07 (support for multiple activations at once instead of a hard-coded limit of 1)
         )
         .eq("id", numericId)
         .single<TaskRow>();
@@ -271,6 +275,30 @@ export default async function ListingPage({
     const taskAccepted = !!data && data.status === "task_accepted";
     const taskUnavailable = !!data && data.status === "pending_payment";
 
+    const activeActivationStatuses = [
+        "waiting_submission",
+        "pending",
+        "resubmission",
+        "resubmission_requested",
+    ] as const;
+
+    let activeForTaskCount: number | null = null;
+    let isTaskFull = false;
+
+    if (data) {
+        const { count: taskActiveCount } = await supabase
+            .from("task_activations")
+            .select("id", { count: "exact", head: true })
+            .eq("task_id", data.id)
+            .in("status", activeActivationStatuses as unknown as string[]);
+
+        activeForTaskCount = taskActiveCount ?? 0;
+        const rawMax = (data as any).max_activations as number | null | undefined;
+        const maxActivationsForTask =
+            rawMax && Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 1;
+        isTaskFull = activeForTaskCount >= maxActivationsForTask;
+    }
+
     // Read payment status from query string (e.g. ?payment=success|cancel)
     const resolvedSearchParams = await searchParams;
     let paymentStatus: "success" | "cancel" | null = null;
@@ -317,12 +345,7 @@ export default async function ListingPage({
             .from("task_activations")
             .select("id", { count: "exact", head: true })
             .eq("user_id", user.id)
-            .in("status", [
-                "waiting_submission",
-                "pending",
-                "resubmission",
-                "resubmission_requested",
-            ]);
+            .in("status", activeActivationStatuses as unknown as string[]);
 
         hasReachedTaskLimit = (activeCount ?? 0) >= maxActiveTasks;
 
@@ -357,33 +380,18 @@ export default async function ListingPage({
                 }
             }
         }
-
-        // Check if any other user has an active (non-cancelled) activation for this task.
-        const { data: otherActivation } = await supabase
-            .from("task_activations")
-            .select("id")
-            .eq("task_id", data.id)
-            .neq("user_id", user.id)
-            .not("status", "eq", "cancelled")
-            .not("status", "eq", "rejected")
-            .maybeSingle();
-
-        taskTaken = !!otherActivation;
+        // For signed-in users, a task is considered "taken" for this viewer
+        // if all worker slots are currently full and they do not already
+        // have an activation for the task.
+        taskTaken = !hasUserStarted && isTaskFull;
 
         if (isPoster) {
-            const { count: activationsCount } = await supabase
-                .from("task_activations")
-                .select("id", { count: "exact", head: true })
-                .eq("task_id", data.id)
-                .in("status", [
-                    "waiting_submission",
-                    "pending",
-                    "resubmission",
-                    "resubmission_requested",
-                ]);
-
-            hasActiveActivations = (activationsCount ?? 0) > 0;
+            hasActiveActivations = (activeForTaskCount ?? 0) > 0;
         }
+    } else if (data) {
+        // For signed-out viewers, treat the task as taken when
+        // there is no remaining capacity.
+        taskTaken = isTaskFull;
     }
 
     const isActiveFundedTask = !!data && data.status === "active";
@@ -391,7 +399,6 @@ export default async function ListingPage({
     const canDeleteTask =
         isPoster &&
         !hasSubmissions &&
-        !taskTaken &&
         (taskUnavailable || (isActiveFundedTask && !taskAccepted && !hasActiveActivations));
 
     // Compute whether the current viewer (if they have started the task)
