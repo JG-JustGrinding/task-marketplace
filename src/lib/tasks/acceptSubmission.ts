@@ -53,6 +53,43 @@ export async function acceptTaskSubmissionWithPayout(
     );
   }
 
+  // Preload other submitter and activation users so we can notify
+  // everyone who is affected when a single submission is accepted.
+  const otherSubmitterIds = new Set<string>();
+  const otherActivationUserIds = new Set<string>();
+
+  try {
+    const { data: otherSubs } = await client
+      .from("task_submissions")
+      .select("user_id, id")
+      .eq("task_id", taskId)
+      .neq("id", submissionId);
+
+    for (const row of (otherSubs ?? []) as any[]) {
+      if (row.user_id && typeof row.user_id === "string") {
+        otherSubmitterIds.add(row.user_id);
+      }
+    }
+  } catch (err) {
+    console.error("Error preloading other submitters for notifications", err);
+  }
+
+  try {
+    const { data: otherActivations } = await client
+      .from("task_activations")
+      .select("user_id")
+      .eq("task_id", taskId)
+      .neq("user_id", submitterId);
+
+    for (const row of (otherActivations ?? []) as any[]) {
+      if (row.user_id && typeof row.user_id === "string") {
+        otherActivationUserIds.add(row.user_id);
+      }
+    }
+  } catch (err) {
+    console.error("Error preloading other activation users for notifications", err);
+  }
+
   // Fetch the task to ensure it is still active and to get payout details.
   const { data: task, error: taskError } = await client
     .from("tasks")
@@ -219,6 +256,46 @@ export async function acceptTaskSubmissionWithPayout(
     });
   } catch (notifyError) {
     console.error("Error queueing task_submission_accepted notification", notifyError);
+  }
+
+  // Notify other submitters that their submissions were rejected.
+  for (const otherUserId of Array.from(otherSubmitterIds)) {
+    if (otherUserId === submitterId) continue;
+    try {
+      await queueNotification({
+        userId: otherUserId,
+        type: "task_submission_rejected",
+        data: {
+          taskId,
+          taskTitle: (task as any)?.title ?? undefined,
+        },
+        channels: { inApp: true, email: true },
+      });
+    } catch (notifyError) {
+      console.error("Error queueing task_submission_rejected notification", notifyError);
+    }
+  }
+
+  // Notify users whose activations were cancelled because another
+  // worker's submission was accepted.
+  for (const otherUserId of Array.from(otherActivationUserIds)) {
+    if (otherUserId === submitterId) continue;
+    try {
+      await queueNotification({
+        userId: otherUserId,
+        type: "task_activation_cancelled",
+        data: {
+          taskId,
+          taskTitle: (task as any)?.title ?? undefined,
+        },
+        channels: { inApp: true, email: true },
+      });
+    } catch (notifyError) {
+      console.error(
+        "Error queueing task_activation_cancelled notification after acceptance",
+        notifyError,
+      );
+    }
   }
 
   return { ok: true as const };
