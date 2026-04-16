@@ -325,7 +325,7 @@ export default function SubmitClient({
           </button>
 
           <h1 className="mt-3 text-2xl md:text-3xl font-semibold leading-tight">
-            Submit your work
+            Submit Your Work
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             You&apos;re submitting to{" "}
@@ -374,7 +374,7 @@ export default function SubmitClient({
         <form onSubmit={handleSubmit} className="space-y-6">
           <section className="card space-y-4 animate-[fadeIn_0.15s_ease-out]">
             <header className="space-y-1">
-              <h2 className="text-base font-semibold">Demo submission (optional)</h2>
+              <h2 className="text-base font-semibold">Demo Submission (Optional)</h2>
               <p className="text-xs text-[var(--text-secondary)]">
                 Optionally share a watermarked or partial version so the poster
                 can review your work without being able to simply reuse it.
@@ -391,7 +391,7 @@ export default function SubmitClient({
                     : "bg-[var(--bg-muted)] text-[var(--text-secondary)] border-[var(--border-color)]"
                 }`}
               >
-                Upload demo file
+                Upload Demo File
               </button>
               <button
                 type="button"
@@ -402,7 +402,7 @@ export default function SubmitClient({
                     : "bg-[var(--bg-muted)] text-[var(--text-secondary)] border-[var(--border-color)]"
                 }`}
               >
-                Use demo link
+                Use Demo Link
               </button>
             </div>
 
@@ -466,7 +466,7 @@ export default function SubmitClient({
 
           <section className="card space-y-4 animate-[fadeIn_0.15s_ease-out]">
             <header className="space-y-1">
-              <h2 className="text-base font-semibold">Final deliverable</h2>
+              <h2 className="text-base font-semibold">Final Deliverable</h2>
               <p className="text-xs text-[var(--text-secondary)]">
                 Attach the full-quality files or a download link. This is the
                 version the poster will actually receive once they accept your
@@ -485,7 +485,7 @@ export default function SubmitClient({
                       : "bg-[var(--bg-muted)] text-[var(--text-secondary)] border-[var(--border-color)]"
                   }`}
                 >
-                  Upload final file
+                  Upload Final File
                 </button>
                 <button
                   type="button"
@@ -496,7 +496,7 @@ export default function SubmitClient({
                       : "bg-[var(--bg-muted)] text-[var(--text-secondary)] border-[var(--border-color)]"
                   }`}
                 >
-                  Use final link
+                  Use Final Link
                 </button>
               </div>
 
@@ -588,7 +588,7 @@ export default function SubmitClient({
                   ? "Time limit passed"
                   : isSubmitting
                   ? "Submitting..."
-                  : "Submit work"}
+                  : "Submit Work"}
               </button>
             </div>
           </section>

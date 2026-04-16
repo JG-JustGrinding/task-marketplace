@@ -330,7 +330,7 @@ export default function HubDashboard({
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <h2 className="text-sm font-semibold">Tasks you posted</h2>
+                <h2 className="text-sm font-semibold">Tasks You've Posted</h2>
                 <p className="text-[0.7rem] text-[var(--text-secondary)]">
                   See who&apos;s working on your tasks and review submissions.
                 </p>
@@ -339,7 +339,7 @@ export default function HubDashboard({
                 href="/create"
                 className="button none px-3 py-1.5 text-center rounded-lg bg-[var(--accent-primary)] text-white text-[0.7rem] font-semibold hover:bg-[var(--accent-hover)] w-full sm:w-auto mt-1 sm:mt-0"
               >
-                Post new task
+                Post New Task
               </Link>
             </div>
 
@@ -351,8 +351,8 @@ export default function HubDashboard({
 
             {!createdError && !hasRealCreated && !someoneHasCreatedTasks && (
               <p className="text-xs text-[var(--text-secondary)]">
-                You haven&apos;t posted any tasks yet. When you do, they&apos;ll show up
-                here with who&apos;s started and any submissions.
+                You haven't posted any tasks yet. When you do, they'll show up
+                here with who's started and any submissions.
               </p>
             )}
 
@@ -461,7 +461,7 @@ export default function HubDashboard({
                             href={`/listing/${task.id}/submissions`}
                             className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
                           >
-                            View submissions
+                            View Submissions
                           </Link>
                         )}
                         {(!isFinished) && (
@@ -469,7 +469,7 @@ export default function HubDashboard({
                             href={`/listing/${task.id}`}
                             className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
                           >
-                            View task
+                            View Task
                           </Link>
                         )}
                       </div>
@@ -497,15 +497,15 @@ export default function HubDashboard({
             }`}
           >
             <div>
-              <h2 className="text-sm font-semibold">Tasks you have started</h2>
+              <h2 className="text-sm font-semibold">Tasks You've Started</h2>
               <p className="text-[0.7rem] text-[var(--text-secondary)]">
-		        Track the status of tasks you&apos;re working on.
+		        Track the status of tasks you're working on.
               </p>
             </div>
 
             {!hasRealSubmitted && mySubmissions.length === 0 && (
               <p className="text-xs text-[var(--text-secondary)]">
-		        You haven&apos;t started any tasks yet. When you do, each task
+		        You haven't started any tasks yet. When you do, each task
 		        and its status will appear here.
               </p>
             )}
@@ -521,7 +521,7 @@ export default function HubDashboard({
         <section className="mt-6 space-y-4">
           {!hasStripeAccount ? (
             <div className="card flex flex-col gap-3">
-              <h2 className="text-sm font-semibold">Set up payouts</h2>
+              <h2 className="text-sm font-semibold">Set Up Payouts</h2>
               <p className="text-xs text-[var(--text-secondary)]">
                 To access your earnings dashboard and withdraw funds, you&apos;ll
                 need to create a Stripe connected account. This keeps payouts
@@ -568,7 +568,7 @@ export default function HubDashboard({
                   }}
                   className="inline-flex items-center justify-center rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-[0.75rem] font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto"
                 >
-                  {isStripeLinkLoading ? "Starting Stripe onboarding..." : "Create Stripe account"}
+                  {isStripeLinkLoading ? "Starting Stripe Onboarding..." : "Create Stripe Account"}
                 </button>
                 <p className="text-[0.65rem] text-[var(--text-muted)] max-w-xs sm:max-w-none">
                   Once your Stripe account is connected, you&apos;ll see your
@@ -578,7 +578,7 @@ export default function HubDashboard({
             </div>
           ) : !hasCompletedStripeOnboarding ? (
             <div className="card flex flex-col gap-3">
-              <h2 className="text-sm font-semibold">Finish Stripe setup</h2>
+              <h2 className="text-sm font-semibold">Finish Stripe Setup</h2>
               <p className="text-xs text-[var(--text-secondary)]">
                 Your Stripe account has been created but onboarding isn&apos;t
                 complete yet. To access your earnings dashboard and withdraw
@@ -625,7 +625,7 @@ export default function HubDashboard({
                   }}
                   className="inline-flex items-center justify-center rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-[0.75rem] font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto"
                 >
-                  {isStripeLinkLoading ? "Opening Stripe..." : "Continue Stripe setup"}
+                  {isStripeLinkLoading ? "Opening Stripe..." : "Continue Stripe Setup"}
                 </button>
                 <p className="text-[0.65rem] text-[var(--text-muted)] max-w-xs sm:max-w-none">
                   Once onboarding is complete, your payout balance and pending
@@ -637,7 +637,7 @@ export default function HubDashboard({
             <div className="grid gap-4 md:grid-cols-3">
               <article className="card flex flex-col gap-2">
               <h2 className="text-xs font-semibold text-[var(--text-secondary)]">
-                Pending earnings
+                Pending Earnings
               </h2>
               <p className="text-2xl font-semibold">
                 ${pending.toLocaleString(undefined, {
@@ -655,7 +655,7 @@ export default function HubDashboard({
                   onClick={() => setShowPendingDetails((v) => !v)}
                   className="none uncolored text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
                 >
-                  {showPendingDetails ? "Hide pending earnings" : "Show pending earnings"}
+                  {showPendingDetails ? "Hide Pending Earnings" : "Show Pending Earnings"}
                 </button>
                 {showPendingDetails && (
                   <div className="mt-2 max-h-40 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
@@ -709,7 +709,7 @@ export default function HubDashboard({
 
               <article className="card flex flex-col gap-2">
               <h2 className="text-xs font-semibold text-[var(--text-secondary)]">
-                Payout balance
+                Payout Balance
               </h2>
               <p className="text-2xl font-semibold">
                 ${available.toLocaleString(undefined, {
@@ -724,7 +724,7 @@ export default function HubDashboard({
 
               <article className="card flex flex-col gap-3">
                 <h2 className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Withdraw funds
+                  Withdraw Funds
                 </h2>
                 <p className="text-[0.7rem] text-[var(--text-secondary)]">
                   Payouts are processed via Stripe and typically arrive within
@@ -775,7 +775,7 @@ export default function HubDashboard({
                       : "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
                   }`}
                 >
-                  {isWithdrawLoading ? "Processing..." : "Withdraw to account"}
+                  {isWithdrawLoading ? "Processing..." : "Withdraw to Account"}
                 </button>
                 {hasStripeAccount && (
                   <button
@@ -814,7 +814,7 @@ export default function HubDashboard({
                   }}
                   className="mt-2 inline-flex items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-1.5 text-[0.7rem] font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto"
                   >
-                  {isStripeDashboardLoading ? "Opening Stripe..." : "Open Stripe account"}
+                  {isStripeDashboardLoading ? "Opening Stripe..." : "Open Stripe Account"}
                   </button>
                 )}
               </article>

@@ -231,7 +231,7 @@ export default function ProfileClient({
                     }}
                     className="px-4 py-2 text-xs sm:text-sm font-medium rounded-full bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)] transition"
                   >
-                    Go to hub
+                    Go to Hub
                   </button>
                   <button
                     type="button"
@@ -240,7 +240,7 @@ export default function ProfileClient({
                     }}
                     className="px-4 py-2 text-xs sm:text-sm font-medium rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition"
                   >
-                    Your account
+                    Your Account
                   </button>
                   {(needsCreatorPro || needsEarnerPro) && (
                     <a
@@ -292,7 +292,7 @@ export default function ProfileClient({
         {/* Created Listings */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Created listings</h2>
+            <h2 className="text-lg font-semibold">Created Listings</h2>
             <div className="flex items-center gap-3">
               <span className="text-xs text-[var(--text-secondary)]">
                 {totalCreated} {totalCreated === 1 ? "listing" : "listings"}
@@ -357,7 +357,7 @@ export default function ProfileClient({
                         disabled={isLoadingMore}
                         className="px-4 py-2 text-xs font-semibold rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-muted)] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {isLoadingMore ? "Loading more..." : "Load more"}
+                        {isLoadingMore ? "Loading More..." : "Load More"}
                       </button>
                     </div>
                   )}

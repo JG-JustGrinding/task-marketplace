@@ -141,7 +141,7 @@ export default function AdminEarningsClient({ earnings, adminSecret }: Props) {
     <section className="card space-y-4">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-sm font-semibold">Platform earnings overview</h2>
+          <h2 className="text-sm font-semibold">Platform Earnings Overview</h2>
           <p className="text-[0.7rem] text-[var(--text-secondary)]">
             This is an internal-only view of all rows in the platform_earnings table.
           </p>
@@ -149,19 +149,19 @@ export default function AdminEarningsClient({ earnings, adminSecret }: Props) {
         <div className="flex flex-col items-start gap-1 text-[0.7rem] text-[var(--text-secondary)] md:items-end">
           <div>
             <span className="font-semibold text-[var(--text-primary)]">
-              Total unclaimed:
+              Total Unclaimed:
             </span>{" "}
             ${totalUnclaimed.toFixed(2)} ({unclaimedCount} entries)
           </div>
           <div>
             <span className="font-semibold text-[var(--text-primary)]">
-              Total claimed:
+              Total Claimed:
             </span>{" "}
             ${totalClaimed.toFixed(2)}
           </div>
           <div>
             <span className="font-semibold text-[var(--text-primary)]">
-              Total all time:
+              Total All Time:
             </span>{" "}
             ${totalAll.toFixed(2)}
           </div>
@@ -175,7 +175,7 @@ export default function AdminEarningsClient({ earnings, adminSecret }: Props) {
           className="button none px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-white font-semibold hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed"
           disabled={isSubmitting || localEarnings.length === 0}
         >
-          Select all unclaimed
+          Select All Unclaimed
         </button>
         <button
           type="button"
@@ -183,7 +183,7 @@ export default function AdminEarningsClient({ earnings, adminSecret }: Props) {
           className="button none px-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] font-semibold hover:text-[var(--accent-primary)] disabled:opacity-60 disabled:cursor-not-allowed"
           disabled={isSubmitting || selectedIds.size === 0}
         >
-          Clear selection
+          Clear Selection
         </button>
         <button
           type="button"
@@ -191,7 +191,7 @@ export default function AdminEarningsClient({ earnings, adminSecret }: Props) {
           className="button none px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-white font-semibold hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed"
           disabled={isSubmitting || selectedIds.size === 0}
         >
-          {isSubmitting ? "Marking as claimed..." : "Mark selected as claimed"}
+          {isSubmitting ? "Marking as Claimed..." : "Mark Selected as Claimed"}
         </button>
         {selectedIds.size > 0 && (
           <span className="text-[0.7rem] text-[var(--text-secondary)]">

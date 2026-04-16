@@ -23,7 +23,7 @@ export default async function NotFound() {
             404
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold mb-3 text-[var(--text-primary)]">
-            Page not found
+            Page Not Found
           </h1>
           <p className="text-sm sm:text-base text-[var(--text-secondary)] mb-6">
             The page you are looking for doesn&apos;t exist or may have been moved.
@@ -33,7 +33,7 @@ export default async function NotFound() {
               href="/"
               className="inline-flex justify-center items-center rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:shadow-md hover:brightness-110 transition-all"
             >
-              Browse tasks
+              Browse Tasks
             </Link>
           </div>
         </div>

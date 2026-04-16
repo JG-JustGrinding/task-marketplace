@@ -378,7 +378,7 @@ export default function ListingSubmissionsClient({
           href={`/listing/${listingId}`}
           className="text-sm font-medium text-[var(--accent-primary)] hover:text-[var(--accent-hover)] self-start md:self-auto"
         >
-          View task
+          View Task
         </Link>
       </div>
       {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
@@ -534,14 +534,14 @@ export default function ListingSubmissionsClient({
                       onClick={() => handleOpenRequestChanges(submission.id)}
                       className="inline-flex items-center justify-center rounded-full border border-[var(--warning)] bg-[var(--warning)] px-3 py-1 text-xs font-medium text-white hover:opacity-90"
                     >
-                      Request changes
+                      Request Changes
                     </button>
                     <button
                       type="button"
                       onClick={() => handleOpenAcceptConfirm(submission.id)}
                       className="inline-flex items-center justify-center rounded-full bg-[var(--accent-primary)] px-3 py-1 text-xs font-medium text-white hover:bg-[var(--accent-hover)]"
                     >
-                      Accept submission
+                      Accept Submission
                     </button>
                   </>
                 )}
@@ -571,7 +571,7 @@ export default function ListingSubmissionsClient({
                         ? "Dispute resolved (upheld)"
                         : submission.canOpenDispute === false
                           ? "Dispute window ended"
-                          : "Open dispute"}
+                          : "Open Dispute"}
                   </button>
                 )}
               </footer>
@@ -579,7 +579,7 @@ export default function ListingSubmissionsClient({
               {disputeId === submission.id && (
                 <div className="mt-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)]/80 p-3 space-y-2">
                   <p className="text-[0.75rem] font-semibold text-[var(--text-primary)]">
-                    Open dispute
+                    Open Dispute
                   </p>
                   <div className="space-y-1">
                     <label className="block text-[0.7rem] font-medium text-[var(--text-secondary)]">
@@ -645,7 +645,7 @@ export default function ListingSubmissionsClient({
                       disabled={isSubmittingDispute}
                       className="rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-[0.7rem] font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isSubmittingDispute ? "Opening..." : "Submit dispute"}
+                      {isSubmittingDispute ? "Opening..." : "Submit Dispute"}
                     </button>
                   </div>
                 </div>
@@ -688,7 +688,7 @@ export default function ListingSubmissionsClient({
                 disabled={isRejecting}
                 className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] disabled:opacity-70"
               >
-                Go back
+                Go Back
               </button>
               <button
                 type="button"
@@ -696,7 +696,7 @@ export default function ListingSubmissionsClient({
                 disabled={isRejecting}
                 className="rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-70"
               >
-                {isRejecting ? "Rejecting..." : "Yes, reject submission"}
+                {isRejecting ? "Rejecting..." : "Yes, Reject Submission"}
               </button>
             </div>
           </div>
@@ -735,7 +735,7 @@ export default function ListingSubmissionsClient({
                 disabled={isAccepting}
                 className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] disabled:opacity-70"
               >
-                Go back
+                Go Back
               </button>
               <button
                 type="button"
@@ -743,7 +743,7 @@ export default function ListingSubmissionsClient({
                 disabled={isAccepting}
                 className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--accent-hover)] disabled:opacity-70"
               >
-                {isAccepting ? "Accepting..." : "Yes, accept submission"}
+                {isAccepting ? "Accepting..." : "Yes, Accept Submission"}
               </button>
             </div>
           </div>
@@ -793,7 +793,7 @@ export default function ListingSubmissionsClient({
                 disabled={isRequesting}
                 className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] disabled:opacity-70"
               >
-                Go back
+                Go Back
               </button>
               <button
                 type="button"
@@ -801,7 +801,7 @@ export default function ListingSubmissionsClient({
                 disabled={isRequesting}
                 className="rounded-lg bg-[var(--warning)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-70"
               >
-                {isRequesting ? "Sending..." : "Send request"}
+                {isRequesting ? "Sending..." : "Send Request"}
               </button>
             </div>
           </div>

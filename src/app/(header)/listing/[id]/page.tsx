@@ -116,11 +116,7 @@ export default async function ListingPage({
     const { data, error } = await supabase
         .from("tasks")
         .select(
-<<<<<<< HEAD
 			"id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status, collection_id, time_limit_days",
-=======
-            "id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status, collection_id, max_activations",
->>>>>>> 39ebf07 (support for multiple activations at once instead of a hard-coded limit of 1)
         )
         .eq("id", numericId)
         .single<TaskRow>();

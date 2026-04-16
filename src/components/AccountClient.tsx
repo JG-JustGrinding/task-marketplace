@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { earnerProFeatures, creatorProFeatures } from "@/lib/ProFeatures";
 
-const TABS = ["My Profile", "Settings", "Subscription", "Sign out"] as const;
+const TABS = ["My Profile", "Settings", "Subscription", "Sign Out"] as const;
 
 type Tab = (typeof TABS)[number];
 
@@ -240,7 +240,7 @@ export default function AccountClient({
             <nav className="space-y-1">
               {TABS.map((tab) => {
                 const isActive = activeTab === tab;
-                const isSignOut = tab === "Sign out";
+                const isSignOut = tab === "Sign Out";
                 return (
                   <button
                     key={tab}
@@ -328,7 +328,7 @@ export default function AccountClient({
                           onClick={() => handleOpenCancelModal("creator")}
                           className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--danger-less-saturated)] border border-[var(--danger-less-saturated)] bg-transparent hover:bg-[var(--danger)]/5"
                         >
-                          Cancel subscription
+                          Cancel Subscription
                         </button>
                       ) : (
                         <a
@@ -390,7 +390,7 @@ export default function AccountClient({
                           onClick={() => handleOpenCancelModal("earner")}
                           className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--danger-less-saturated)] border border-[var(--danger-less-saturated)] bg-transparent hover:bg-[var(--danger)]/5"
                         >
-                          Cancel subscription
+                          Cancel Subscription
                         </button>
                       ) : (
                         <a
@@ -476,7 +476,7 @@ export default function AccountClient({
                 {/* Change password */}
                 <div className="pt-4 border-t border-[var(--border-color)] space-y-4">
                   <div>
-                    <h3 className="text-sm font-semibold">Change password</h3>
+                    <h3 className="text-sm font-semibold">Change Password</h3>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -524,7 +524,7 @@ export default function AccountClient({
                       disabled={isSavingProfile}
                       className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-70"
                     >
-                      {isSavingProfile ? "Saving..." : "Save changes"}
+                      {isSavingProfile ? "Saving..." : "Save Changes"}
                     </button>
                   </div>
                 </div>
@@ -552,7 +552,7 @@ export default function AccountClient({
 
                 <div className="flex items-start justify-between gap-4 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-2">
                   <div className="space-y-0.5">
-                    <p className="text-sm font-medium">Allow activity emails</p>
+                    <p className="text-sm font-medium">Allow Activity Emails</p>
                     <p className="text-xs text-[var(--text-secondary)]">
                       Receive emails about important site events such as when someone starts, submits, or when your submission has been accepted.
                     </p>
@@ -573,7 +573,7 @@ export default function AccountClient({
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-4 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-2">
                     <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Allow important email notifications</p>
+                      <p className="text-sm font-medium">Allow Important Email Notifications</p>
                       <p className="text-xs text-[var(--text-secondary)]">
                         Receive essential updates about your account, security, and
                         critical activity through email.
@@ -594,7 +594,7 @@ export default function AccountClient({
 
                   <div className="flex items-start justify-between gap-4 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-2">
                     <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Allow promotional emails</p>
+                      <p className="text-sm font-medium">Allow Promotional Emails</p>
                       <p className="text-xs text-[var(--text-secondary)]">
                         Get emails about tips, product updates, and occasional promotions about
                         new tasks and features.
@@ -621,7 +621,7 @@ export default function AccountClient({
                     disabled={isSavingSettings}
                     className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-70"
                   >
-                    {isSavingSettings ? "Saving..." : "Save settings"}
+                    {isSavingSettings ? "Saving..." : "Save Settings"}
                   </button>
                 </div>
               </div>
@@ -633,7 +633,7 @@ export default function AccountClient({
       {showSignOutModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="card max-w-sm w-full mx-4 p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Sign out</h2>
+            <h2 className="text-lg font-semibold">Sign Out</h2>
             <p className="text-sm text-[var(--text-secondary)]">
               Are you sure you want to sign out?
             </p>
@@ -660,7 +660,7 @@ export default function AccountClient({
                 disabled={isSigningOut}
                 className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-70"
               >
-                {isSigningOut ? "Signing out..." : "Sign out"}
+                {isSigningOut ? "Signing Out..." : "Sign Out"}
               </button>
             </div>
           </div>
@@ -670,7 +670,7 @@ export default function AccountClient({
       {cancelSubscriptionPlan && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="card max-w-sm w-full mx-4 p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Cancel subscription</h2>
+            <h2 className="text-lg font-semibold">Cancel Subscription</h2>
             <p className="text-sm text-[var(--text-secondary)]">
               To confirm, type <span className="font-semibold">cancel</span> in the box below. This will cancel your {cancelSubscriptionPlan === "creator" ? "Creator Pro" : "Earner Pro"} subscription.
             </p>
@@ -730,7 +730,7 @@ export default function AccountClient({
                 }
                 className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--danger)] text-white hover:bg-[var(--danger-less-saturated)] disabled:opacity-70"
               >
-                {isCancellingSubscription ? "Cancelling..." : "Cancel subscription"}
+                {isCancellingSubscription ? "Cancelling..." : "Cancel Subscription"}
               </button>
             </div>
           </div>

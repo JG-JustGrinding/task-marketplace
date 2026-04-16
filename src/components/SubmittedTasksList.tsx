@@ -482,15 +482,15 @@ export default function SubmittedTasksList({
                           className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)] disabled:opacity-60"
                         >
                           {pendingCheckInIds.includes(submission.id)
-                            ? "Checking in..."
-                            : "Check in"}
+                            ? "Checking In..."
+                            : "Check In"}
                         </button>
                       ) : (
                         <Link
                           href={`/listing/${task.id}/submit`}
                           className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
                         >
-                          Submit task
+                          Submit Task
                         </Link>
                       )
                     )}
@@ -498,7 +498,7 @@ export default function SubmittedTasksList({
                       href={`/listing/${task.id}`}
                       className="text-[0.7rem] font-semibold text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
                     >
-                      View task
+                      View Task
                     </Link>
                   </>
                 )}
@@ -507,7 +507,7 @@ export default function SubmittedTasksList({
 
             {showDetails && (
               <div className="mt-2 rounded-lg bg-[var(--bg-muted)]/80 px-3 py-2 text-[0.7rem] text-[var(--text-secondary)]">
-                <p className="font-semibold mb-1">Requested changes</p>
+                <p className="font-semibold mb-1">Requested Changes</p>
                 <p>
                   {"resubmission_message" in submission &&
                   (submission as any).resubmission_message

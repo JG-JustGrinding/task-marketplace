@@ -175,7 +175,7 @@ export default function SignupClient() {
 						</div>
 					)}
 					<header className="mb-6">
-						<h1 className="mb-1 text-2xl font-bold title-font">Create your account</h1>
+						<h1 className="mb-1 text-2xl font-bold title-font">Create Your Account</h1>
 						<p className="text-sm body-font">
 							Sign up to post tasks, complete work, and get paid.
 						</p>

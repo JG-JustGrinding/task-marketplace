@@ -131,7 +131,7 @@ export default function UsernameOnboardingClient({
           }}
         >
           <header className="mb-6 text-center">
-            <h1 className="mb-1 text-2xl font-bold title-font">Choose your username</h1>
+            <h1 className="mb-1 text-2xl font-bold title-font">Choose Your Username</h1>
             <p className="text-sm body-font text-[var(--text-secondary)]">
               We created a suggestion based on your Google account{emailHint}. You can change it now or later in
               your account settings.
@@ -181,14 +181,14 @@ export default function UsernameOnboardingClient({
                 disabled={loading}
                 className="inline-flex items-center justify-center rounded-lg border border-[var(--border-color)] bg-transparent px-4 py-2 text-xs sm:text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-muted)]/70 transition-colors disabled:opacity-50"
               >
-                Skip for now
+                Skip for Now
               </button>
               <button
                 type="submit"
                 disabled={loading}
                 className="default inline-flex items-center justify-center rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold body-font transition-colors disabled:opacity-50"
               >
-                {loading ? "Saving..." : "Save username"}
+                {loading ? "Saving..." : "Save Username"}
               </button>
             </div>
           </form>

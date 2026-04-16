@@ -347,13 +347,13 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
             }
           >
             <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
-            <span>Create task</span>
+            <span>Create Task</span>
           </a>
 
           {isLoggedIn && (
             <a
               href="/hub"
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--bg-muted)]/70 px-3 py-1.5 text-xs sm:text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors"
+              className="inline-flex items-center justify-center gap-0 sm:gap-2 rounded-full border border-[var(--border-color)] bg-[var(--bg-muted)]/70 h-9 w-9 sm:h-auto sm:w-auto sm:px-3 sm:py-1.5 text-xs sm:text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors"
             >
               <FontAwesomeIcon icon={faHouse} className="h-3 w-3" />
               <span className="hidden sm:inline">Hub</span>
@@ -376,11 +376,11 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
                 href="/login"
                 className="inline-flex items-center justify-center rounded-full border border-[var(--border-color)] bg-transparent px-4 py-2 text-xs sm:text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-muted)]/70 transition-colors"
               >
-                Log in
+                Log In
               </a>
               <a href="/signup">
                 <button className="inline-flex items-center justify-center rounded-full bg-[var(--accent-primary)] px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm hover:shadow-md hover:brightness-110 transition-all">
-                  Sign up
+                  Sign Up
                 </button>
               </a>
             </>

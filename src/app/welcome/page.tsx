@@ -44,25 +44,25 @@ export default function WelcomePage() {
                             href="/"
                             className="text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                         >
-                            Browse tasks
+                            Browse Tasks
                         </Link>
                         <Link
                             href="/create"
                             className="hidden text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:inline"
                         >
-                            Post a task
+                            Post a Task
                         </Link>
                         <Link
                             href="/login"
                             className="inline-flex items-center justify-center rounded-full border border-[var(--border-color)] bg-transparent px-4 py-2 text-xs sm:text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-muted)]/70 transition-colors"
                         >
-                            Log in
+                            Log In
                         </Link>
                         <Link
                             href="/signup"
                             className="rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[var(--accent-hover)] sm:px-6"
                         >
-                            Sign up
+                            Sign Up
                         </Link>
                     </nav>
                 </div>
@@ -82,11 +82,11 @@ export default function WelcomePage() {
                                     : "Post tasks. Earn by solving them."}
                             </span>
                             <h1 className="mt-5 text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
-                                Turn problems into bounties.
+                                Turn Problems Into Bounties.
                                 <span className="block text-white/90">
                                     {useCompleterLanguage
-                                        ? "Post tasks or earn by completing them."
-                                        : "Post tasks or earn by solving them."}
+                                        ? "Post Tasks or Earn by Completing Them."
+                                        : "Post Tasks or Earn by Solving Them."}
                                 </span>
                             </h1>
                             <p className="mt-5 text-base text-white/85 sm:text-lg">
@@ -101,7 +101,7 @@ export default function WelcomePage() {
                                     href="/create"
                                     className="inline-flex items-center justify-center rounded-lg border border-white/40 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 sm:px-8"
                                 >
-                                    Post a task
+                                    Post a Task
                                 </Link>
                                 <Link
                                     href="/signup"
@@ -140,11 +140,11 @@ export default function WelcomePage() {
                                 <div className="mt-6 space-y-3">
                                     <div className="flex items-start gap-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-3">
                                         <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-xs font-semibold text-[var(--accent-primary)]">
-                                            ART
+                                            SOU
                                         </span>
                                         <div className="flex-1">
-                                            <p className="text-sm font-semibold">Create Animations for this Pixel Art Character</p>
-                                            <p className="text-xs text-[var(--text-secondary)]">$25</p>
+                                            <p className="text-sm font-semibold">Create a Theme for My Project</p>
+                                            <p className="text-xs text-[var(--text-secondary)]">$8</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-3">
@@ -165,12 +165,12 @@ export default function WelcomePage() {
                                             <p className="text-xs text-[var(--text-secondary)]">$30</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-start gap-3 rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--bg-muted)]/60 px-3 py-3">
+                                    <div className="flex items-start gap-3 rounded-xl border bordborder-[var(--border-color)] bg-[var(--bg-muted)]/60 px-3 py-3">
                                         <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-secondary)]/5 text-xs font-semibold text-[var(--accent-secondary)]">
                                             +
                                         </span>
                                         <div className="flex-1">
-                                            <p className="text-sm font-semibold">Your next task</p>
+                                            <p className="text-sm font-semibold">Your Next Task</p>
                                             <p className="text-xs text-[var(--text-secondary)]">
                                                 {useCompleterLanguage
                                                     ? "Post a problem, set a bounty, & accept a completion."
@@ -193,7 +193,7 @@ export default function WelcomePage() {
                                     ? "Post a task, let completers submit work, and pay only when you accept a result."
                                     : "Post a task, let solvers submit solutions, and pay only when you accept a result."}
                             </p>
-                        </div>
+                        </div>er-dashed 
 
                         <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                             <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-5 shadow-sm">
@@ -261,7 +261,7 @@ export default function WelcomePage() {
                 <section className="bg-[var(--bg-secondary)] border-b border-[var(--border-color)] py-16 px-4 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
                         <div className="mx-auto max-w-2xl text-center">
-                            <h2 className="text-2xl font-bold sm:text-3xl">How it works</h2>
+                            <h2 className="text-2xl font-bold sm:text-3xl">How It Works</h2>
                             <p className="mt-2 text-sm text-[var(--text-secondary)] sm:text-base">
                                 {useCompleterLanguage
                                     ? "A simple three-step flow for both task creators and completers, from problem to submission to payout."
@@ -274,14 +274,14 @@ export default function WelcomePage() {
                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                                     For task creators
                                 </p>
-                                <h3 className="mt-2 text-base font-semibold">Post a problem, reward a solution</h3>
+                                <h3 className="mt-2 text-base font-semibold">Post a Problem, Reward a Solution</h3>
                                 <div className="mt-5 space-y-4">
                                     <div className="flex gap-4">
                                         <div className="inline-flex h-8 w-8 aspect-square items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-xs font-semibold text-[var(--accent-primary)]">
                                             1
                                         </div>
                                         <div>
-                                            <p className="text-sm font-semibold">Post your task</p>
+                                            <p className="text-sm font-semibold">Post Your Task</p>
                                             <p className="mt-1 text-sm text-[var(--text-secondary)]">
                                                 Describe what you need done and set a payout amount.
                                             </p>
@@ -293,7 +293,7 @@ export default function WelcomePage() {
                                         </div>
                                         <div>
                                             <p className="text-sm font-semibold">
-                                                {useCompleterLanguage ? "Review completions" : "Review solutions"}
+                                                {useCompleterLanguage ? "Review Completions" : "Review Solutions"}
                                             </p>
                                             <p className="mt-1 text-sm text-[var(--text-secondary)]">
                                                 {useCompleterLanguage
@@ -307,7 +307,7 @@ export default function WelcomePage() {
                                             3
                                         </div>
                                         <div>
-                                            <p className="text-sm font-semibold">Accept & pay</p>
+                                            <p className="text-sm font-semibold">Accept & Pay</p>
                                             <p className="mt-1 text-sm text-[var(--text-secondary)]">
                                                 {useCompleterLanguage
                                                     ? "Approve the best completion and the reward is released to the completer. You can also request revisions or reject submissions if they don't meet your needs."
@@ -324,8 +324,8 @@ export default function WelcomePage() {
                                 </p>
                                 <h3 className="mt-2 text-base font-semibold">
                                     {useCompleterLanguage
-                                        ? "Browse tasks, complete work, earn rewards"
-                                        : "Browse tasks, solve problems, earn rewards"}
+                                        ? "Browse Tasks, Complete Work, Earn Rewards"
+                                        : "Browse Tasks, Solve Problems, Earn Rewards"}
                                 </h3>
                                 <div className="mt-5 space-y-4">
                                     <div className="flex gap-4">
@@ -333,7 +333,7 @@ export default function WelcomePage() {
                                             1
                                         </div>
                                         <div>
-                                            <p className="text-sm font-semibold">Browse tasks</p>
+                                            <p className="text-sm font-semibold">Browse Tasks</p>
                                             <p className="mt-1 text-sm text-[var(--text-secondary)]">
                                                 Find tasks that match your skills and interests
                                             </p>
@@ -345,7 +345,7 @@ export default function WelcomePage() {
                                         </div>
                                         <div>
                                             <p className="text-sm font-semibold">
-                                                {useCompleterLanguage ? "Complete tasks" : "Solve tasks"}
+                                                {useCompleterLanguage ? "Complete Tasks" : "Solve Tasks"}
                                             </p>
                                             <p className="mt-1 text-sm text-[var(--text-secondary)]">
                                                 {useCompleterLanguage
@@ -359,7 +359,7 @@ export default function WelcomePage() {
                                             3
                                         </div>
                                         <div>
-                                            <p className="text-sm font-semibold">Get paid</p>
+                                            <p className="text-sm font-semibold">Get Paid</p>
                                             <p className="mt-1 text-sm text-[var(--text-secondary)]">
                                                 {useCompleterLanguage
                                                     ? "If the creator accepts your completion, the payout is released to your balance and you can withdraw your earnings."
@@ -386,13 +386,13 @@ export default function WelcomePage() {
                                 href="/"
                                 className="inline-flex items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-8 py-3 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--bg-muted)]"
                             >
-                                Browse tasks
+                                Browse Tasks
                             </Link>
                             <Link
                                 href="/signup"
                                 className="inline-flex items-center justify-center rounded-lg bg-[var(--accent-primary)] px-8 py-3 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-[var(--accent-hover)] hover:shadow-lg"
                             >
-                                Create your account
+                                Create Your Account
                             </Link>
                         </div>
                     </div>

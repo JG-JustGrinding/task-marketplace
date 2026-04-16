@@ -345,7 +345,7 @@ export default function ListingClient({
                     {(projectTitle || projectSummary) && (
                         <section className="space-y-2">
                             <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                                About the project
+                                About the Project
                             </h2>
                             {projectTitle && (
                                 <p className="text-sm font-medium text-[var(--text-primary)]">
@@ -370,7 +370,7 @@ export default function ListingClient({
                                     setShowDeleteConfirm(true);
                                 }}
                             >
-                                Delete task
+                                Delete Task
                             </button>
                         </div>
                     )}
@@ -400,10 +400,9 @@ export default function ListingClient({
                                     setReportError(null);
                                     setReportSuccess(false);
                                     setShowReportModal(true);
-                                    setHasJustReported(true);
                                 }}
                             >
-                                {(hasReportedTask || hasJustReported) ? "Task reported" : "Report this task"}
+                                {(hasReportedTask || hasJustReported) ? "Task Reported" : "Report This Task"}
                             </button>
                         </div>
                     )}
@@ -478,7 +477,7 @@ export default function ListingClient({
                                     href={`/listing/${listing.id}/submissions`}
                                     className="bold inline-block text-xs font-medium text-[var(--accent-primary)] hover:underline"
                                 >
-                                    View submissions
+                                    View Submissions
                                 </Link>
                             ) : (
                                 !taskAccepted && (
@@ -549,7 +548,7 @@ export default function ListingClient({
                                             }
                                         }}
                                     >
-                                        {isFundingTask ? "Starting checkout..." : "Fund task"}
+                                        {isFundingTask ? "Starting Checkout..." : "Fund Task"}
                                     </button>
                                     </>
                                 )}
@@ -591,7 +590,7 @@ export default function ListingClient({
                                                 setShowStartConfirm(true);
                                             }}
                                         >
-                                            Start task
+                                            Start Task
                                         </button>
                                     )
                                 ) : (
@@ -619,7 +618,7 @@ export default function ListingClient({
                                                     className="flex-1 py-2.5 text-sm font-medium rounded-lg bg-[var(--danger)] text-white hover:opacity-90"
                                                     onClick={() => setShowCancelConfirm(true)}
                                                 >
-                                                    Cancel task
+                                                    Cancel Task
                                                 </button>
                                                 {needsCheckIn && !hasCheckedIn ? (
                                                     <button
@@ -629,15 +628,15 @@ export default function ListingClient({
                                                         onClick={handleCheckIn}
                                                     >
                                                         {isCheckingIn
-                                                            ? "Checking in..."
-                                                            : "Check in"}
+                                                            ? "Checking In..."
+                                                            : "Check In"}
                                                     </button>
                                                 ) : (
                                                     <Link
                                                         href={`/listing/${listing.id}/submit`}
                                                         className="none flex-1 py-2.5 text-sm font-medium rounded-lg bg-[var(--accent-secondary)] text-white hover:bg-[var(--accent-secondary-hover)] text-center"
                                                     >
-                                                        Submit task
+                                                        Submit Task
                                                     </Link>
                                                 )}
                                             </>
@@ -685,7 +684,7 @@ export default function ListingClient({
                                 onClick={() => setShowDeleteConfirm(false)}
                                 className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] disabled:opacity-50"
                             >
-                                Go back
+                                Go Back
                             </button>
                             <button
                                 type="button"
@@ -720,8 +719,8 @@ export default function ListingClient({
                                 {isDeleting
                                     ? "Deleting..."
                                     : isFundedDeletionFlow
-                                    ? "Yes, delete and refund"
-                                    : "Yes, delete task"}
+                                    ? "Yes, Delete and Refund"
+                                    : "Yes, Delete Task"}
                             </button>
                         </div>
                     </div>
@@ -755,7 +754,7 @@ export default function ListingClient({
                                 onClick={() => setShowCancelConfirm(false)}
                                 className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]"
                             >
-                                Go back
+                                Go Back
                             </button>
                             <button
                                 type="button"
@@ -775,7 +774,7 @@ export default function ListingClient({
                                     }
                                 }}
                             >
-                                Yes, cancel task
+                                Yes, Cancel Task
                             </button>
                         </div>
                     </div>
@@ -905,10 +904,10 @@ export default function ListingClient({
                             id="report-task-title"
                             className="text-base font-semibold text-[var(--text-primary)]"
                         >
-                            Report this task
+                            Report This Task
                         </h2>
                         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                            Use this form to let us know if this task is spam, fraudulent, abusive, or otherwise inappropriate.
+                           Let us know if this task is spam, fraudulent, abusive, or otherwise inappropriate.
                         </p>
 
                         <div className="mt-4 space-y-3">
@@ -994,8 +993,9 @@ export default function ListingClient({
                                         if (!res.ok) {
                                             setReportError(
                                                 (data && (data as any).error) ||
-                                                    "We couldn&apos;t submit your report. Please try again.",
+                                                    "We couldn't submit your report. Please try again.",
                                             );
+                                            setHasJustReported(false);
                                             return;
                                         }
 
@@ -1003,16 +1003,17 @@ export default function ListingClient({
                                         setReportDescription("");
                                         // Optionally close the modal after a short delay; for now, close immediately.
                                         setShowReportModal(false);
+                                        setHasJustReported(true);
                                     } catch (err) {
                                         setReportError(
-                                            "We couldn&apos;t submit your report. Please check your connection and try again.",
+                                            "We couldn't submit your report. Please check your connection and try again.",
                                         );
                                     } finally {
                                         setIsSubmittingReport(false);
                                     }
                                 }}
                             >
-                                {isSubmittingReport ? "Submitting..." : "Submit report"}
+                                {isSubmittingReport ? "Submitting..." : "Submit Report"}
                             </button>
                         </div>
                     </div>

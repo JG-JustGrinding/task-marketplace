@@ -685,7 +685,7 @@ export default function CreateTaskClient({
             <div>
               <label
                 htmlFor="title"
-                className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1"
+                className="block text-sm font-medium text-[var(--text-primary)] mb-1"
               >
                 Task Title
               </label>
@@ -697,20 +697,20 @@ export default function CreateTaskClient({
                 value={form.title}
                 onChange={(e) => handleChange("title", e.target.value)}
                 onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
-                className="mt-1 w-full rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm shadow-sm outline-none ring-0 transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-900/80 dark:focus:border-indigo-400"
+                className="mt-1 w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 px-3 py-2 text-sm shadow-sm outline-none ring-0 transition focus:border-[var(--accent-primary)] focus:bg-[var(--bg-secondary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                 aria-describedby="title-help title-error"
                 required
               />
               <p
                 id="title-help"
-                className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                className="mt-1 text-xs text-[var(--text-secondary)]"
               >
                 A clear, concise title that collaborators will see first.
               </p>
               {touched.title && basicErrors.title && (
                 <p
                   id="title-error"
-                  className="mt-1 text-xs text-red-500"
+                  className="mt-1 text-xs text-[var(--danger)]"
                 >
                   {basicErrors.title}
                 </p>
@@ -718,10 +718,10 @@ export default function CreateTaskClient({
             </div>
 
             <div>
-              <span className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+              <span className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 Category Tags
               </span>
-              <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mb-3 text-xs text-[var(--text-secondary)]">
                 Choose up to three tags that best describe this task.
               </p>
               <div className="flex flex-wrap gap-2">
@@ -793,9 +793,9 @@ export default function CreateTaskClient({
             <div>
               <label
                 htmlFor="shortDescription"
-                className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1"
+                className="block text-sm font-medium text-[var(--text-primary)] mb-1"
               >
-                Short description
+                Short Description
               </label>
               <textarea
                 id="shortDescription"
@@ -806,20 +806,20 @@ export default function CreateTaskClient({
                 onBlur={() =>
                   setTouched((prev) => ({ ...prev, shortDescription: true }))
                 }
-                className="mt-1 w-full rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm shadow-sm outline-none ring-0 transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-900/80 dark:focus:border-indigo-400"
+                className="mt-1 w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 px-3 py-2 text-sm shadow-sm outline-none ring-0 transition focus:border-[var(--accent-primary)] focus:bg-[var(--bg-secondary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                 aria-describedby="shortDescription-help shortDescription-error"
                 required
               />
               <p
                 id="shortDescription-help"
-                className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                className="mt-1 text-xs text-[var(--text-secondary)]"
               >
                 This appears in feeds and search results. Keep it brief and inviting.
               </p>
               {touched.shortDescription && basicErrors.shortDescription && (
                 <p
                   id="shortDescription-error"
-                  className="mt-1 text-xs text-red-500"
+                  className="mt-1 text-xs text-[var(--danger)]"
                 >
                   {basicErrors.shortDescription}
                 </p>
@@ -833,9 +833,9 @@ export default function CreateTaskClient({
             <div>
               <label
                 htmlFor="needDetails"
-                className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1"
+                className="block text-sm font-medium text-[var(--text-primary)] mb-1"
               >
-                What do you need? (Optional)
+                What Do You Need? (Optional)
               </label>
               <textarea
                 id="needDetails"
@@ -843,12 +843,12 @@ export default function CreateTaskClient({
                 rows={5}
                 value={form.needDetails}
                 onChange={(e) => handleChange("needDetails", e.target.value)}
-                className="mt-1 w-full rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm shadow-sm outline-none ring-0 transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-900/80 dark:focus:border-indigo-400"
+                className="mt-1 w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 px-3 py-2 text-sm shadow-sm outline-none ring-0 transition focus:border-[var(--accent-primary)] focus:bg-[var(--bg-secondary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                 aria-describedby="needDetails-help"
               />
               <p
                 id="needDetails-help"
-                className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                className="mt-1 text-xs text-[var(--text-secondary)]"
               >
                 Describe the task in plain language. What should the collaborator deliver?
               </p>
@@ -857,7 +857,7 @@ export default function CreateTaskClient({
             <div>
               <label
                 htmlFor="technicalRequirements"
-                className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1"
+                className="block text-sm font-medium text-[var(--text-primary)] mb-1"
               >
                 Technical Requirements (Optional)
               </label>
@@ -867,12 +867,12 @@ export default function CreateTaskClient({
                 rows={4}
                 value={form.technicalRequirements}
                 onChange={(e) => handleChange("technicalRequirements", e.target.value)}
-                className="mt-1 w-full rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm shadow-sm outline-none ring-0 transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-900/80 dark:focus:border-indigo-400"
+                className="mt-1 w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 px-3 py-2 text-sm shadow-sm outline-none ring-0 transition focus:border-[var(--accent-primary)] focus:bg-[var(--bg-secondary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                 aria-describedby="technicalRequirements-help"
               />
               <p
                 id="technicalRequirements-help"
-                className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                className="mt-1 text-xs text-[var(--text-secondary)]"
               >
                 File types, sizes, formats, engines, tools, or any non-negotiable constraints.
               </p>
@@ -978,7 +978,7 @@ export default function CreateTaskClient({
                     </div>
                     {reference.type === "image" && reference.url && (
                       <div className="mt-1 flex items-center gap-3">
-                        <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+                        <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)]">
                           <img
                             src={reference.url}
                             alt={`Image reference ${index + 1}`}
@@ -1087,7 +1087,7 @@ export default function CreateTaskClient({
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  Creator Pro extras
+                  Creator Pro Extras
                 </p>
                 <p className="text-xs text-[var(--text-secondary)]">
                   Add a logo, banner, and time limit to your task.
@@ -1120,7 +1120,7 @@ export default function CreateTaskClient({
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="text-xs font-semibold text-[var(--text-primary)]">
-                      Task logo
+                      Task Logo
                     </p>
                   </div>
                 </div>
@@ -1224,7 +1224,7 @@ export default function CreateTaskClient({
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="text-xs font-semibold text-[var(--text-primary)]">
-                      Task banner
+                      Task Banner
                     </p>
                   </div>
                 </div>
@@ -1334,7 +1334,7 @@ export default function CreateTaskClient({
 
             <div className="space-y-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/70 p-4 text-xs shadow-[var(--shadow-soft)]">
               <p className="text-xs font-semibold text-[var(--text-primary)]">
-                Time limit after work starts
+                Time Limit After Work Starts
               </p>
               <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
                 Set how long collaborators have to submit work after they check in
@@ -1350,7 +1350,7 @@ export default function CreateTaskClient({
                       : "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
                   } ${creatorProActive ? "cursor-pointer hover:bg-[var(--bg-muted)]" : "cursor-pointer"}`}
                 >
-                  No time limit
+                  No Time Limit
                 </button>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-[var(--text-secondary)]">
@@ -1424,12 +1424,12 @@ export default function CreateTaskClient({
             <div>
               <label
                 htmlFor="price"
-                className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1"
+                className="block text-sm font-medium text-[var(--text-primary)] mb-1"
               >
                 Payout for Completion
               </label>
-              <div className="mt-1 flex items-center rounded-xl border border-gray-200 bg-white/80 px-3 py-2 shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 dark:border-gray-700 dark:bg-gray-900/80 dark:focus-within:border-indigo-400">
-                <span className="mr-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="mt-1 flex items-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 px-3 py-2 shadow-sm focus-within:border-[var(--accent-primary)] focus-within:ring-2 focus-within:ring-[var(--accent-primary)]/15">
+                <span className="mr-2 text-sm text-[var(--text-secondary)]">
                   $
                 </span>
                 <input
@@ -1448,28 +1448,28 @@ export default function CreateTaskClient({
               </div>
               <p
                 id="price-help"
-                className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                className="mt-1 text-xs text-[var(--text-secondary)]"
               >
                 Minimum $5
               </p>
               {touched.price && priceError && (
                 <p
                   id="price-error"
-                  className="mt-1 text-xs text-red-500"
+                  className="mt-1 text-xs text-[var(--danger)]"
                 >
                   {priceError}
                 </p>
               )}
             </div>
 
-            <div className="rounded-xl border border-gray-100 bg-slate-50 px-4 py-3 text-sm text-gray-800 shadow-sm dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-100">
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)] px-4 py-3 text-sm text-[var(--text-primary)] shadow-sm">
               <p className="font-medium">
-                You will pay <span className="text-indigo-600 dark:text-indigo-300">${""}
+                You will pay <span className="text-[var(--accent-primary)]">${""}
                   {priceValue > 0 ? priceValue.toFixed(2) : "0.00"}
                 </span>{" "}
               </p>
-              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                Funds are held securely until you accept a submission.
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                Funds are held until you accept a submission. You can request a refund on open tasks at any time.
               </p>
             </div>
           </div>
@@ -1477,13 +1477,13 @@ export default function CreateTaskClient({
       case "review":
         return (
           <div className="space-y-4">
-            <div className="rounded-xl border border-gray-100 bg-white/80 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900/80">
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/80 p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-semibold text-gray-900 dark:text-gray-50">
+                  <h2 className="text-base font-semibold text-[var(--text-primary)]">
                     {form.title || "Untitled task"}
                   </h2>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
                     {form.shortDescription
                       ? form.shortDescription.length > 140
                         ? `${form.shortDescription.slice(0, 140)}...`
@@ -1491,7 +1491,7 @@ export default function CreateTaskClient({
                       : "This is how your task will appear in the marketplace."}
                   </p>
                 </div>
-                <div className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200">
+                <div className="rounded-full bg-[var(--accent-primary)]/10 px-3 py-1 text-xs font-medium text-[var(--accent-primary)]">
                   ${priceValue > 0 ? priceValue.toFixed(2) : "0.00"}
                 </div>
               </div>
@@ -1501,43 +1501,43 @@ export default function CreateTaskClient({
                   form.categories.map((category) => (
                     <span
                       key={category}
-                      className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                      className="inline-flex items-center rounded-full bg-[var(--bg-muted)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--text-primary)]"
                     >
                       {category}
                     </span>
                   ))
                 ) : (
-                  <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                  <span className="text-[11px] text-[var(--text-muted)]">
                     No categories selected
                   </span>
                 )}
               </div>
 
               {(form.needDetails || form.technicalRequirements || form.references.length > 0) && (
-                <div className="mt-4 grid gap-3 text-xs text-gray-700 dark:text-gray-200 md:grid-cols-2">
+                <div className="mt-4 grid gap-3 text-xs text-[var(--text-primary)] md:grid-cols-2">
                   {form.needDetails && (
                     <div>
-                      <p className="mb-1 font-semibold text-gray-900 dark:text-gray-50">
-                        What you need
+                      <p className="mb-1 font-semibold text-[var(--text-primary)]">
+                        What You Need
                       </p>
-                      <p className="text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
+                      <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
                         {form.needDetails}
                       </p>
                     </div>
                   )}
                   {form.technicalRequirements && (
                     <div>
-                      <p className="mb-1 font-semibold text-gray-900 dark:text-gray-50">
+                      <p className="mb-1 font-semibold text-[var(--text-primary)]">
                         Technical requirements
                       </p>
-                      <p className="text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
+                      <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
                         {form.technicalRequirements}
                       </p>
                     </div>
                   )}
                   {form.references.length > 0 && (
                     <div className="md:col-span-2">
-                      <p className="mb-1 font-semibold text-gray-900 dark:text-gray-50">
+                      <p className="mb-1 font-semibold text-[var(--text-primary)]">
                         References
                       </p>
                       <ul className="space-y-1 text-[11px] leading-relaxed">
@@ -1557,9 +1557,9 @@ export default function CreateTaskClient({
                           return (
                             <li
                               key={index}
-                              className="break-words text-indigo-600 dark:text-indigo-300"
+                              className="break-words text-[var(--accent-primary)]"
                             >
-                              <span className="mr-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                              <span className="mr-1 rounded-full bg-[var(--bg-muted)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                                 {label}
                               </span>
                               {displayValue}
@@ -1574,13 +1574,13 @@ export default function CreateTaskClient({
             </div>
 
             {submitError && (
-              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-800 shadow-sm dark:border-red-900/50 dark:bg-red-900/40 dark:text-red-100">
+              <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-xs text-[var(--danger)] shadow-sm">
                 {submitError}
               </div>
             )}
 
             {submitSuccess && (
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs text-emerald-800 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-900/40 dark:text-emerald-100">
+              <div className="rounded-xl border border-[var(--success)]/25 bg-[var(--success)]/10 px-4 py-3 text-xs text-[var(--success)] shadow-sm">
                 Your task has been posted successfully.
               </div>
             )}
@@ -1598,8 +1598,8 @@ export default function CreateTaskClient({
           <div
             className={`rounded-xl border px-4 py-3 text-xs shadow-sm ${
               paymentStatus === "success"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-900/40 dark:text-emerald-100"
-                : "border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-900/40 dark:text-red-100"
+                ? "border-[var(--success)]/25 bg-[var(--success)]/10 text-[var(--success)]"
+                : "border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger)]"
             }`}
           >
             {paymentStatus === "success"
@@ -1695,15 +1695,15 @@ export default function CreateTaskClient({
           </ol>
         </nav>
 
-        <section className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white/90 p-6 shadow-md backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90">
+        <section className="relative overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/90 p-6 shadow-md backdrop-blur-sm">
           <div
-            className="absolute inset-0 pointer-events-none bg-gradient-to-br from-indigo-50/40 via-transparent to-sky-50/40 dark:from-indigo-950/40 dark:via-transparent dark:to-sky-950/40"
+            className="absolute inset-0 pointer-events-none"
             aria-hidden="true"
           />
-          <div className="relative flex flex-col gap-6">
+          <div className="relative flex flex-col gap-6 bg-[var(--bg-secondary)]">
             <header className="space-y-1">
-              <h1 className="text-base font-semibold tracking-tight text-gray-900 dark:text-gray-50">
-                Create a new task
+              <h1 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
+                Create a New Task
               </h1>
             </header>
 
@@ -1714,8 +1714,8 @@ export default function CreateTaskClient({
               {renderStep()}
             </div>
 
-            <footer className="mt-2 flex flex-col gap-3 border-t border-gray-100 pt-4 text-xs sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
-              <div className="text-[11px] text-gray-500 dark:text-gray-500">
+            <footer className="mt-2 flex flex-col gap-3 border-t border-[var(--border-color)] pt-4 text-xs sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-[11px] text-[var(--text-secondary)]">
                 Step {stepIndex + 1} of {STEPS.length}
               </div>
               <div className="flex justify-end gap-2">
@@ -1723,7 +1723,7 @@ export default function CreateTaskClient({
                   type="button"
                   onClick={handleBack}
                   disabled={stepIndex === 0 || isSubmitting}
-                  className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-gray-800"
+                  className="inline-flex items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3.5 py-1.5 text-xs font-medium text-[var(--text-primary)] shadow-sm transition hover:border-[var(--border-color)] hover:bg-[var(--bg-muted)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Back
                 </button>
@@ -1787,7 +1787,7 @@ export default function CreateTaskClient({
       {authModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
           <div
-            className="w-full max-w-md rounded-2xl border bg-white/95 p-8 shadow-md backdrop-blur-sm card"
+            className="w-full max-w-md rounded-2xl border bg-[var(--bg-secondary)] p-8 shadow-md backdrop-blur-sm card"
             style={{
               backgroundColor: "var(--bg-secondary)",
               borderColor: "var(--border-color)",
@@ -1873,7 +1873,7 @@ export default function CreateTaskClient({
                 </button>
             </div>
             {authError && (
-              <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              <div className="mb-3 rounded-lg border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-3 py-2 text-xs text-[var(--danger)]">
                 {authError}
               </div>
             )}
@@ -1893,7 +1893,7 @@ export default function CreateTaskClient({
                       setAuthError(null);
                     }}
                     disabled={authLoading}
-                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1910,7 +1910,7 @@ export default function CreateTaskClient({
                       setAuthError(null);
                     }}
                     disabled={authLoading}
-                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                   />
                 </div>
                 <button
@@ -1952,7 +1952,7 @@ export default function CreateTaskClient({
                       setAuthError(null);
                     }}
                     disabled={authLoading}
-                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1969,7 +1969,7 @@ export default function CreateTaskClient({
                       setAuthError(null);
                     }}
                     disabled={authLoading}
-                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1986,7 +1986,7 @@ export default function CreateTaskClient({
                       setAuthError(null);
                     }}
                     disabled={authLoading}
-                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                   />
                 </div>
                 <div className="space-y-1">
@@ -2003,7 +2003,7 @@ export default function CreateTaskClient({
                       setAuthError(null);
                     }}
                     disabled={authLoading}
-                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="mt-1 w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-muted)] px-3 py-2 text-xs outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15"
                   />
                 </div>
                 <button

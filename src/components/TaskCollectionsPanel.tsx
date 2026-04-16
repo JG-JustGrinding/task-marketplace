@@ -219,7 +219,7 @@ export default function TaskCollectionsPanel({
           id="task-collections-title"
           className="text-base font-semibold text-[var(--text-primary)]"
         >
-          Manage task collection
+          Manage Task Collection
         </h2>
         <p className="mt-1 text-xs text-[var(--text-secondary)]">
           Group this task into a collection so you can show related tasks on this page.
@@ -228,7 +228,7 @@ export default function TaskCollectionsPanel({
         <div className="mt-4 space-y-4">
           <div className="space-y-1">
             <label className="block text-xs font-medium text-[var(--text-secondary)]">
-              Existing collections
+              Existing Collections
             </label>
             <select
               className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
@@ -252,13 +252,13 @@ export default function TaskCollectionsPanel({
               onClick={handleAssignExisting}
               disabled={isLoading || isSubmitting}
             >
-              Save selection
+              Save Selection
             </button>
           </div>
 
           <div className="space-y-1">
             <label className="block text-xs font-medium text-[var(--text-secondary)]">
-              Create new collection
+              Create New Collection
             </label>
             <input
               type="text"
@@ -275,7 +275,7 @@ export default function TaskCollectionsPanel({
               onClick={handleCreateAndAssign}
               disabled={isSubmitting || !newName.trim() || hasReachedCollectionLimit}
             >
-              Create and assign
+              Create and Assign
             </button>}
             {hasReachedCollectionLimit && (
               <p className="text-[0.7rem] text-[var(--text-muted)] mt-1">

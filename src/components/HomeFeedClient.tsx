@@ -241,7 +241,7 @@ export default function HomeFeedClient({
                 onClick={() => (window.location.href = "/")}
                 className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent-primary)]"
               >
-                Back to tasks
+                Back to Tasks
               </button>
             )}
             {initialSearch.trim() && (
@@ -285,7 +285,7 @@ export default function HomeFeedClient({
                 href="/"
                 className="text-sm font-medium text-[var(--accent-primary)] hover:underline"
               >
-                Go back to home
+                Go Back to Home
               </Link>
             </div>
           ) : (
@@ -324,7 +324,7 @@ export default function HomeFeedClient({
                 disabled={isLoadingMore}
                 className="px-4 py-2 text-xs font-semibold rounded-full border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-muted)] disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isLoadingMore ? "Loading more..." : "Load more"}
+                {isLoadingMore ? "Loading More..." : "Load More"}
               </button>
             </div>
           )}
