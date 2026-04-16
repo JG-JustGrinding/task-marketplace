@@ -59,14 +59,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const rawTab = resolved.tab;
   const normalizedTab = typeof rawTab === "string" ? rawTab.toLowerCase() : "";
 
-  let initialTab: "My Profile" | "Settings" | "Subscription" | "Sign out" | undefined;
+  let initialTab: "My Profile" | "Settings" | "Subscription" | "Sign Out" | undefined;
 
   if (normalizedTab === "settings") {
     initialTab = "Settings";
   } else if (normalizedTab === "subscription") {
     initialTab = "Subscription";
   } else if (normalizedTab === "sign out" || normalizedTab === "signout") {
-    initialTab = "Sign out";
+    initialTab = "Sign Out";
   } else if (normalizedTab === "my profile" || normalizedTab === "profile") {
     initialTab = "My Profile";
   }
