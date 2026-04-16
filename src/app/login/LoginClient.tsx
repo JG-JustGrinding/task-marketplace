@@ -161,7 +161,7 @@ export default function LoginClient() {
 					<form className="space-y-5" aria-label="Sign in form" onSubmit={handleSubmit}>
 						<div className="space-y-2">
 							<label htmlFor="email" className="block text-sm font-medium body-font">
-								Email address
+								Email Address
 							</label>
 							<input
 								id="email"
@@ -237,7 +237,7 @@ export default function LoginClient() {
 					</div>
 
 					<p className="mt-6 text-center text-sm body-font">
-						Don&apos;t have an account?{" "}
+						Don't have an account?{" "}
 						<a href={redirectParam ? `/signup?redirect=${encodeURIComponent(redirectParam)}` : "/signup"}>
 							<b>Sign up</b>
 						</a>

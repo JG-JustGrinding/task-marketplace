@@ -209,7 +209,7 @@ export default function SignupClient() {
 
 						<div className="space-y-2">
 							<label htmlFor="email" className="block text-sm font-medium body-font">
-								Email address
+								Email Address
 							</label>
 							<input
 								id="email"
@@ -258,7 +258,7 @@ export default function SignupClient() {
 
 						<div className="space-y-2">
 							<label htmlFor="confirmPassword" className="block text-sm font-medium body-font">
-								Confirm password
+								Confirm Password
 							</label>
 							<input
 								id="confirmPassword"
