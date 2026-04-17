@@ -193,7 +193,7 @@ export default function WelcomePage() {
                                     ? "Post a task, let completers submit work, and pay only when you accept a result."
                                     : "Post a task, let solvers submit solutions, and pay only when you accept a result."}
                             </p>
-                        </div>er-dashed 
+                        </div>
 
                         <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                             <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-5 shadow-sm">

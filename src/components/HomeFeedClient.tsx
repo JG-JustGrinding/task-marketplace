@@ -233,7 +233,7 @@ export default function HomeFeedClient({
           />
         )}
 
-        <section className="mt-6 flex-1">
+        <section className="lg:mt-3 flex-1">
           <div className="mb-6 space-y-1">
             {initialSearch.trim() && filteredListings.length > 0 && (
               <button
