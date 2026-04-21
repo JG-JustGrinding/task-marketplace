@@ -7,6 +7,29 @@ const BANNER_BUCKET = "task-banners";
 const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_BANNER_SIZE_BYTES = 10 * 1024 * 1024;
 
+// Exclude SVG to prevent stored XSS via embedded <script>.
+const ALLOWED_BRANDING_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/gif",
+  "image/webp",
+]);
+
+const ALLOWED_BRANDING_EXTENSIONS = new Set([
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+]);
+
+function isAllowedBrandingFile(file: File): boolean {
+  if (!ALLOWED_BRANDING_MIME_TYPES.has(file.type)) return false;
+  const ext = getFileExtension(file.name);
+  return ALLOWED_BRANDING_EXTENSIONS.has(ext);
+}
+
 function getFileExtension(fileName: string): string {
   const lastDot = fileName.lastIndexOf(".");
   if (lastDot === -1) return "bin";
@@ -93,9 +116,9 @@ export async function POST(
     let nextBannerPath = ((task as any).banner_path as string | null) ?? null;
 
     if (hasLogo) {
-      if (!logoFile.type.startsWith("image/")) {
+      if (!isAllowedBrandingFile(logoFile)) {
         return NextResponse.json(
-          { error: "Logo must be an image file." },
+          { error: "Logo must be a PNG, JPG, GIF, or WEBP image." },
           { status: 400 },
         );
       }
@@ -136,9 +159,9 @@ export async function POST(
     }
 
     if (hasBanner) {
-      if (!bannerFile.type.startsWith("image/")) {
+      if (!isAllowedBrandingFile(bannerFile)) {
         return NextResponse.json(
-          { error: "Banner must be an image file." },
+          { error: "Banner must be a PNG, JPG, GIF, or WEBP image." },
           { status: 400 },
         );
       }

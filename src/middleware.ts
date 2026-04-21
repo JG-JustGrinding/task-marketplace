@@ -1,8 +1,43 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import {
+  applyRateLimitHeaders,
+  createRateLimitResponse,
+  rateLimitByIp,
+} from "@/lib/rateLimit";
+
+const RATE_LIMIT_EXCLUDED_PATHS = [
+  "/api/stripe/webhook",
+  "/api/tasks/auto-accept-submissions",
+  "/api/tasks/enforce-time-limits",
+  "/api/tasks/expire-checkins",
+];
+
+function shouldApplyApiRateLimit(pathname: string): boolean {
+  if (!pathname.startsWith("/api/")) {
+    return false;
+  }
+
+  return !RATE_LIMIT_EXCLUDED_PATHS.some((excludedPath) =>
+    pathname.startsWith(excludedPath),
+  );
+}
 
 export async function middleware(req: NextRequest) {
+  let apiRateLimitResult = null;
+
+  if (shouldApplyApiRateLimit(req.nextUrl.pathname)) {
+    apiRateLimitResult = await rateLimitByIp("api", req);
+
+    if (!apiRateLimitResult.success) {
+      return createRateLimitResponse(
+        "Too many requests. Please try again shortly.",
+        apiRateLimitResult,
+      );
+    }
+  }
+
   // Clone the request headers for the downstream response
   const res = NextResponse.next({
     request: {
@@ -32,6 +67,10 @@ export async function middleware(req: NextRequest) {
     // If refresh fails (e.g. refresh token expired), let the request continue;
     // downstream code can treat the user as signed out.
   });
+
+  if (apiRateLimitResult) {
+    applyRateLimitHeaders(res, apiRateLimitResult);
+  }
 
   return res;
 }

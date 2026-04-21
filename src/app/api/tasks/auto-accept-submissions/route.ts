@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { acceptTaskSubmissionWithPayout } from "@/lib/tasks/acceptSubmission";
 import { isPremiumActive } from "@/lib/premium";
+import { isAuthorizedCronRequest } from "@/lib/authSecrets";
 
 const BASE_AUTO_ACCEPT_MS = 3 * 24 * 60 * 60 * 1000; // default window
 const CREATOR_PRO_AUTO_ACCEPT_MS = 7 * 24 * 60 * 60 * 1000; // extended window for Creator Pro
@@ -17,12 +18,10 @@ const CREATOR_PRO_AUTO_ACCEPT_MS = 7 * 24 * 60 * 60 * 1000; // extended window f
 
 export async function POST(request: Request) {
   try {
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      const headerSecret = request.headers.get("x-cron-secret");
-      if (!headerSecret || headerSecret !== cronSecret) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    // Fail-closed: refuse the request when CRON_SECRET is not configured
+    // or the provided header does not match (constant-time comparison).
+    if (!isAuthorizedCronRequest(request)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const admin = createAdminClient();

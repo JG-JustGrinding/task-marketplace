@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createRateLimitResponse, rateLimitByUser } from "@/lib/rateLimit";
 
 const ALLOWED_REASONS = [
   "spam",
@@ -48,6 +49,14 @@ export async function POST(request: Request) {
 
     if (userError || !user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const rateLimitResult = await rateLimitByUser("reportTask", user.id);
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(
+        "Too many reports submitted. Please try again later.",
+        rateLimitResult,
+      );
     }
 
     // Ensure the task exists before creating a report.

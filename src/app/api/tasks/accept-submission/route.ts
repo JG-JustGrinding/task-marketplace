@@ -63,7 +63,9 @@ export async function POST(request: Request) {
       const status =
         message === "Submission not found" || message === "Task not found"
           ? 404
-          : message === "Task is not active" || message === "Submission does not belong to this task"
+          : message === "Task is not active" ||
+            message === "Submission does not belong to this task" ||
+            message === "Submission is not awaiting review"
             ? 400
             : 500;
 

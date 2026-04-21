@@ -23,6 +23,30 @@ type CreateTaskBody = {
 const IMAGE_REFERENCE_BUCKET = "task-image-references";
 const MAX_REFERENCE_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
+// Allowlisted image MIME types. We deliberately exclude SVG because it can
+// contain script tags and would enable stored XSS when rendered inline.
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+	"image/png",
+	"image/jpeg",
+	"image/jpg",
+	"image/gif",
+	"image/webp",
+]);
+
+const ALLOWED_IMAGE_EXTENSIONS = new Set([
+	"png",
+	"jpg",
+	"jpeg",
+	"gif",
+	"webp",
+]);
+
+function isAllowedImageFile(file: File): boolean {
+	if (!ALLOWED_IMAGE_MIME_TYPES.has(file.type)) return false;
+	const ext = getFileExtension(file.name);
+	return ALLOWED_IMAGE_EXTENSIONS.has(ext);
+}
+
 function getFileExtension(fileName: string): string {
 	const lastDot = fileName.lastIndexOf(".");
 	if (lastDot === -1) return "bin";
@@ -145,11 +169,11 @@ export async function POST(request: Request) {
 				);
 			}
 
-			if (!file.type.startsWith("image/")) {
+			if (!isAllowedImageFile(file)) {
 				return NextResponse.json(
 					{
 						error:
-							"Image file references must be image files (PNG, JPG, etc.).",
+							"Image file references must be PNG, JPG, GIF, or WEBP images.",
 					},
 					{ status: 400 },
 				);
@@ -224,8 +248,9 @@ export async function POST(request: Request) {
 			.single();
 
 		if (error) {
+			console.error("Error inserting task", error);
 			return NextResponse.json(
-				{ error: error.message },
+				{ error: "Failed to create task. Please try again." },
 				{ status: 500 },
 			);
 		}

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createRateLimitResponse,
+  rateLimitByIp,
+  rateLimitByUser,
+} from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,6 +33,22 @@ export async function POST(req: NextRequest) {
 
     if (!user || userError) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+    }
+
+    const ipRateLimitResult = await rateLimitByIp("changePasswordIp", req);
+    if (!ipRateLimitResult.success) {
+      return createRateLimitResponse(
+        "Too many password change attempts from this network. Please try again later.",
+        ipRateLimitResult,
+      );
+    }
+
+    const rateLimitResult = await rateLimitByUser("changePassword", user.id);
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(
+        "Too many password change attempts. Please try again later.",
+        rateLimitResult,
+      );
     }
 
     if (!user.email) {
