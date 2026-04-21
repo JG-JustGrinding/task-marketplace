@@ -7,6 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import HomeFeedClient from "@/components/HomeFeedClient";
 
 export const metadata: Metadata = {
+  alternates: {
+    canonical: "/",
+  },
   description:
     "Browse Bountask and help others with simple creative tasks that can be completed for cash payouts.",
 };

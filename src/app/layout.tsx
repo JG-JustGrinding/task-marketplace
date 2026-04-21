@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Lato, Montserrat } from "next/font/google";
+import { getSiteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -15,12 +16,11 @@ const lato = Lato({
 });
 
 const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "Bountask";
-const siteTagline =
-  process.env.NEXT_PUBLIC_SITE_SLOGAN ||
-  "Post tasks, complete work, and get paid.";
 const defaultDescription = `${siteName} is a modern task marketplace where anyone can post tasks, complete work, and get paid.`;
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
+  metadataBase: siteUrl,
   title: {
     default: siteName,
     template: "%s | " + siteName,
@@ -31,6 +31,7 @@ export const metadata: Metadata = {
     description: defaultDescription,
     siteName,
     type: "website",
+    url: siteUrl,
   },
   twitter: {
     card: "summary_large_image",
