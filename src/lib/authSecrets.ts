@@ -16,7 +16,7 @@ export function safeCompareSecret(
   const a = Buffer.from(provided, "utf8");
   const b = Buffer.from(expected, "utf8");
   if (a.length !== b.length) {
-    // Still run a dummy comparison to keep timing similar.
+    // Still run a dummy comparison to keep timing similar
     try {
       timingSafeEqual(a, a);
     } catch {
