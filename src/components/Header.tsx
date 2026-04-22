@@ -45,8 +45,8 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
   }, [pathname, searchParams]);
 
   const isLoggedIn = !!user;
-  const userName = profile ? profile.username : "No Username";
-  const userInitial = userName?.charAt(0);
+  const userName = profile?.username || "Bountask User";
+  const userInitial = userName.charAt(0).toUpperCase();
 
   const handleChange = (value: string) => {
     setLocalSearch(value);
@@ -239,7 +239,6 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
         <div className="flex items-center gap-2 sm:gap-3 ml-2">
           {isLoggedIn && (
             <>
-              {/* Mobile: open full-screen overlay */}
               <div className="relative sm:hidden">
                 <button
                   type="button"
@@ -256,7 +255,6 @@ export default function Header({ user, profile, search = "", onSearchChange }: H
                 </button>
               </div>
 
-              {/* Desktop: dropdown popup */}
               <div className="relative hidden sm:block" ref={notifRef}>
               <button
                 type="button"

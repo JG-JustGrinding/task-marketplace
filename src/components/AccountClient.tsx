@@ -434,7 +434,7 @@ export default function AccountClient({
                 <div className="flex flex-col sm:flex-row sm:items-center gap-6">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-20 w-20 rounded-full bg-[var(--accent-primary)] flex items-center justify-center text-xl font-semibold text-white">
-                      {profileUsername.charAt(0).toUpperCase()}
+                      {profileUsername.charAt(0).toUpperCase() || "B"}
                     </div>
                     {false && (
                       <button
@@ -456,6 +456,7 @@ export default function AccountClient({
                         value={profileUsername}
                         onChange={(e) => { setProfileUsername(e.target.value); resetErrorAndSuccess(); }}
                         className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                        placeholder="Enter your username..."
                       />
                     </div>
 

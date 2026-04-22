@@ -234,7 +234,7 @@ export async function GET(
 
       result.push({
         id: s.id as number,
-        submitterName: profile?.username || "Marketplace user",
+        submitterName: profile?.username || "Bountask User",
         submittedAt: s.created_at as string,
         demoUrl,
         finalUrl,

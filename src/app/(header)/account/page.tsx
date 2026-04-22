@@ -39,8 +39,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     .maybeSingle();
 
   const email = user.email ?? "";
-  const fallbackUsername = email ? email.split("@")[0] : "";
-  const username = profile?.username || fallbackUsername || "User";
+  const username = profile?.username || "";
 
   const allowImportantEmails =
     (profile as any)?.allow_important_emails ?? true;

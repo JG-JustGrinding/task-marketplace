@@ -23,8 +23,8 @@ const plans: Array<{
   {
     key: "creator",
     name: "Creator Pro",
-    price: 10,
-    tagline: "For task creators and businesses",
+    price: 7.99,
+    tagline: "For Task Creators and Developers",
     accent: "var(--accent-primary)",
     accentHover: "var(--accent-hover)",
     features: creatorProFeatures(),
@@ -33,8 +33,8 @@ const plans: Array<{
   {
     key: "earner",
     name: "Earner Pro",
-    price: 15,
-    tagline: "For task completers and freelancers",
+    price: 14.99,
+    tagline: "For Task Completers and Freelancers",
     accent: "var(--accent-secondary)",
     accentHover: "var(--accent-secondary-hover)",
     features: earnerProFeatures(),
@@ -228,7 +228,7 @@ export default function PremiumClient({
                       {isCollectionsFeature && showCollectionsInfo && (
                         <p className="ml-8 text-[0.7rem] text-[var(--text-muted)] font-semibold leading-snug">
                           Group your tasks into named collections, which show a
-                          "Tasks also in this collection" section on each task&apos;s page so earners can discover related work.
+                          "Tasks also in this collection" section on each task's page so earners can discover related work.
                         </p>
                       )}
                     </li>
@@ -257,8 +257,8 @@ export default function PremiumClient({
         {/* Footer note */}
         <div className="text-center flex flex-col gap-1">
           <p
-            style={{ color: "var(--text-secondary)" }}
-            className="text-sm"
+            style={{ color: "var(--text-muted)" }}
+            className="text-xs"
           >
             Billing is handled securely through Stripe. You can cancel your subscription at any time from your account settings.
           </p>

@@ -56,7 +56,7 @@ export async function generateMetadata({
     };
   }
 
-  const userName = profile.username || "Marketplace User";
+  const userName = profile.username || "Bountask User";
   const description = `View ${userName}'s profile on Bountask, including their posted tasks and activity.`;
 
   return {
@@ -199,7 +199,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     });
   }
 
-  const userName = profile.username || "Marketplace User";
+  const userName = profile.username || "Bountask User";
 
   return (
     <ProfileClient
