@@ -17,6 +17,19 @@ type ReferenceItem = {
   url: string;
 };
 
+type BeginDeleteFundedTaskResult = {
+  ok?: boolean;
+  error?: string;
+  payment_intent_id?: string | null;
+  refund_cents?: number;
+  platform_fee_cents?: number;
+};
+
+type SimpleRpcResult = {
+  ok?: boolean;
+  error?: string;
+};
+
 async function deleteTaskBrandingAssets(
   logoPath: string | null | undefined,
   bannerPath: string | null | undefined,
@@ -201,6 +214,16 @@ export async function DELETE(
 
     // Branch 1: unfunded tasks still awaiting payment can be hard deleted
     if (status === "pending_payment") {
+      if ((task as any).stripe_payment_intent_id) {
+        return NextResponse.json(
+          {
+            error:
+              "This funded task is already being deleted. Please refresh and try again.",
+          },
+          { status: 409 },
+        );
+      }
+
       try {
         await deleteTaskBrandingAssets(
           (task as any).logo_path as string | null | undefined,
@@ -270,11 +293,68 @@ export async function DELETE(
       );
       const refundCents = Math.max(0, grossCents - platformFeeCents);
 
+      const { data: beginDeleteData, error: beginDeleteError } = await supabase.rpc(
+        "begin_delete_funded_task",
+        {
+          p_task_id: numericId,
+          p_platform_cancellation_fee_rate: PLATFORM_CANCELLATION_FEE_RATE,
+        },
+      );
+
+      if (beginDeleteError) {
+        console.error("Error beginning funded task deletion", beginDeleteError);
+        return NextResponse.json(
+          { error: "Failed to lock this task for deletion. Please try again." },
+          { status: 500 },
+        );
+      }
+
+      const beginDeleteResult =
+        (beginDeleteData ?? {}) as BeginDeleteFundedTaskResult;
+
+      if (!beginDeleteResult.ok) {
+        const beginDeleteMessage =
+          beginDeleteResult.error ??
+          "This task is already being deleted or was just changed. Please refresh and try again.";
+
+        const beginDeleteStatus =
+          beginDeleteMessage === "Task not found"
+            ? 404
+            : beginDeleteMessage === "This task is already being deleted or was just changed. Please refresh and try again."
+              ? 409
+              : beginDeleteMessage === "This task cannot be deleted because it has active activations." ||
+                  beginDeleteMessage === "This task does not appear to have a valid funded amount." ||
+                  beginDeleteMessage === "This task cannot be deleted because its payment record is incomplete." ||
+                  beginDeleteMessage === "This task cannot be deleted in its current state."
+                ? 400
+                : 500;
+
+        return NextResponse.json(
+          { error: beginDeleteMessage },
+          { status: beginDeleteStatus },
+        );
+      }
+
+      const rpcPaymentIntentId = beginDeleteResult.payment_intent_id ?? null;
+      const rpcRefundCents = Number(beginDeleteResult.refund_cents ?? refundCents);
+      const rpcPlatformFeeCents = Number(
+        beginDeleteResult.platform_fee_cents ?? platformFeeCents,
+      );
+
+      if (!rpcPaymentIntentId) {
+        return NextResponse.json(
+          { error: "This task cannot be deleted because its payment record is incomplete." },
+          { status: 400 },
+        );
+      }
+
       try {
-        if (refundCents > 0) {
+        if (rpcRefundCents > 0) {
           await stripe.refunds.create({
-            payment_intent: paymentIntentId,
-            amount: refundCents,
+            payment_intent: rpcPaymentIntentId,
+            amount: rpcRefundCents,
+          }, {
+            idempotencyKey: `task-delete-refund-${numericId}`,
           });
         } else {
           // If the computed refund is 0 (e.g. very small tasks), keep it simple
@@ -285,6 +365,21 @@ export async function DELETE(
         }
       } catch (stripeError) {
         console.error("Error issuing Stripe refund for deleted task", stripeError);
+
+        // Best-effort rollback of the temporary lock so the creator is not left
+        // with a task stuck in pending_payment when no refund was issued.
+        const { error: rollbackError } = await supabase.rpc(
+          "rollback_delete_funded_task",
+          { p_task_id: numericId },
+        );
+
+        if (rollbackError) {
+          console.error(
+            "Error rolling back funded task deletion lock after refund failure",
+            rollbackError,
+          );
+        }
+
         return NextResponse.json(
           { error: "Failed to issue refund for this task. Please try again." },
           { status: 500 },
@@ -293,73 +388,36 @@ export async function DELETE(
 
       // Record the platform's cancellation fee and mark the task as cancelled.
       try {
-        const admin = createAdminClient();
+        const { data: finalizeDeleteData, error: finalizeDeleteError } = await supabase.rpc(
+          "finalize_delete_funded_task",
+          {
+            p_task_id: numericId,
+            p_platform_fee_cents: rpcPlatformFeeCents,
+          },
+        );
 
-        if (platformFeeCents > 0) {
-          const { error: platformEarningsError } = await admin
-            .from("platform_earnings")
-            .insert({
-              task_id: numericId,
-              submitter_id: user.id,
-              amount_cents: platformFeeCents,
-            } as any);
-
-          if (platformEarningsError) {
-            console.error(
-              "Error inserting platform_earnings row for cancelled task",
-              platformEarningsError,
-            );
-          }
-        }
-
-        const { error: taskUpdateError } = await admin
-          .from("tasks")
-          .update({ status: "pending_payment" })
-          .eq("id", numericId);
-
-        if (taskUpdateError) {
-          console.error(
-            "Error updating task status to pending_payment after refund",
-            taskUpdateError,
-          );
+        if (finalizeDeleteError) {
+          console.error("Error finalizing funded task deletion", finalizeDeleteError);
           return NextResponse.json(
-            { error: "Refund issued but failed to update task status." },
+            { error: "Refund issued but failed to finalize task deletion." },
             { status: 500 },
           );
         }
 
-        try {
-          await deleteTaskBrandingAssets(
-            (task as any).logo_path as string | null | undefined,
-            (task as any).banner_path as string | null | undefined,
-          );
-          await deleteTaskImageReferenceAssets(
-            (task as any).references as ReferenceItem[] | null | undefined,
-          );
-        } catch (assetError) {
+        const finalizeDeleteResult =
+          (finalizeDeleteData ?? {}) as SimpleRpcResult;
+
+        if (!finalizeDeleteResult.ok) {
           console.error(
-            "Error deleting task branding or reference assets after refund",
-            assetError,
+            "Finalize funded task deletion returned non-ok result",
+            finalizeDeleteResult,
           );
           return NextResponse.json(
             {
               error:
-                "Refund issued but failed to remove branding or reference files.",
+                finalizeDeleteResult.error ??
+                "Refund issued but failed to finalize task deletion.",
             },
-            { status: 500 },
-          );
-        }
-
-        // actually delete the task
-        const { error: deleteError } = await admin
-          .from("tasks")
-          .delete()
-          .eq("id", numericId);
-
-        if (deleteError) {
-          console.error("Error deleting task after refund", deleteError);
-          return NextResponse.json(
-            { error: "Refund issued but failed to delete task." },
             { status: 500 },
           );
         }
@@ -368,6 +426,21 @@ export async function DELETE(
         return NextResponse.json(
           { error: "Refund issued but failed to record deletion in database." },
           { status: 500 },
+        );
+      }
+
+      try {
+        await deleteTaskBrandingAssets(
+          (task as any).logo_path as string | null | undefined,
+          (task as any).banner_path as string | null | undefined,
+        );
+        await deleteTaskImageReferenceAssets(
+          (task as any).references as ReferenceItem[] | null | undefined,
+        );
+      } catch (assetError) {
+        console.error(
+          "Task deleted after refund, but failed to remove branding or reference assets",
+          assetError,
         );
       }
 

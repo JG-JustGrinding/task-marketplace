@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isAuthorizedCronRequest } from "@/lib/authSecrets";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -11,15 +12,11 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function POST(request: Request) {
   try {
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      const headerSecret = request.headers.get("x-cron-secret");
-      if (!headerSecret || headerSecret !== cronSecret) {
-        return NextResponse.json(
-          { error: "Unauthorized" },
-          { status: 401 },
-        );
-      }
+    if (!isAuthorizedCronRequest(request)) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 },
+      );
     }
 
     const supabase = await createClient();

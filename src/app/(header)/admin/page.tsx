@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AdminEarningsClient from "@/components/AdminEarningsClient";
+import { safeCompareSecret } from "@/lib/authSecrets";
 
 export const metadata: Metadata = {
 	title: "Admin Earnings",
@@ -33,7 +34,7 @@ async function verifyAdminPassword(formData: FormData) {
 	const password = formData.get("password");
 	if (typeof password !== "string" || !password) return;
 	if (!process.env.ADMIN_PAGE_PASSWORD) return;
-	if (password !== process.env.ADMIN_PAGE_PASSWORD) return;
+	if (!safeCompareSecret(password, process.env.ADMIN_PAGE_PASSWORD)) return;
 
 	const cookieStore = await cookies();
 	cookieStore.set("admin_page_authed", "1", {
@@ -55,7 +56,7 @@ export default async function AdminPage({
 		? secretParamRaw[0]
 		: secretParamRaw;
 
-	if (!secretParam || secretParam !== process.env.ADMIN_PAGE_SECRET) {
+	if (!secretParam || !safeCompareSecret(secretParam, process.env.ADMIN_PAGE_SECRET)) {
 		notFound();
 	}
 

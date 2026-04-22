@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeCompareSecret } from "@/lib/authSecrets";
 
 export async function POST(req: NextRequest) {
   try {
     const headerSecret = req.headers.get("x-admin-secret");
+    const expected = process.env.ADMIN_PAGE_SECRET;
 
-    if (!headerSecret || headerSecret !== process.env.ADMIN_PAGE_SECRET) {
+    if (!expected || !safeCompareSecret(headerSecret, expected)) {
       // Pretend this route does not exist instead of exposing an auth error.
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }

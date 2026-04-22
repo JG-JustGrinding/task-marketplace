@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// Only allow same-origin relative paths for `next` to prevent open redirects.
+function sanitizeNextPath(raw: string | null | undefined): string {
+	if (!raw || typeof raw !== "string") return "/";
+	// Must start with a single "/" and must not start with "//" or "/\\"
+	if (!raw.startsWith("/")) return "/";
+	if (raw.startsWith("//") || raw.startsWith("/\\")) return "/";
+	return raw;
+}
+
 export async function GET(request: NextRequest) {
 	const requestUrl = new URL(request.url);
 	const code = requestUrl.searchParams.get("code");
-	const next = requestUrl.searchParams.get("next") ?? "/";
+	const next = sanitizeNextPath(requestUrl.searchParams.get("next"));
 	const error = requestUrl.searchParams.get("error");
 	const origin = requestUrl.searchParams.get("origin");
 

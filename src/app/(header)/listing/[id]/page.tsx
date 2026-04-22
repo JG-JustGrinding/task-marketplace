@@ -78,10 +78,14 @@ export async function generateMetadata({
     return {
         title,
         description,
+        alternates: {
+            canonical: `/listing/${numericId}`,
+        },
         openGraph: {
             title,
             description,
             type: "article",
+            url: `/listing/${numericId}`,
             images: imageUrls.length
                 ? imageUrls.map((url) => ({ url }))
                 : undefined,

@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import stripe from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  createRateLimitResponse,
+  rateLimitByIp,
+  rateLimitByUser,
+} from "@/lib/rateLimit";
 
 type PlanType = "creator" | "earner";
 
@@ -58,6 +63,28 @@ export async function POST(req: Request) {
 
     if (!user || userError) {
       return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+    }
+
+    const ipRateLimitResult = await rateLimitByIp(
+      "subscriptionCheckoutIp",
+      req,
+    );
+    if (!ipRateLimitResult.success) {
+      return createRateLimitResponse(
+        "Too many subscription checkout attempts from this network. Please try again later.",
+        ipRateLimitResult,
+      );
+    }
+
+    const rateLimitResult = await rateLimitByUser(
+      "subscriptionCheckout",
+      user.id,
+    );
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(
+        "Too many subscription checkout attempts. Please try again later.",
+        rateLimitResult,
+      );
     }
 
     const baseUrl = getBaseUrl(req);

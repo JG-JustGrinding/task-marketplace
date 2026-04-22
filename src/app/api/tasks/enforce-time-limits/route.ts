@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { queueNotification } from "@/lib/notifications";
+import { isAuthorizedCronRequest } from "@/lib/authSecrets";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
@@ -18,12 +19,8 @@ const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 
 export async function POST(request: Request) {
   try {
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      const headerSecret = request.headers.get("x-cron-secret");
-      if (!headerSecret || headerSecret !== cronSecret) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    if (!isAuthorizedCronRequest(request)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const admin = createAdminClient();

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { queueNotification } from "@/lib/notifications";
 import { isPremiumActive } from "@/lib/premium";
+import { createRateLimitResponse, rateLimitByUser } from "@/lib/rateLimit";
 
 type ActivateTaskBody = {
   taskId?: number;
@@ -27,6 +28,14 @@ export async function POST(request: Request) {
 
     if (userError || !user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const rateLimitResult = await rateLimitByUser("activateTask", user.id);
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(
+        "Too many task activation attempts. Please try again later.",
+        rateLimitResult,
+      );
     }
 
     // Look up the task to determine its per-task activation capacity.
