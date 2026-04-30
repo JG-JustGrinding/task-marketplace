@@ -23,7 +23,7 @@ const plans: Array<{
   {
     key: "creator",
     name: "Creator Pro",
-    price: 7.99,
+    price: parseFloat(process.env.NEXT_PUBLIC_CREATOR_PRO_PRICE || "9.99"),
     tagline: "For Task Creators and Developers",
     accent: "var(--accent-primary)",
     accentHover: "var(--accent-hover)",
@@ -33,7 +33,7 @@ const plans: Array<{
   {
     key: "earner",
     name: "Earner Pro",
-    price: 14.99,
+    price: parseFloat(process.env.NEXT_PUBLIC_EARNER_PRO_PRICE || "14.99"),
     tagline: "For Task Completers and Freelancers",
     accent: "var(--accent-secondary)",
     accentHover: "var(--accent-secondary-hover)",
