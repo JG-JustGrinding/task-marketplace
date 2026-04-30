@@ -120,7 +120,7 @@ export default async function ListingPage({
     const { data, error } = await supabase
         .from("tasks")
         .select(
-			"id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status, collection_id, time_limit_days",
+			"id, user_id, title, categories, short_description, need_details, technical_requirements, references, price, status, collection_id, time_limit_days, max_activations",
         )
         .eq("id", numericId)
         .single<TaskRow>();
