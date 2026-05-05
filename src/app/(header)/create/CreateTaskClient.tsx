@@ -30,6 +30,7 @@ interface TaskFormState {
   premiumLogoPreview: string;
   premiumBannerPreview: string;
   timeLimitDays: string;
+  maxUsers: number;
 }
 
 const INITIAL_STATE: TaskFormState = {
@@ -43,6 +44,7 @@ const INITIAL_STATE: TaskFormState = {
   premiumLogoPreview: "",
   premiumBannerPreview: "",
   timeLimitDays: "",
+  maxUsers: 3,
 };
 
 const DRAFT_STORAGE_KEY = "create_task_draft_v1";
@@ -148,6 +150,7 @@ export default function CreateTaskClient({
             ? { ...ref, url: "" }
             : ref,
         ),
+        maxUsers: form.maxUsers,
       };
 
       const payload = JSON.stringify({
@@ -465,6 +468,7 @@ export default function CreateTaskClient({
       formData.append("technicalRequirements", form.technicalRequirements);
       formData.append("references", JSON.stringify(form.references));
       formData.append("price", String(priceValue));
+      formData.append("maxUsers", String(form.maxUsers));
       if (form.timeLimitDays) {
         formData.append("timeLimitDays", form.timeLimitDays);
       }
@@ -1069,6 +1073,51 @@ export default function CreateTaskClient({
                     Drive, make it shareable, and paste the image link here. Image
                 references are stored as links, not file uploads.
               </p>)}
+            </div>
+
+            <div>
+              <span className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                Max Users
+              </span>
+              <p className="mb-3 text-xs text-[var(--text-secondary)]">
+                What's the max number of users that can start this task at the same time?
+              </p>
+              <div className="flex gap-2">
+                {([1, 3, 5] as const).map((count) => {
+                  const isProOnly = count === 5;
+                  const isDisabled = isProOnly && !creatorProActive;
+                  const isSelected = form.maxUsers === count;
+                  return (
+                    <button
+                      key={count}
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() => {
+                        if (isDisabled) {
+                          setShowCreatorProPanel(true);
+                          return;
+                        }
+                        setForm((prev) => ({ ...prev, maxUsers: count }));
+                      }}
+                      className={`relative flex h-10 w-14 items-center justify-center rounded-xl border text-sm font-semibold transition ${
+                        isSelected
+                          ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white shadow-sm"
+                          : isDisabled
+                          ? "border-[var(--border-color)] bg-[var(--bg-secondary)]/60 text-[var(--text-muted)] cursor-not-allowed opacity-60"
+                          : "border-[var(--border-color)] bg-[var(--bg-secondary)]/80 text-[var(--text-primary)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)]"
+                      }`}
+                      aria-pressed={isSelected}
+                    >
+                      {count}
+                      {isProOnly && !creatorProActive && (
+                        <span className="absolute -top-1.5 -right-1.5 rounded-full bg-[var(--accent-primary)] px-1 py-px text-[9px] font-bold leading-none text-white">
+                          PRO
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         );

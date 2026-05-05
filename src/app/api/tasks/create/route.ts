@@ -18,6 +18,7 @@ type CreateTaskBody = {
 	references?: ReferenceItem[];
 	price?: string | number;
 	timeLimitDays?: string | number | null;
+	maxUsers?: string | number;
 };
 
 const IMAGE_REFERENCE_BUCKET = "task-image-references";
@@ -104,6 +105,7 @@ export async function POST(request: Request) {
 				price: (formData.get("price") as string | null) ?? undefined,
 				timeLimitDays:
 					(formData.get("timeLimitDays") as string | null) ?? undefined,
+				maxUsers: (formData.get("maxUsers") as string | null) ?? undefined,
 			};
 		} else {
 			body = (await request.json()) as CreateTaskBody;
@@ -128,7 +130,17 @@ export async function POST(request: Request) {
 			references = [],
 			price,
 			timeLimitDays,
+			maxUsers,
 		} = body;
+
+		const parsedMaxUsers = maxUsers !== undefined ? Number(maxUsers) : 3;
+		if (parsedMaxUsers > 10) {
+			// just checking for below 10 because I might change the allowed max users in the future and I don't want to hardcode specific allowed values
+			return NextResponse.json(
+				{ error: "maxUsers must be 1, 3, or 5." },
+				{ status: 400 },
+			);
+		}
 
 		if (!title || !shortDescription) {
 			return NextResponse.json(
@@ -231,6 +243,28 @@ export async function POST(request: Request) {
 			parsedTimeLimitDays = numericTimeLimit;
 		}
 
+		if (parsedMaxUsers === 5) {
+			const { data: profile } = await supabase
+				.from("profiles")
+				.select("creator_pro_active, creator_pro_expires_at")
+				.eq("id", user.id)
+				.maybeSingle();
+
+			const creatorProActive = profile
+				? isPremiumActive(
+						(profile as any).creator_pro_active,
+						(profile as any).creator_pro_expires_at,
+				  )
+				: false;
+
+			if (!creatorProActive) {
+				return NextResponse.json(
+					{ error: "Creator Pro is required to set max users to 5." },
+					{ status: 403 },
+				);
+			}
+		}
+
 		const { data, error } = await supabase
 			.from("tasks")
 			.insert({
@@ -243,6 +277,7 @@ export async function POST(request: Request) {
 				references: references,
 				price: numericPrice,
 				time_limit_days: parsedTimeLimitDays,
+				max_activations: parsedMaxUsers,
 			})
 			.select()
 			.single();
