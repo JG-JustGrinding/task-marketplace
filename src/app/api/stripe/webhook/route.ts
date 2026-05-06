@@ -69,12 +69,24 @@ const syncProfileSubscription = async (
     // Resolve plan type
     // ---------------------------
 
-    const plan: ProPlan | null =
+    let plan: ProPlan | null =
       explicitPlan ||
       normalizePlanFromMetadata(
         (metadata.planType as string | undefined) ??
         (metadata.plan as string | undefined)
       );
+
+    // Fallback: resolve plan from the subscription's price ID when metadata is
+    // missing (e.g. when the user resubscribes via the Stripe billing portal).
+    if (!plan) {
+      const priceId = subscription.items?.data?.[0]?.price?.id ?? null;
+      if (priceId) {
+        const creatorPriceId = process.env.STRIPE_CREATOR_PRO_PRICE_ID;
+        const earnerPriceId = process.env.STRIPE_EARNER_PRO_PRICE_ID;
+        if (creatorPriceId && priceId === creatorPriceId) plan = "creator";
+        else if (earnerPriceId && priceId === earnerPriceId) plan = "earner";
+      }
+    }
 
     if (!userId || !plan) {
       console.error("Subscription webhook missing user or plan metadata", {

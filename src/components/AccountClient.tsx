@@ -61,6 +61,7 @@ export default function AccountClient({
   const [isCancellingSubscription, setIsCancellingSubscription] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
+  const [isRedirectingToPortal, setIsRedirectingToPortal] = useState(false);
 
   const earnerProWillExpire = earnerProActive ? false : earnerProExpiresAt ? new Date(earnerProExpiresAt).getTime() > Date.now() : false;
   const creatorProWillExpire = creatorProActive ? false : creatorProExpiresAt ? new Date(creatorProExpiresAt).getTime() > Date.now() : false;
@@ -199,6 +200,27 @@ export default function AccountClient({
     resetCancelMessages();
   };
 
+  const handleManageSubscription = async (subscriptionId: string) => {
+    setIsRedirectingToPortal(true);
+    try {
+      const res = await fetch("/api/account/stripe-dashboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscriptionId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.url) {
+        window.location.href = data.url;
+      } else {
+        setCancelError(data?.error || "Unable to open subscription management. Please try again.");
+        setIsRedirectingToPortal(false);
+      }
+    } catch {
+      setCancelError("Unable to open subscription management. Please try again.");
+      setIsRedirectingToPortal(false);
+    }
+  };
+
   const handleConfirmCancelSubscription = async () => {
     if (!cancelSubscriptionPlan) return;
     setIsCancellingSubscription(true);
@@ -325,10 +347,11 @@ export default function AccountClient({
                       {creatorProActive && creatorProSubscriptionId ? (
                         <button
                           type="button"
-                          onClick={() => handleOpenCancelModal("creator")}
-                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--danger-less-saturated)] border border-[var(--danger-less-saturated)] bg-transparent hover:bg-[var(--danger)]/5"
+                          onClick={() => handleManageSubscription(creatorProSubscriptionId)}
+                          disabled={isRedirectingToPortal}
+                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--accent-primary)] border border-[var(--accent-primary)] bg-transparent hover:bg-[var(--accent-primary)]/5 disabled:opacity-50"
                         >
-                          Cancel Subscription
+                          {isRedirectingToPortal ? "Redirecting..." : "Manage Subscription"}
                         </button>
                       ) : (
                         <a
@@ -387,10 +410,11 @@ export default function AccountClient({
                       {earnerProActive && earnerProSubscriptionId ? (
                         <button
                           type="button"
-                          onClick={() => handleOpenCancelModal("earner")}
-                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--danger-less-saturated)] border border-[var(--danger-less-saturated)] bg-transparent hover:bg-[var(--danger)]/5"
+                          onClick={() => handleManageSubscription(earnerProSubscriptionId)}
+                          disabled={isRedirectingToPortal}
+                          className="inline-flex bold items-center rounded-md px-3 py-1.5 text-xs font-medium text-[var(--accent-secondary)] border border-[var(--accent-secondary)] bg-transparent hover:bg-[var(--accent-secondary)]/5 disabled:opacity-50"
                         >
-                          Cancel Subscription
+                          {isRedirectingToPortal ? "Redirecting..." : "Manage Subscription"}
                         </button>
                       ) : (
                         <a
