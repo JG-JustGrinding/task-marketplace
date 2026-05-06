@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import stripe from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
 
     const baseUrl = getBaseUrl(req);
 
-    const sessionParams: Parameters<typeof stripe.billingPortal.sessions.create>[0] = {
+    const sessionParams: Stripe.BillingPortal.SessionCreateParams = {
       customer: stripeCustomerId,
       return_url: `${baseUrl}/account?tab=Subscription`,
     };
