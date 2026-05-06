@@ -106,8 +106,11 @@ const syncProfileSubscription = async (
     const status = subscription.status;
     const cancelAtPeriodEnd = subscription.cancel_at_period_end ?? false;
 
-    const isActive =
-      (status === "active" || status === "trialing") && !cancelAtPeriodEnd;
+    // A subscription is active as long as Stripe considers it live.
+    // cancel_at_period_end=true means the user cancelled but still has access
+    // until the period ends; Stripe will fire customer.subscription.deleted
+    // (or update the status to "canceled") when access should actually end.
+    const isActive = status === "active" || status === "trialing";
 
     // ---------------------------
     // Expiration date
@@ -124,6 +127,33 @@ const syncProfileSubscription = async (
     const expiresAtIso = rawCurrentPeriodEnd
       ? new Date(rawCurrentPeriodEnd * 1000).toISOString()
       : null;
+
+    // ---------------------------
+    // Guard against stale events
+    // ---------------------------
+    // If this subscription is being deactivated, only apply the update when
+    // the stored subscription ID matches. This prevents a delayed or retried
+    // event for an old cancelled subscription from overwriting a newer active
+    // subscription that the user has since created.
+    if (!isActive) {
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select(`${columnPrefix}_subscription_id`)
+        .eq("id", userId)
+        .maybeSingle();
+
+      const storedSubId = (currentProfile as any)?.[`${columnPrefix}_subscription_id`] as string | null | undefined;
+
+      if (storedSubId && storedSubId !== subscription.id) {
+        console.log("Skipping deactivation for stale subscription", {
+          userId,
+          plan,
+          storedSubId,
+          incomingSubId: subscription.id,
+        });
+        return;
+      }
+    }
 
     // ---------------------------
     // Build update payload
