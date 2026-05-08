@@ -159,7 +159,7 @@ export default function TermsOfServicePage() {
               When a Task Poster creates a task, the payment is collected and
               held until the task is completed or refunded.
             </p>
-            <p className="mb-2">Bountask charges a 10% platform fee on transactions.</p>
+            <p className="mb-2">Bountask charges a 15% platform fee on transactions. Earner Pro subscribers receive a reduced fee of 5%.</p>
             <p>
               By using the platform, users agree to the payment processing terms
               of Stripe.

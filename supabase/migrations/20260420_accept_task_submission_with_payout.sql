@@ -11,7 +11,7 @@ declare
   v_task record;
   v_submission record;
   v_profile record;
-  v_platform_take_rate numeric := 0.10;
+  v_platform_take_rate numeric := 0.15;
   v_gross_cents integer := 0;
   v_worker_cents integer := 0;
   v_platform_cents integer := 0;
@@ -62,7 +62,7 @@ begin
 
   if coalesce(v_profile.earner_pro_active, false)
     or (v_profile.earner_pro_expires_at is not null and v_profile.earner_pro_expires_at > now()) then
-    v_platform_take_rate := 0.03;
+    v_platform_take_rate := 0.05;
   end if;
 
   v_gross_cents := greatest(0, round(coalesce(v_task.price, 0)::numeric * 100)::integer);
